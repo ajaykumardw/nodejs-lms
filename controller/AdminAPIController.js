@@ -2,7 +2,6 @@ require('dotenv').config();
 const Role = require('../model/Role');
 const User = require('../model/User');
 const RoleUser = require('../model/RoleUser');
-const { validationResult } = require('express-validator');
 const validate = require('../util/validation')
 
 exports.getRoleAPI = (req, res, next) => {
