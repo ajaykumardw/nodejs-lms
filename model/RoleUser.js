@@ -12,7 +12,12 @@ const roleUserSchema = new schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "users",
         required: true
-    }
+    },
+    created_by: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "users",
+        required: true,
+    },
 });
 
 module.exports = mongoose.model('role_user', roleUserSchema);

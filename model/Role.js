@@ -18,6 +18,15 @@ const roleSchema = new schema({
         required: true,
         maxlength: 5000,
     },
+    type: {
+        type: Boolean,
+        required: true
+    },
+    created_by: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "users",
+        required: true,
+    },
     // permission: {}
 });
 
