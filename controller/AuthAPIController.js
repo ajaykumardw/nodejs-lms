@@ -5,17 +5,10 @@ const User = require('../model/User');
 const { validationResult } = require('express-validator')
 const jwtSecretKey = process.env.JWT_SECRET;
 const expireTime = process.env.token_expire_time;
+const validate = require('../util/validation')
 
 exports.postAPILogIn = (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(422).json({
-            status: 'Failure',
-            statusCode: 422,
-            message: "Validation failed",
-            errors: errors.array() // fixed typo: `erros` → `errors`
-        });
-    }
+    if (!validate(req, res)) return;
 
     const { email, password } = req.body;
     let loadedUser;

@@ -3,24 +3,17 @@ const Role = require('../model/Role');
 const User = require('../model/User');
 const RoleUser = require('../model/RoleUser');
 const { validationResult } = require('express-validator');
+const validate = require('../util/validation')
 
 exports.getRoleAPI = (req, res, next) => {
     return res.json({ user: req.userId })
 }
 
 exports.postRoleAPI = (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        res.status(422).json({
-            status: 'Failure',
-            statusCode: 422,
-            message: "Validation failed",
-            error: errors.array()
-        });
-    }
-    const name = req.body.name;
-    const description = req.body.description;
-    const type = req.body.type;
+    if (!validate(req, res)) return;
+
+    const { name, description, type } = req.body;
+
     User.findById(req.userId).then(user => {
         if (!user) {
             const error = new Error("User does not authenticated!");
@@ -47,17 +40,10 @@ exports.postRoleAPI = (req, res, next) => {
 }
 
 exports.postRoleUserAPI = (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        res.status(422).json({
-            status: 'Failure',
-            statusCode: 422,
-            message: "Validation failed",
-            error: errors.array()
-        });
-    }
-    const roleId = req.body.role_id;
-    const userId = req.body.user_id;
+
+    if (!validate(req, res)) return;
+
+    const { roleId, userId } = req.body;
     User.findById(req.userId).then(user => {
         const roleUser = new RoleUser({
             role_id: roleId,
