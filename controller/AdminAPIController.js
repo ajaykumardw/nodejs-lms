@@ -41,6 +41,8 @@ exports.postRoleAPI = (req, res, next) => {
             statusCode: 200,
             message: "Role created successfully!"
         });
+    }).catch(err => {
+        next(err);
     })
 }
 
