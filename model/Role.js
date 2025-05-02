@@ -22,12 +22,16 @@ const roleSchema = new schema({
         type: Boolean,
         required: true
     },
+    status: {
+        type: Boolean,
+        default: 0,
+        required: true
+    },
     created_by: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "users",
         required: true,
     },
-    // permission: {}
 });
 
 module.exports = mongoose.model('roles', roleSchema);

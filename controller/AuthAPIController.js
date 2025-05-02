@@ -40,7 +40,9 @@ exports.postAPILogIn = (req, res, next) => {
                 statusCode: 200,
                 message: "User logged in successfully!",
                 token: token,
-                userId: loadedUser._id.toString()
+                userId: loadedUser._id.toString(),
+                email: loadedUser.email,
+                name: loadedUser.first_name + " " + loadedUser.last_name
             });
         })
         .catch(err => {

@@ -5,13 +5,27 @@ const RoleUser = require('../model/RoleUser');
 const validate = require('../util/validation')
 
 exports.getRoleAPI = (req, res, next) => {
-    return res.json({ user: req.userId })
-}
+    Role.find({ created_by: req.userId })
+        .select('type name description status') // select specific fields from Role
+        .populate('created_by', 'first_name last_name email')   // populate only name and email from User
+        .populate('company_id', 'first_name last_name email')
+        .then(data => {
+            res.status(200).json({
+                status: "Success",
+                statusCode: 200,
+                message: "Role fetched successfully!",
+                data: data
+            });
+        })
+        .catch(err => {
+            next(err);
+        });
+};
 
 exports.postRoleAPI = (req, res, next) => {
     if (!validate(req, res)) return;
 
-    const { name, description, type } = req.body;
+    const { name, description, type, status } = req.body;
 
     User.findById(req.userId).then(user => {
         if (!user) {
@@ -22,6 +36,7 @@ exports.postRoleAPI = (req, res, next) => {
         const role = new Role({
             company_id: user._id,
             name: name,
+            status: status,
             description: description,
             type: type,
             created_by: user._id

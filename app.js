@@ -10,7 +10,7 @@ const app = express();
 
 // ✅ Environment variables
 const MongoURL = process.env.MONGODB_URL;       // 🔄 Use consistent casing
-const port = process.env.PORT || 3000;          // ✅ Fallback to 3000 if undefined
+const port = process.env.PORT || 4000;          // ✅ Fallback to 3000 if undefined
 
 // ✅ Middleware
 app.use(flash());
@@ -31,8 +31,8 @@ app.use((req, res, next) => {
 });
 
 // ✅ API Routes
-app.use('/auth', authRoute);
-app.use('/admin', adminRoute);
+app.use('/api/auth', authRoute);
+app.use('/api/admin', adminRoute);
 
 // ✅ Error Handling Middleware (last!)
 app.use((error, req, res, next) => {

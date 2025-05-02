@@ -10,6 +10,9 @@ exports.postRoleValidation = [
     body('company_id')
         .notEmpty().withMessage('Company ID is required')
         .isMongoId().withMessage('Invalid Company ID format'),
+    body('status')
+        .isBoolean().withMessage('Status should be true or false')
+        .not().isEmpty().withMessage('Status is required'),
     body('name').notEmpty().withMessage('Name is required').isLength({ min: 3, max: 20 }).withMessage('Role can be of min 3 and max 20 length'),
     body('description').notEmpty().withMessage('Description is required').isLength({ min: 4, max: 1000 }).withMessage('Description is min of 4 and max of 1000 length'),
     body('created_by').notEmpty().withMessage('Created by is required').isMongoId().withMessage("It should be a unique id")
@@ -20,4 +23,13 @@ exports.roleUserPostValidation = [
         .isMongoId().withMessage('User id should be of object type id'),
     body('role_id').notEmpty().withMessage("Role id is required")
         .isMongoId().withMessage('Role id should be of object type id'),
+];
+
+exports.permissionPostValidation = [
+
+];
+
+exports.packageTypePostValidation = [
+    body('name').notEmpty().withMessage('Name is required').isLength({ min: 4, max: 25 }).withMessage("Package Type min length should be 4 and max 25"),
+    body('status').notEmpty().withMessage("Status is required").isBoolean().withMessage("Status should be true or false")
 ];
