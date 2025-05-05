@@ -24,7 +24,7 @@ router.put('/package-type/:packageTypeId', isAuth, validation.packageTypePostVal
 //routes for package
 router.get('/package', isAuth, packageAPIController.getPackageAPI);
 router.get('/package/create', isAuth, packageAPIController.createPackageAPI);
-router.post('/package', isAuth, packageAPIController.postPackageAPI);
-router.put('/package/:packageId', isAuth, packageAPIController.putPackageAPI)
+router.post('/package', isAuth, validation.postPackageValidation, packageAPIController.postPackageAPI);
+router.put('/package/:packageTypeId/:packageId', isAuth, packageAPIController.putPackageAPI)
 
 module.exports = router;

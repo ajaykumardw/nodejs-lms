@@ -1,9 +1,46 @@
-const validation = require('../validation/validation');
+const validation = require('../util/validation')
 const PackageType = require('../model/PackageType');
 
-exports.getPackageAPI = (req, res, next) => {
+exports.getPackageAPI = async (req, res, next) => {
+    const userId = req.userId;
 
-}
+    try {
+        // Get all package types created by this user
+        const packageTypes = await PackageType.find({ created_by: userId }, { package: 1 });
+
+        if (!packageTypes) {
+            const error = new Error("Package type does not exist!");
+            error.statusCode = 404;
+            throw error;
+        }
+
+        let allPackages = [];
+
+        packageTypes.forEach((pkgTypeDoc) => {
+            const packageTypeId = pkgTypeDoc._id;
+
+            if (pkgTypeDoc.package?.items?.length) {
+                pkgTypeDoc.package.items.forEach((item, index) => {
+                    allPackages.push({
+                        ...item.toObject(), // convert Mongoose subdocument to plain object
+                        package_type_id: packageTypeId,
+                        index: index,
+                    });
+                });
+            }
+        });
+
+        res.status(200).json({
+            status: "Success",
+            statusCode: 200,
+            data: "Data fetched successfully!",
+            data: allPackages,
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
 
 exports.createPackageAPI = (req, res, next) => {
     const userId = req.userId;
@@ -21,18 +58,108 @@ exports.createPackageAPI = (req, res, next) => {
         })
 }
 
-exports.postPackageAPI = (req, res, next) => {
+exports.postPackageAPI = async (req, res, next) => {
+    if (!validation(req, res)) return;
     const userId = req.userId;
     const { name, description, amount, packagetype, status } = req.body;
-    res.status(200).json({
-        name: name,
-        description: description,
-        amount: amount,
-        packagetype: packagetype,
-        status: status
-    });
+    try {
+        const package_type = await PackageType.findOne({ _id: packagetype, created_by: userId });
+        if (!package_type) {
+            const error = new Error("Package type does not exist!");
+            error.statusCode = 404;
+            throw error;
+        }
+
+        const newItem = {
+            name,
+            description,
+            amount,
+            status,
+            package_type_id: packagetype
+        };
+
+        await package_type.addPackage(newItem);
+
+        res.status(200).json({
+            status: "Success",
+            statusCode: 200,
+            message: 'Package added successfully',
+        });
+
+    } catch (error) {
+        next(error);
+    }
+
 }
 
-exports.putPackageAPI = (req, res, next) => {
+exports.putPackageAPI = async (req, res, next) => {
+
+    const userId = req.userId;
+    const packageId = req.params.packageId;
+    const packageTypeId = req.params.packageTypeId;
+
+    const { name, description, amount, packagetype, status, _id } = req.body;
+
+    const packageType = await PackageType.findOne({ created_by: userId, _id: packagetype });
+
+    if (!packageType) {
+        const error = new Error("Package Type does not exist!");
+        error.statusCode = 404;
+        throw error;
+    }
+
+    const newItem = {
+        name,
+        description,
+        amount,
+        status,
+        package_type_id: packageType
+    };
+
+    if (packageTypeId.toString() !== packagetype.toString()) {
+
+        const oldItem = {
+            name,
+            description,
+            amount,
+            status,
+            package_type_id: packageTypeId
+        };
+
+        const oldPackageType = await PackageType.findOne({ created_by: userId, _id: packageTypeId });
+
+        if (!oldPackageType) {
+            const error = new Error("Package Type does not exist!");
+            error.statusCode = 404;
+            throw error;
+        }
+
+        const newPackageType = await PackageType.findOne({ created_by: userId, _id: packagetype });
+
+        if (!newPackageType) {
+            const error = new Error("Package Type does not exist!");
+            error.statusCode = 404;
+            throw error;
+        }
+
+        await oldPackageType.removePackage(packageId);
+
+        await newPackageType.addPackage(oldItem);
+
+        res.status(200).json({
+            status: "Success",
+            statusCode: 200,
+            message: "Data updated successfully",
+        });
+
+    }
+
+    await packageType.updatePackage([packageId, newItem]);
+
+    res.status(200).json({
+        status: "Success",
+        statusCode: 200,
+        message: "Data updated successfully!"
+    });
 
 }

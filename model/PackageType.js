@@ -31,18 +31,17 @@ const packageTypeSchema = new Schema({
                     required: false, // Assuming description is optional
                 },
                 package_type_id: {
-                    type: Number,
+                    type: mongoose.Schema.Types.ObjectId,
                     required: false, // Can be null
                     ref: "package_types",
                 },
                 status: {
-                    type: String,
-                    enum: ['active', 'inactive'], // Only these two values are allowed
+                    type: Boolean,
                     required: true, // Status is required
                 },
                 amount: {
                     type: Number,
-                    required: false, // Amount is optional (can be null)
+                    required: true, // Amount is not optional (can be null)
                 },
                 created_at: {
                     type: Date,
@@ -57,5 +56,30 @@ const packageTypeSchema = new Schema({
         ],
     }
 });
+
+
+packageTypeSchema.methods.addPackage = function (newItem) {
+    this.package.items.push(newItem);
+    return this.save();
+};
+
+packageTypeSchema.methods.updatePackage = function ([id, newItem]) {
+    const item = this.package.items.find(item => item._id.toString() === id.toString());
+    if (item) {
+        Object.assign(item, newItem); // update item with new values
+        this.markModified('package'); // tell Mongoose it changed
+        return this.save();
+    } else {
+        return Promise.reject(new Error('Item not found'));
+    }
+};
+
+packageTypeSchema.methods.removePackage = function (packageId) {
+    // Convert to string for safe comparison
+    this.package.items = this.package.items.filter(item => item._id.toString() !== packageId.toString());
+    this.markModified('package'); // Necessary for nested object changes
+    return this.save();
+};
+
 
 module.exports = mongoose.model('package_types', packageTypeSchema); // Model name 'Package'

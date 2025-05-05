@@ -33,3 +33,19 @@ exports.packageTypePostValidation = [
     body('name').notEmpty().withMessage('Name is required').isLength({ min: 4, max: 25 }).withMessage("Package Type min length should be 4 and max 25"),
     body('status').notEmpty().withMessage("Status is required").isBoolean().withMessage("Status should be true or false")
 ];
+
+exports.postPackageValidation = [
+    body('name').notEmpty().withMessage("Name is required").isLength({ max: 255 }).withMessage("Name can be max of 255 length"),
+    body('description').notEmpty().withMessage("Description is required").isLength({ max: 65535 }).withMessage("Description can be maximum 65535"),
+    body('packagetype').notEmpty().withMessage('Package type is required').isMongoId().withMessage("Package Type should be object Id"),
+    body('status').notEmpty().withMessage("Status is required").isBoolean().withMessage("Status should be of boolean type"),
+    body('amount')
+        .notEmpty().withMessage("Amount is required")
+        .isNumeric().withMessage("Amount must be a number")
+        .custom((value) => {
+            if (Number(value) > 1_000_000_000_000) {
+                throw new Error("Amount is too large");
+            }
+            return true;
+        }),
+]
