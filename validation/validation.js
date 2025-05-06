@@ -49,3 +49,8 @@ exports.postPackageValidation = [
             return true;
         }),
 ]
+
+exports.postPermissionModule = [
+    body('name').notEmpty().withMessage("Name is required").isLength({ max: 255 }).withMessage("Permission module can be max of 255 length"),
+    body('status').notEmpty().withMessage("Status is required").isBoolean().withMessage("It should be of true or false type")
+]

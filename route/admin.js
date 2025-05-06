@@ -4,7 +4,7 @@ const isAuth = require('../middleware/is-auth')
 const validation = require('../validation/validation');
 const roleController = require('../controller/RoleAPIController');
 const packageAPIController = require('../controller/PackageAPIController');
-const permissionController = require('../controller/PermissionAPIController');
+const permissionModuleController = require('../controller/PermissionModuleAPIController');
 const packageTypeController = require('../controller/PackageTypeAPIController');
 
 //routes for roles
@@ -13,8 +13,9 @@ router.post('/role', isAuth, validation.postRoleValidation, roleController.postR
 router.post('/role/user', isAuth, validation.roleUserPostValidation, roleController.postRoleUserAPI)
 
 //routes for permission
-router.get('/permission', isAuth, permissionController.getPermissionAPI);
-router.post('/permission', isAuth, permissionController.postPermissionAPI);
+router.get('/permission-module', isAuth, permissionModuleController.getPermissionModuleAPI);
+router.post('/permission-module', isAuth, validation.postPermissionModule, permissionModuleController.postPermissionModuleAPI);
+router.put('/permission-module/:permissionId', isAuth, validation.postPermissionModule, permissionModuleController.putPermissionModuleAPI);
 
 //routes for package type
 router.get('/package-type', isAuth, packageTypeController.getPackageTypeAPI);

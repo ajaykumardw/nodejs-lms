@@ -29,6 +29,9 @@ exports.postAPILogIn = (req, res, next) => {
                 throw error;
             }
 
+            const expiresInSeconds = expireTime * 60 * 60; // convert to seconds
+            const expirationTimestamp = Math.floor(Date.now() / 1000) + expiresInSeconds;
+
             const token = jwt.sign(
                 { email: loadedUser.email, userId: loadedUser._id.toString() },
                 jwtSecretKey,
@@ -40,6 +43,7 @@ exports.postAPILogIn = (req, res, next) => {
                 statusCode: 200,
                 message: "User logged in successfully!",
                 token: token,
+                expiresAt: expirationTimestamp,
                 userId: loadedUser._id.toString(),
                 email: loadedUser.email,
                 name: loadedUser.first_name + " " + loadedUser.last_name
