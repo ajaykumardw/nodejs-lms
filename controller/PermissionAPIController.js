@@ -7,13 +7,17 @@ exports.getPermission = async (req, res, next) => {
 
     const permissionModule = await PermissionModule.find({ created_by: userId }, { permission: 1 });
 
-    if (!permissionModule) {
+    const totalPermissionModule = await PermissionModule.find({ 'permission.0': { $exists: true } });
+
+    if (!permissionModule || !totalPermissionModule) {
         const error = new Error("Permission module does not exist!");
         error.statusCode = 404;
         throw error;
     }
 
     let allPermission = [];
+
+    let totalPermission = [];
 
     permissionModule.forEach((permModulDoc) => {
 
@@ -30,11 +34,27 @@ exports.getPermission = async (req, res, next) => {
         }
     })
 
+    totalPermissionModule.forEach((totPermission) => {
+        const permissId = totPermission._id;
+        if (totPermission?.permission?.length) {
+            totPermission.permission.forEach((item, index) => {
+                totalPermission.push({
+                    ...item.toObject(), // convert Mongoose subdocument to plain object
+                    permission_module_id: permissId,
+                    index: index,
+                });
+            })
+        }
+    })
+
     res.status(200).json({
         status: "Success",
         statusCode: 200,
         message: "Data fetched successfully",
-        data: allPermission,
+        data: {
+            allPermission,
+            totalPermission
+        },
     })
 
 }

@@ -25,7 +25,7 @@ router.put('/permission/:permissionModuleId/:permissionId', isAuth, validation.p
 
 //routes for package type
 router.get('/package-type', isAuth, packageTypeController.getPackageTypeAPI);
-router.post('/package-type', isAuth, validation.packageTypePostValidation, packageTypeController.postPackageType)
+router.post('/package-type', isAuth, validation.packageTypePostValidation, packageTypeController.postPackageType);
 router.put('/package-type/:packageTypeId', isAuth, validation.packageTypePostValidation, packageTypeController.updatePackageTypeAPI);
 
 //routes for package

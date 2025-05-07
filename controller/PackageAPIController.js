@@ -2,19 +2,38 @@ const validation = require('../util/validation')
 const PackageType = require('../model/PackageType');
 
 exports.getPackageAPI = async (req, res, next) => {
+
     const userId = req.userId;
 
     try {
+
         // Get all package types created by this user
         const packageTypes = await PackageType.find({ created_by: userId }, { package: 1 });
 
-        if (!packageTypes) {
+        const totalPackageType = await PackageType.find({ 'package.items.0': { $exists: true } });
+
+        if (!packageTypes || !totalPackageType) {
             const error = new Error("Package type does not exist!");
             error.statusCode = 404;
             throw error;
         }
 
         let allPackages = [];
+
+        let totalPackage = [];
+
+        totalPackageType.forEach((totPackType) => {
+            const packgId = totPackType._id;
+            if (totPackType?.package?.items?.length) {
+                totPackType.package.items.forEach((item, index) => {
+                    totalPackage.push({
+                        ...item.toObject(), // convert Mongoose subdocument to plain object
+                        package_type_id: packgId,
+                        index: index,
+                    });
+                })
+            }
+        })
 
         packageTypes.forEach((pkgTypeDoc) => {
             const packageTypeId = pkgTypeDoc._id;
@@ -34,7 +53,10 @@ exports.getPackageAPI = async (req, res, next) => {
             status: "Success",
             statusCode: 200,
             data: "Data fetched successfully!",
-            data: allPackages,
+            data: {
+                allPackages,
+                totalPackage
+            },
         });
 
     } catch (error) {

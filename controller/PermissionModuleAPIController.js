@@ -2,28 +2,23 @@ const User = require('../model/User');
 const validation = require('../util/validation')
 const PermissionModule = require('../model/PermissionModule');
 
-exports.getPermissionModuleAPI = (req, res, next) => {
+exports.getPermissionModuleAPI = async (req, res, next) => {
 
     const userId = req.userId;
 
-    User.findById(userId).then(user => {
-        if (!user) {
-            const error = new Error("User does not exist");
-            error.statusCode = 404;
-            throw error;
-        }
+    const allPermission = await PermissionModule.find({ created_by: userId })
 
-        return PermissionModule.find({ created_by: user._id })
-    }).then(data => {
-        res.status(200).json({
-            status: "Success",
-            statusCode: 200,
-            message: "Data fetched successfully",
-            data: data,
-        });
-    }).catch(err => {
-        next(err);
-    })
+    const nameData = await PermissionModule.find().select('_id name');
+
+    res.status(200).json({
+        status: "Success",
+        statusCode: 200,
+        message: "Data fetched successfully",
+        data: {
+            allPermission,
+            nameData
+        },
+    });
 
 }
 

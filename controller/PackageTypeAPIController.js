@@ -2,27 +2,29 @@ const User = require('../model/User');
 const validation = require('../util/validation');
 const PackageType = require('../model/PackageType');
 
-exports.getPackageTypeAPI = (req, res, next) => {
-    User.findById(req.userId)
-        .then(user => {
-            if (!user) {
-                const error = new Error('User does not exist');
-                error.statusCode = 401;
-                throw error;
-            }
-            return PackageType.find({ created_by: user._id });
-        })
-        .then(packageTypes => {
-            res.status(200).json({
-                status: 'Success',
-                statusCode: 200,
-                message: "Package Type fetched successfully!",
-                data: packageTypes
-            });
-        })
-        .catch(err => {
-            next(err);
-        });
+exports.getPackageTypeAPI = async (req, res, next) => {
+
+    const userId = req.userId;
+
+    const packageTypes = await PackageType.find({ created_by: userId });
+
+    const nameData = await PackageType.find().select('_id name');
+
+    if (!packageTypes) {
+        const error = new Error('Package Type not exist');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    res.status(200).json({
+        status: 'Success',
+        statusCode: 200,
+        message: "Package Type fetched successfully!",
+        data: {
+            packageTypes,
+            nameData
+        }
+    });
 }
 
 exports.postPackageType = (req, res, next) => {
