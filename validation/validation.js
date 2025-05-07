@@ -54,3 +54,9 @@ exports.postPermissionModule = [
     body('name').notEmpty().withMessage("Name is required").isLength({ max: 255 }).withMessage("Permission module can be max of 255 length"),
     body('status').notEmpty().withMessage("Status is required").isBoolean().withMessage("It should be of true or false type")
 ]
+
+exports.postPermission = [
+    body('name').notEmpty().withMessage("Name is required").isLength({ max: 255 }).withMessage("Name max length should be 255"),
+    body('status').notEmpty().withMessage("Status is required").isBoolean().withMessage("Status should be boolean"),
+    body('permissionmodule').notEmpty().withMessage("Permission module is required")
+];

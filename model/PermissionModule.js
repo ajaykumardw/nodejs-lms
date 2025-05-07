@@ -1,69 +1,96 @@
 const mongoose = require('mongoose');
-
 const Schema = mongoose.Schema;
 
-const permissionModuleSchema = new Schema({
-    name: {
-        type: String, // VARCHAR(255) 
-        maxlength: 255, // Limit the length to 255 characters
-        required: true, // name is required
+const permissionItemSchema = new Schema({
+    permission_module_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: 'permission_modules',
     },
-    company_id: {
-        type: mongoose.Schema.Types.ObjectId, // BIGINT 
-        required: true, // company_id is required
-        ref: 'users', // Reference to 'companies' collection
+    name: {
+        type: String,
+        maxlength: 255,
+        required: true,
+    },
+    slug: {
+        type: String,
+        maxlength: 255,
+        required: true,
     },
     status: {
         type: Boolean,
-        required: true
+        required: true,
     },
     created_by: {
-        type: mongoose.Schema.Types.ObjectId, // BIGINT 
-        required: true, // created_by is required
-        ref: 'users', // Reference to 'users' collection (assuming there's a 'users' collection)
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: 'users',
     },
     created_at: {
-        type: Date, // DATETIME 
-        required: true, // created_at is required
-        default: Date.now, // Default to current date/time
+        type: Date,
+        required: true,
+        default: Date.now,
     },
     updated_at: {
-        type: Date, // TIMESTAMP 
-        required: false, // updated_at is optional
-    },
-    permission: {
-        items: [{
-            permission_module_id: {
-                type: mongoose.Schema.Types.ObjectId, // BIGINT 
-                required: true, // permission_module_id is required
-                ref: 'permission_modules', // Reference to 'permission_modules' collection
-            },
-            name: {
-                type: String, // VARCHAR(255) 
-                maxlength: 255, // Limit the length to 255 characters
-                required: true, // name is required
-            },
-            slug: {
-                type: String, // VARCHAR(255) 
-                maxlength: 255, // Limit the length to 255 characters
-                required: true, // slug is required
-            },
-            created_by: {
-                type: mongoose.Schema.Types.ObjectId, // BIGINT 
-                required: true, // created_by is required
-                ref: 'users', // Reference to 'users' collection
-            },
-            created_at: {
-                type: Date, // DATETIME 
-                required: true, // created_at is required
-                default: Date.now, // Default to current date/time
-            },
-            updated_at: {
-                type: Date, // TIMESTAMP 
-                required: false, // updated_at is optional
-            }
-        }]
+        type: Date,
     }
 });
 
-module.exports = mongoose.model('permission_modules', permissionModuleSchema); // Model name 'PermissionModule'
+const permissionModuleSchema = new Schema({
+    name: {
+        type: String,
+        maxlength: 255,
+        required: true,
+    },
+    company_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: 'users', // Consider changing this to 'companies' if that's the intent
+    },
+    status: {
+        type: Boolean,
+        required: true,
+    },
+    created_by: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: 'users',
+    },
+    created_at: {
+        type: Date,
+        required: true,
+        default: Date.now,
+    },
+    updated_at: {
+        type: Date,
+    },
+    permission: [permissionItemSchema], // DIRECTLY use an array here
+});
+
+permissionModuleSchema.methods.addPermission = function (newItem) {
+    this.permission.push(newItem);
+    return this.save();
+};
+
+permissionModuleSchema.methods.removePermission = function (permissionId) {
+    this.permission = this.permission.filter(item =>
+        item._id.toString() !== permissionId.toString()
+    );
+    this.markModified('permission');
+    return this.save();
+};
+
+permissionModuleSchema.methods.updatePermission = function ([permissionId, newItem]) {
+    const item = this.permission.find(item =>
+        item._id.toString() === permissionId.toString()
+    );
+    if (item) {
+        Object.assign(item, newItem);
+        this.markModified('permission');
+        return this.save();
+    } else {
+        return Promise.reject(new Error('Permission item not found'));
+    }
+};
+
+module.exports = mongoose.model('permission_modules', permissionModuleSchema);
