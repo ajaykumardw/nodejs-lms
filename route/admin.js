@@ -11,7 +11,9 @@ const packageTypeController = require('../controller/PackageTypeAPIController');
 //routes for roles
 router.get('/role', isAuth, roleController.getRoleAPI);
 router.post('/role', isAuth, validation.postRoleValidation, roleController.postRoleAPI);
+router.get('/role/create', isAuth, roleController.createDataAPI);
 router.post('/role/user', isAuth, validation.roleUserPostValidation, roleController.postRoleUserAPI)
+router.put('/role/:roleId', isAuth, validation.postRoleValidation, roleController.putRole);
 
 //routes for permission
 router.get('/permission-module', isAuth, permissionModuleController.getPermissionModuleAPI);
@@ -20,6 +22,7 @@ router.put('/permission-module/:permissionId', isAuth, validation.postPermission
 
 router.get('/permission', isAuth, permissionController.getPermission);
 router.post('/permission', isAuth, validation.postPermission, permissionController.postPermission);
+router.get('/permission/edit/:permissionId', isAuth, permissionController.editPermission);
 router.get('/permission/create', isAuth, permissionController.createPermission);
 router.put('/permission/:permissionModuleId/:permissionId', isAuth, validation.postPermission, permissionController.putPermission)
 

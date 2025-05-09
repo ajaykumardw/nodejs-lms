@@ -2,11 +2,6 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const permissionItemSchema = new Schema({
-    permission_module_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true,
-        ref: 'permission_modules',
-    },
     name: {
         type: String,
         maxlength: 255,

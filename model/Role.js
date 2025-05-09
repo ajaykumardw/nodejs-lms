@@ -1,22 +1,21 @@
 const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-const schema = mongoose.Schema;
-
-const roleSchema = new schema({
+const roleSchema = new Schema({
     company_id: {
-        type: schema.Types.ObjectId,
+        type: Schema.Types.ObjectId,
         required: true,
         ref: "users"
     },
     name: {
         type: String,
         required: true,
-        maxlength: 255,
+        maxlength: 255
     },
     description: {
         type: String,
         required: true,
-        maxlength: 5000,
+        maxlength: 5000
     },
     type: {
         type: Boolean,
@@ -24,14 +23,24 @@ const roleSchema = new schema({
     },
     status: {
         type: Boolean,
-        default: 0,
+        default: false,
         required: true
     },
     created_by: {
-        type: mongoose.Schema.Types.ObjectId,
+        type: Schema.Types.ObjectId,
         ref: "users",
-        required: true,
+        required: true
     },
+    permissions: {
+        type: Map,
+        of: [
+            {
+                type: Schema.Types.ObjectId,
+                ref: "permissions" // or your permission model
+            }
+        ],
+        required: false
+    }
 });
 
 module.exports = mongoose.model('roles', roleSchema);
