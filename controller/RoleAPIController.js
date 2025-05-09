@@ -7,7 +7,7 @@ const PermissionModule = require('../model/PermissionModule');
 
 exports.getRoleAPI = (req, res, next) => {
     Role.find({ created_by: req.userId })
-        .select('type name description status, permissions') // select specific fields from Role
+        .select('type name description status permissions') // select specific fields from Role
         .populate('created_by', 'first_name last_name email')   // populate only name and email from User
         .populate('company_id', 'first_name last_name email')
         .then(data => {
