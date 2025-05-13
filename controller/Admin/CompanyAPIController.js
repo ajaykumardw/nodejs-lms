@@ -1,6 +1,7 @@
 const User = require('../../model/User');
 const Country = require('../../model/Country');
 const PackageType = require('../../model/PackageType');
+const bcrypt = require('bcryptjs')
 
 exports.getCompanyIndexAPI = async (req, res, next) => {
 
@@ -73,14 +74,14 @@ exports.postCompanyAPI = async (req, res, next) => {
         } = req.body;
 
         // Optional: hash password
-        // const hashedPassword = await bcrypt.hash(password, 12);
+        const hashedPassword = await bcrypt.hash(password, 12);
 
         const user = new User({
             first_name,
             last_name,
             company_name,
             email,
-            password, // Use hashedPassword if hashing
+            password: hashedPassword, // Use hashedPassword if hashing
             country_id,
             state_id,
             city_id,
