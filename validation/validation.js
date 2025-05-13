@@ -56,3 +56,85 @@ exports.postPermission = [
     body('status').notEmpty().withMessage("Status is required").isBoolean().withMessage("Status should be boolean"),
     body('permissionmodule').notEmpty().withMessage("Permission module is required")
 ];
+
+exports.postCompany = [
+    body('company_id')
+        .notEmpty().withMessage("Company ID is required")
+        .isMongoId().withMessage("Invalid Company ID"),
+
+    body('first_name')
+        .notEmpty().withMessage("First name is required")
+        .isLength({ max: 255 }).withMessage("First name max length is 255"),
+
+    body('last_name')
+        .notEmpty().withMessage("Last name is required")
+        .isLength({ max: 255 }).withMessage("Last name max length is 255"),
+
+    body('company_name')
+        .optional()
+        .isLength({ max: 255 })
+        .withMessage('Company name max length is 255'),
+
+    body('email')
+        .notEmpty().withMessage("Email is required")
+        .isEmail().withMessage("Email must be valid")
+        .isLength({ max: 255 }).withMessage("Email max length is 255"),
+
+    body('password')
+        .notEmpty().withMessage("Password is required")
+        .isLength({ max: 255 }).withMessage("Password max length is 255"),
+
+    body('phone')
+        .notEmpty().withMessage("Phone number is required")
+        .isLength({ max: 255 }).withMessage("Phone number max length is 255"),
+
+    body('status')
+        .optional()
+        .isBoolean().withMessage("Status must be boolean"),
+
+    body('dob')
+        .notEmpty().withMessage("Date of birth is required")
+        .isISO8601().withMessage("Date of birth must be a valid date"),
+
+    body('address')
+        .optional()
+        .isLength({ max: 4000 }).withMessage("Address max length is 4000"),
+
+    body('country_id')
+        .optional()
+        .isMongoId().withMessage("Invalid Country ID"),
+
+    body('state_id')
+        .optional()
+        .isMongoId().withMessage("Invalid State ID"),
+
+    body('city_id')
+        .optional()
+        .isMongoId().withMessage("Invalid City ID"),
+
+    body('photo')
+        .optional(),
+    // .isLength({ max: 5000 }).withMessage("Photo path max length is 5000"),
+
+    body('gst_no').optional().isLength({ min: 15, max: 15 }).withMessage("GST No should be of 15 digit"),
+
+    body('pan_no').optional().isLength({ min: 10, max: 10 }).withMessage("PAN No should be of 10 digit"),
+
+    body('website').optional().isLength({ min: 8, max: 10 }).withMessage("website min and max length should be 8 and 10"),
+
+    body('is_verified')
+        .optional()
+        .isBoolean().withMessage("is_verified must be boolean"),
+
+    body('created_by')
+        .notEmpty().withMessage("created_by is required")
+        .isInt().withMessage("created_by must be a number"),
+
+    body('master_company_id')
+        .notEmpty().withMessage("master_company_id is required")
+        .isMongoId().withMessage("Invalid master_company_id"),
+
+    body('parent_company_id')
+        .notEmpty().withMessage("parent_company_id is required")
+        .isMongoId().withMessage("Invalid parent_company_id")
+];

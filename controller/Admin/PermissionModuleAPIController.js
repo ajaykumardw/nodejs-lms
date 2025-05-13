@@ -1,6 +1,6 @@
-const User = require('../model/User');
-const validation = require('../util/validation')
-const PermissionModule = require('../model/PermissionModule');
+const User = require('../../model/User');
+const validation = require('../../util/validation')
+const PermissionModule = require('../../model/PermissionModule');
 
 exports.getPermissionModuleAPI = async (req, res, next) => {
 

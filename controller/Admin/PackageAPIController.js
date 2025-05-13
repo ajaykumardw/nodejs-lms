@@ -1,5 +1,5 @@
-const validation = require('../util/validation')
-const PackageType = require('../model/PackageType');
+const validation = require('../../util/validation')
+const PackageType = require('../../model/PackageType');
 
 exports.getPackageAPI = async (req, res, next) => {
 

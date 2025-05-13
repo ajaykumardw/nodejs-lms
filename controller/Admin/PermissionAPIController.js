@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
-const validation = require('../util/validation')
-const PermissionModule = require('../model/PermissionModule');
+const validation = require('../../util/validation')
+const PermissionModule = require('../../model/PermissionModule');
 
 exports.getPermission = async (req, res, next) => {
     const userId = req.userId;

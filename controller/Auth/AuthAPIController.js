@@ -1,9 +1,9 @@
 require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('../model/User');
+const User = require('../../model/User');
 const jwtSecretKey = process.env.JWT_SECRET;
-const validate = require('../util/validation')
+const validate = require('../../util/validation')
 const expireTime = process.env.token_expire_time;
 
 exports.postAPILogIn = (req, res, next) => {

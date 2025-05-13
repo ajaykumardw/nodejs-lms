@@ -1,9 +1,9 @@
 require('dotenv').config();
-const Role = require('../model/Role');
-const User = require('../model/User');
-const RoleUser = require('../model/RoleUser');
-const validate = require('../util/validation');
-const PermissionModule = require('../model/PermissionModule');
+const Role = require('../../model/Role');
+const User = require('../../model/User');
+const RoleUser = require('../../model/RoleUser');
+const validate = require('../../util/validation');
+const PermissionModule = require('../../model/PermissionModule');
 
 exports.getRoleAPI = (req, res, next) => {
     Role.find({ created_by: req.userId })

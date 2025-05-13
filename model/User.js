@@ -1,12 +1,15 @@
 const mongoose = require('mongoose');
-
-const Schema = mongoose.Schema;
+const { Schema, Types } = mongoose;
 
 const userSchema = new Schema({
     company_id: {
-        type: Schema.Types.ObjectId, // Same note: use String or Number if needed
+        type: Schema.Types.Mixed,
         required: true,
         ref: "users",
+        validate: {
+            validator: v => Types.ObjectId.isValid(v) || typeof v === 'number',
+            message: props => `${props.value} is not a valid ObjectId or number`,
+        },
     },
     first_name: {
         type: String,
@@ -17,6 +20,11 @@ const userSchema = new Schema({
         type: String,
         maxlength: 255,
         required: true,
+    },
+    company_name: {
+        type: String,
+        maxlength: 255,
+        required: false
     },
     email: {
         type: String,
@@ -37,29 +45,49 @@ const userSchema = new Schema({
         type: Boolean,
         default: 0,
     },
-    dob: {
-        type: Date,
-        required: true,
-    },
     address: {
         type: String,
         maxlength: 4000,
     },
+    pincode: {
+        type: String,
+        required: true,
+        minLength: 6,
+        maxlength: 10
+    },
+    package_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: false,
+        ref: "package"
+    },
     country_id: {
-        type: Schema.Types.ObjectId,
+        type: String,
         ref: "countries",
+        required: true,
     },
     state_id: {
-        type: Schema.Types.ObjectId,
-        ref: "states"
+        type: String,
+        required: true,
     },
     city_id: {
-        type: Schema.Types.ObjectId,
-        ref: "cities"
+        type: String,
+        required: true,
+    },
+    gst_no: {
+        type: String,
+        required: false,
+    },
+    pan_no: {
+        type: String,
+        required: false,
+    },
+    website: {
+        type: String,
+        required: false,
     },
     photo: {
         type: String,
-        maxlength: 255
+        // maxlength: 255
     },
     is_verified: {
         type: Boolean
@@ -76,19 +104,27 @@ const userSchema = new Schema({
         type: Date
     },
     created_by: {
-        type: Number,
+        type: mongoose.Schema.Types.ObjectId,
         ref: "users",
         required: true,
     },
     master_company_id: {
-        type: Schema.Types.ObjectId, // Again, consider String or Number
+        type: Schema.Types.Mixed,
         ref: "users",
         required: true,
+        validate: {
+            validator: v => Types.ObjectId.isValid(v) || typeof v === 'number',
+            message: props => `${props.value} is not a valid ObjectId or number`,
+        },
     },
     parent_company_id: {
-        type: Schema.Types.ObjectId,
+        type: Schema.Types.Mixed,
         ref: "users",
         required: true,
+        validate: {
+            validator: v => Types.ObjectId.isValid(v) || typeof v === 'number',
+            message: props => `${props.value} is not a valid ObjectId or number`,
+        },
     },
 });
 
