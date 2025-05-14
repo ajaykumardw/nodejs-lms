@@ -52,6 +52,16 @@ const packageTypeSchema = new Schema({
                     type: Date,
                     required: false, // Updated date is optional
                 },
+                permissions: {
+                    type: Map,
+                    of: [
+                        {
+                            type: Schema.Types.ObjectId,
+                            ref: "permissions" // or your permission model
+                        }
+                    ],
+                    required: false
+                }
             }
         ],
     }
@@ -65,9 +75,18 @@ packageTypeSchema.methods.addPackage = function (newItem) {
 
 packageTypeSchema.methods.updatePackage = function ([id, newItem]) {
     const item = this.package.items.find(item => item._id.toString() === id.toString());
+
     if (item) {
-        Object.assign(item, newItem); // update item with new values
-        this.markModified('package'); // tell Mongoose it changed
+        // Replace the permissions object if provided
+        if (newItem.permissions) {
+            item.permissions = { ...newItem.permissions };
+        }
+
+        // Update other fields, excluding permissions
+        const { permissions, ...otherFields } = newItem;
+        Object.assign(item, otherFields);
+
+        this.markModified('package'); // mark the whole package field as modified
         return this.save();
     } else {
         return Promise.reject(new Error('Item not found'));

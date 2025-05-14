@@ -1,5 +1,6 @@
 const validation = require('../../util/validation')
 const PackageType = require('../../model/PackageType');
+const PermissionModule = require('../../model/PermissionModule');
 
 exports.getPackageAPI = async (req, res, next) => {
 
@@ -27,7 +28,8 @@ exports.getPackageAPI = async (req, res, next) => {
             if (totPackType?.package?.items?.length) {
                 totPackType.package.items.forEach((item, index) => {
                     totalPackage.push({
-                        ...item.toObject(), // convert Mongoose subdocument to plain object
+                        ...item.toObject(),
+                        permissions: item.permissions, // convert Mongoose subdocument to plain object
                         package_type_id: packgId,
                         index: index,
                     });
@@ -42,6 +44,7 @@ exports.getPackageAPI = async (req, res, next) => {
                 pkgTypeDoc.package.items.forEach((item, index) => {
                     allPackages.push({
                         ...item.toObject(), // convert Mongoose subdocument to plain object
+                        permissions: item.permissions, // convert Mongoose subdocument to plain object
                         package_type_id: packageTypeId,
                         index: index,
                     });
@@ -64,26 +67,26 @@ exports.getPackageAPI = async (req, res, next) => {
     }
 };
 
-exports.createPackageAPI = (req, res, next) => {
+exports.createPackageAPI = async (req, res, next) => {
     const userId = req.userId;
-    PackageType.find({ created_by: userId })
-        .select('id name')
-        .then(result => {
-            res.status(200).json({
-                status: "Success",
-                statusCode: 200,
-                message: "Data fetched successfully!",
-                data: result
-            });
-        }).catch(err => {
-            next(err);
-        })
+    const packageType = await PackageType.find({ created_by: userId }).select('id name');
+    const permission = await PermissionModule.find({ created_by: userId }).select('_id name permission')
+
+    res.status(200).json({
+        status: "Success",
+        statusCode: 200,
+        message: "Data fetched successfully!",
+        data: {
+            packageType,
+            permission
+        }
+    });
 }
 
 exports.postPackageAPI = async (req, res, next) => {
     if (!validation(req, res)) return;
     const userId = req.userId;
-    const { name, description, amount, packagetype, status } = req.body;
+    const { name, description, amount, packagetype, status, permissions } = req.body;
     try {
         const package_type = await PackageType.findOne({ _id: packagetype, created_by: userId });
         if (!package_type) {
@@ -97,7 +100,8 @@ exports.postPackageAPI = async (req, res, next) => {
             description,
             amount,
             status,
-            package_type_id: packagetype
+            package_type_id: packagetype,
+            permissions
         };
 
         await package_type.addPackage(newItem);
@@ -120,7 +124,7 @@ exports.putPackageAPI = async (req, res, next) => {
     const packageId = req.params.packageId;
     const packageTypeId = req.params.packageTypeId;
 
-    const { name, description, amount, packagetype, status, _id } = req.body;
+    const { name, description, amount, packagetype, status, _id, permissions } = req.body;
 
     const packageType = await PackageType.findOne({ created_by: userId, _id: packagetype });
 
@@ -135,7 +139,8 @@ exports.putPackageAPI = async (req, res, next) => {
         description,
         amount,
         status,
-        package_type_id: packageType
+        package_type_id: packageType,
+        permissions
     };
 
     if (packageTypeId.toString() !== packagetype.toString()) {
@@ -145,7 +150,8 @@ exports.putPackageAPI = async (req, res, next) => {
             description,
             amount,
             status,
-            package_type_id: packageTypeId
+            package_type_id: packageTypeId,
+            permissions
         };
 
         const oldPackageType = await PackageType.findOne({ created_by: userId, _id: packageTypeId });
