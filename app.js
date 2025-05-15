@@ -23,6 +23,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, "public")));
 
 const imageDir = path.join(__dirname, "/public/img/user-profile");
+
 if (!fs.existsSync(imageDir)) {
     fs.mkdirSync(imageDir);
 }
