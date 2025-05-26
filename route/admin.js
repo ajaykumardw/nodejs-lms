@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const isAuth = require('../middleware/is-auth')
-const validation = require('../validation/validation');
+const validation = require('../validation/Adminvalidation');
 const roleController = require('../controller/Admin/RoleAPIController');
 const packageAPIController = require('../controller/Admin/PackageAPIController');
 const permissionController = require('../controller/Admin/PermissionAPIController');
@@ -44,7 +44,9 @@ router.put('/package/:packageTypeId/:packageId', isAuth, packageAPIController.pu
 router.get('/company', isAuth, companyAPIController.getCompanyIndexAPI);
 router.post('/company', isAuth, validation.postCompany, companyAPIController.postCompanyAPI);
 router.get('/company/create', isAuth, companyAPIController.createCompanyAPI);
-router.get('/company/email/check/:email', isAuth, companyAPIController.checkEmailCompanyAPI)
+router.get('/company/:id/edit', isAuth, companyAPIController.editCompanyAPI);
+router.put('/company/:id', isAuth, companyAPIController.putCompanyAPI);
+router.get('/company/email/check/:email/:id', isAuth, companyAPIController.checkEmailCompanyAPI)
 
 
 router.post('/designation', isAuth, designationAPIController.postDesignationAPI);
