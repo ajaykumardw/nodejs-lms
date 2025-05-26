@@ -138,3 +138,9 @@ exports.postCompany = [
         .notEmpty().withMessage("parent_company_id is required")
         .isMongoId().withMessage("Invalid parent_company_id")
 ];
+
+
+exports.postDesignation = [
+    body('name').notEmpty().withMessage("Name is required").isLength({ max: 255 }).withMessage("Name max length should be 255"),
+    body('status').notEmpty().withMessage("Status is required").isBoolean().withMessage("Status should be boolean"),
+];

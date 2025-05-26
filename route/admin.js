@@ -8,6 +8,8 @@ const permissionController = require('../controller/Admin/PermissionAPIControlle
 const permissionModuleController = require('../controller/Admin/PermissionModuleAPIController');
 const packageTypeController = require('../controller/Admin/PackageTypeAPIController');
 const companyAPIController = require('../controller/Admin/CompanyAPIController');
+const designationAPIController = require('../controller/Admin/DesignationAPIController');
+const ParticipationTypeAPIController = require('../controller/Admin/ParticipationTypeAPIController');
 
 //routes for roles
 router.get('/role', isAuth, roleController.getRoleAPI);
@@ -43,5 +45,16 @@ router.get('/company', isAuth, companyAPIController.getCompanyIndexAPI);
 router.post('/company', isAuth, validation.postCompany, companyAPIController.postCompanyAPI);
 router.get('/company/create', isAuth, companyAPIController.createCompanyAPI);
 router.get('/company/email/check/:email', isAuth, companyAPIController.checkEmailCompanyAPI)
+
+
+router.post('/designation', isAuth, designationAPIController.postDesignationAPI);
+router.get('/designations', isAuth, designationAPIController.getDesignationAPI);
+router.put('/designation/:id', isAuth, designationAPIController.putDesignationAPI)
+router.delete('/designation/:id', isAuth, designationAPIController.deleteDesignationAPI)
+
+router.post('/participation_type', isAuth, ParticipationTypeAPIController.postAPI);
+router.get('/participation_types', isAuth, ParticipationTypeAPIController.getAPI);
+router.put('/participation_type/:id', isAuth, ParticipationTypeAPIController.putAPI)
+router.delete('/participation_type/:id', isAuth, ParticipationTypeAPIController.deleteAPI)
 
 module.exports = router;
