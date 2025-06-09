@@ -10,7 +10,7 @@ function encrypt(text) {
   return `${encrypted}:${iv.toString('hex')}`;
 }
 
-function decrypt(encryptedText) {
+function decrypt(encryptedText) { console.log('encryptedText', encryptedText)
     if (typeof encryptedText !== 'string') return encryptedText;
     if (!encryptedText.includes(':')) return encryptedText;  // Not encrypted or already decrypted
   

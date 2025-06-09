@@ -5,6 +5,7 @@ const User = require('../../model/User');
 const jwtSecretKey = process.env.JWT_SECRET;
 const validate = require('../../util/validation')
 const expireTime = process.env.token_expire_time;
+const { hash, normalizeEmail } = require('../../util/encryption');
 
 exports.postAPILogIn = (req, res, next) => {
     if (!validate(req, res)) return;
@@ -12,7 +13,7 @@ exports.postAPILogIn = (req, res, next) => {
     const { email, password } = req.body;
     let loadedUser;
 
-    User.findOne({ email: email })
+    User.findOne({ email_hash: hash(normalizeEmail(email)) })
         .then(user => {
             if (!user) {
                 const error = new Error("A user with this email cannot be found!");
