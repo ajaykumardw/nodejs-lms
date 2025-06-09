@@ -205,3 +205,16 @@ exports.putCompanyAPI = async (req, res, next) => {
         console.log("Error occured", error);
     }
 }
+
+exports.getCountryAPI = async (req, res, next) => {
+    const country = await Country.find();
+    res.json({
+        status: "Success",
+        statusCode: 200,
+        message: "Data fetched successfully",
+        data: {
+            country
+        }
+    });
+
+}

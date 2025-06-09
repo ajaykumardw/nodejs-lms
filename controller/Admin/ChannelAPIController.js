@@ -5,22 +5,12 @@ const { successResponse, errorResponse, warningResponse } = require('../../util/
 const getDesignationAPI = async (req, res, next) => {
     try {
         const companyId = req.user?._id || req.userId;
-
-        const filter = { company_id: companyId };
-
-        // If status is present in query, add it to the filter
-        if (req.query.status !== undefined) {
-            filter.status = req.query.status === 'true';
-        }
-
-        const data = await Designation.find(filter).select('name status');
-
+        const data = await Designation.find({ company_id: companyId }).select('name status');
         return successResponse(res, "Designation fetched successfully!", data);
     } catch (error) {
         next(error);
     }
 };
-
 
 const postDesignationAPI = async (req, res, next) => {
     try {

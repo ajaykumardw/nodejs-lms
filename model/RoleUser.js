@@ -13,11 +13,17 @@ const roleUserSchema = new schema({
         ref: "users",
         required: true
     },
-    created_by: {
+    assigned_by: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "users",
-        required: true,
+        required: false,
     },
+    assigned_at: { 
+        type: Date, 
+        default: Date.now 
+    }
 });
+
+roleUserSchema.index({ user_id: 1, role_id: 1 }, { unique: true });
 
 module.exports = mongoose.model('role_user', roleUserSchema);

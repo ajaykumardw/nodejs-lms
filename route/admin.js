@@ -10,6 +10,7 @@ const packageTypeController = require('../controller/Admin/PackageTypeAPIControl
 const companyAPIController = require('../controller/Admin/CompanyAPIController');
 const designationAPIController = require('../controller/Admin/DesignationAPIController');
 const ParticipationTypeAPIController = require('../controller/Admin/ParticipationTypeAPIController');
+const UserAPIController = require('../controller/Admin/UserAPIController');
 
 //routes for roles
 router.get('/role', isAuth, roleController.getRoleAPI);
@@ -58,5 +59,18 @@ router.post('/participation_type', isAuth, ParticipationTypeAPIController.postAP
 router.get('/participation_types', isAuth, ParticipationTypeAPIController.getAPI);
 router.put('/participation_type/:id', isAuth, ParticipationTypeAPIController.putAPI)
 router.delete('/participation_type/:id', isAuth, ParticipationTypeAPIController.deleteAPI)
+
+//user routes
+router.post('/user', isAuth, UserAPIController.createUserAPI);
+router.put('/user/:id', isAuth, UserAPIController.updateUserAPI);
+router.delete('/user/:id', isAuth, UserAPIController.deleteAPI);
+router.get('/user/:id/edit', isAuth, UserAPIController.editAPI);
+router.get('/user/search', isAuth, UserAPIController.searchUserAPI);
+router.put('/user/update-password/:id', isAuth, UserAPIController.updatePasswordAPI);
+router.put('/user/attach/empcode/:id', isAuth, UserAPIController.attachNewUserCodeAPI);
+router.put('/user/mark/active/empcode/:id', isAuth, UserAPIController.markActiveUserCodeAPI);
+router.put('/user/status/update/:id', isAuth, UserAPIController.updateStatusAPI);
+
+router.get('/countries', isAuth, companyAPIController.getCountryAPI);
 
 module.exports = router;
