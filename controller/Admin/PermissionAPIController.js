@@ -3,68 +3,85 @@ const validation = require('../../util/validation')
 const PermissionModule = require('../../model/PermissionModule');
 
 exports.getPermission = async (req, res, next) => {
-    const userId = req.userId;
+    const userId = req.userId?.toString();
 
-    const permissionModules = await PermissionModule.find(
-        { created_by: userId },
-        { permission: 1 }
-    );
+    try {
+        // Get all permission modules including permission and name
+        const allPermissionModules = await PermissionModule.find(
+            {
+                $or: [
+                    { created_by: userId },
+                    { 'permission.0': { $exists: true } }
+                ]
+            },
+            { permission: 1, name: 1, created_by: 1 }
+        ).lean();
 
-    const totalPermissionModules = await PermissionModule.find(
-        { 'permission.0': { $exists: true } },
-        { permission: 1 }
-    );
+        if (!allPermissionModules || allPermissionModules.length === 0) {
+            const error = new Error("Permission modules do not exist!");
+            error.statusCode = 404;
+            throw error;
+        }
 
-    if (!permissionModules || !totalPermissionModules) {
-        const error = new Error("Permission module does not exist!");
-        error.statusCode = 404;
-        throw error;
-    }
+        const permissionMap = new Map();
 
-    const allPermissionMap = new Map();
-    const totalPermissionMap = new Map();
+        allPermissionModules.forEach((module) => {
+            const moduleId = module._id.toString();
+            const moduleName = module.name || '';
+            const createdBy = module.created_by?.toString();
 
-    for (const permModule of permissionModules) {
-        const perModulId = permModule._id;
+            module.permission?.forEach((perm, index) => {
+                const permId = perm._id.toString();
 
-        if (permModule.permission?.length) {
-            permModule.permission.forEach((item, index) => {
-                if (!allPermissionMap.has(item._id.toString())) {
-                    allPermissionMap.set(item._id.toString(), {
-                        ...item.toObject(),
-                        permission_module_id: perModulId,
+                if (!permissionMap.has(permId)) {
+                    permissionMap.set(permId, {
+                        ...perm,
                         index,
+                        permission_module_ids: [moduleId],
+                        permission_module_names: [moduleName],
+                        created_by_list: [createdBy],
                     });
+                } else {
+                    const existing = permissionMap.get(permId);
+                    existing.permission_module_ids.push(moduleId);
+                    existing.permission_module_names.push(moduleName);
+                    existing.created_by_list.push(createdBy);
                 }
             });
+        });
+
+        const allPermission = [];
+        const totalPermission = [];
+
+        for (const [_, value] of permissionMap.entries()) {
+            const finalPerm = {
+                ...value,
+                permission_module_names: value.permission_module_names.join(', '),
+            };
+
+            // If any of the modules for this permission were created by the current user
+            const isUserCreated = value.created_by_list.some(creatorId => creatorId === userId);
+
+            if (isUserCreated) {
+                allPermission.push(finalPerm);
+            }
+
+            totalPermission.push(finalPerm);
         }
+
+        res.status(200).json({
+            status: "Success",
+            statusCode: 200,
+            message: "Data fetched successfully",
+            data: {
+                allPermission,
+                totalPermission,
+            },
+        });
+
+    } catch (error) {
+        next(error);
     }
-
-    for (const mod of totalPermissionModules) {
-        const modId = mod._id;
-
-        if (mod.permission?.length) {
-            mod.permission.forEach((item, index) => {
-                if (!totalPermissionMap.has(item._id.toString())) {
-                    totalPermissionMap.set(item._id.toString(), {
-                        ...item.toObject(),
-                        permission_module_id: modId,
-                        index,
-                    });
-                }
-            });
-        }
-    }
-
-    res.status(200).json({
-        status: "Success",
-        statusCode: 200,
-        message: "Data fetched successfully",
-        data: {
-            allPermission: Array.from(allPermissionMap.values()),
-            totalPermission: Array.from(totalPermissionMap.values()),
-        },
-    });
 };
 
 exports.createPermission = async (req, res, next) => {

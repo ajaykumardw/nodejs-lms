@@ -6,6 +6,7 @@ const flash = require('connect-flash');
 const bodyParser = require('body-parser');
 const authRoute = require('./route/auth');
 const adminRoute = require('./route/admin');
+const companyRouter = require('./route/company')
 const path = require('path')
 const fs = require('fs')
 
@@ -23,6 +24,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, "public")));
 
 const imageDir = path.join(__dirname, "/public/img/user-profile");
+
 if (!fs.existsSync(imageDir)) {
     fs.mkdirSync(imageDir);
 }
@@ -73,6 +75,7 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api/auth', authRoute);
 app.use('/api/admin', adminRoute);
+app.use('/api/company', companyRouter);
 
 // Error handler (last)
 app.use((error, req, res, next) => {

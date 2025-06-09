@@ -1,5 +1,22 @@
 const mongoose = require('mongoose');
 const { Schema, Types } = mongoose;
+const {
+    encrypt,
+    decrypt,
+    hash,
+    normalizeEmail,
+    normalizePhone
+  } = require('../util/encryption');
+
+const UserCodeSchema = new mongoose.Schema({
+    code: {
+      type: String,
+      required: true,
+      unique: false // unique across users? handled manually
+    },
+    issued_on: Date, // Optional: date when it was issued
+    type: String      // Optional: internal, external, etc.
+  }, { _id: true }); // Avoids creating _id for sub-docs
 
 const userSchema = new Schema({
     company_id: {
@@ -28,18 +45,41 @@ const userSchema = new Schema({
     },
     email: {
         type: String,
+        set: function (val) {
+            const norm = normalizeEmail(val);
+            this.email_hash = hash(norm); // for searching
+            return encrypt(norm);
+        },
+        get: decrypt
+    },
+    email_hash: {
+        type: String
+    },
+    alternative_email: {
+        type: String,
         maxlength: 255,
-        required: true,
+        required: false,
     },
     password: {
         type: String,
         maxlength: 255,
         required: true,
+        // select: false
     },
     phone: {
         type: String,
-        maxlength: 255,
-        required: true,
+        set: function (val) {
+            const norm = normalizePhone(val);
+            this.phone_hash = hash(norm);
+            return encrypt(norm);
+        },
+        get: function (val) {
+            return decrypt(val);
+        },
+
+    },
+    phone_hash: {
+        type: String
     },
     status: {
         type: Boolean,
@@ -126,6 +166,66 @@ const userSchema = new Schema({
             message: props => `${props.value} is not a valid ObjectId or number`,
         },
     },
+    designation_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "destinations",
+    },
+    zone_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "zones",
+    },
+    dob: {
+        type: Date
+    },
+    urn_no: {
+        type: String,
+        required: false,
+    },
+    idfa_code: {
+        type: String,
+        required: false,
+    },
+    application_no: {
+        type: String,
+        required: false,
+    },
+    licence_no: {
+        type: String,
+        required: false,
+    },
+    employee_type: {
+        type: String,
+        required: false,
+    },
+    participation_type_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "participation_types",
+    },
+    codes: [UserCodeSchema], // Array of codes
 });
+
+// UserSchema.index({ 'employee_codes.code': 1 });
+
+userSchema.virtual('emp_id').get(function () {
+    const activeCodeObj = (this.codes || []).find(code => code.type === 'active');
+    return activeCodeObj?.code || null;
+});
+
+userSchema.virtual('roles', {
+    ref: 'role_user',
+    localField: '_id',
+    foreignField: 'user_id',
+    justOne: false
+  });
+
+userSchema.set('toJSON', { virtuals: true, getters: true });
+userSchema.set('toObject', { virtuals: true, getters: true });
+
+// userSchema.pre('save', function (next) {
+//     if (this.isModified('first_name')) {
+//       this.first_name = encrypt(this.first_name.toLowerCase());
+//     }
+//     next();
+//   });
 
 module.exports = mongoose.model("users", userSchema);
