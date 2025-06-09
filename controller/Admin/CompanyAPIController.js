@@ -115,6 +115,106 @@ exports.postCompanyAPI = async (req, res, next) => {
 
 exports.checkEmailCompanyAPI = async (req, res, next) => {
     const email = req.params.email;
-    const userExist = await User.findOne({ email: email });
+    const id = req.params.id;
+
+    const query = { email: email };
+    if (id && id !== 'null' && id !== 'undefined') {
+        query._id = { $ne: id };
+    }
+
+    const userExist = await User.findOne(query);
     res.json({ exists: !!userExist }); // returns { exists: true } or { exists: false }
+};
+
+exports.editCompanyAPI = async (req, res, next) => {
+    try {
+
+        const userId = req.userId;
+        const companyId = req.params.id;
+
+        const company = await User.findOne({ _id: companyId, created_by: userId });
+
+        if (!company) {
+            return res.status(404).json({
+                status: "Error",
+                statusCode: 404,
+                message: "Company not found or access denied",
+            });
+        }
+
+        return res.status(200).json({
+            status: "Success",
+            statusCode: 200,
+            message: "Data fetched successfully",
+            data: company,
+        });
+    } catch (error) {
+        console.error("Error occurred:", error);
+        return res.status(500).json({
+            status: "Error",
+            statusCode: 500,
+            message: "Internal server error",
+        });
+    }
+};
+
+exports.putCompanyAPI = async (req, res, next) => {
+    try {
+        const userId = req.userId;
+        const id = req.params.id;
+
+        const data = await User.findOne({ created_by: userId, _id: id });
+
+        const imageUrl = req.file ? req.file.filename : '';
+
+        const {
+            first_name, last_name, company_name, email,
+            country_id, state_id, city_id, address, status,
+            phone, website, package_id, pincode, gst_no, pan_no
+        } = req.body;
+
+        data.first_name = first_name;
+        data.last_name = last_name;
+        data.company_name = company_name;
+        data.email = email;
+        data.phone = phone;
+        data.address = address;
+        data.pincode = pincode;
+        data.package_id = package_id;
+        data.country_id = country_id;
+        data.state_id = state_id;
+        data.city_id = city_id;
+        data.gst_no = gst_no;
+        data.pan_no = pan_no;
+        data.website = website;
+        data.status = status;
+
+        if (imageUrl && imageUrl != '') {
+            data.photo = imageUrl;
+        }
+
+        await data.save();
+
+        res.status(200).json({
+            status: "Success",
+            statusCode: 200,
+            message: "Company updated successfully!",
+        })
+
+    } catch (error) {
+        console.log("Error occured", error);
+    }
+}
+
+exports.getCountryAPI = async (req, res, next) => {
+    const country = await Country.find();
+    res.json({
+        status: "Success",
+        statusCode: 200,
+        message: "Data fetched successfully",
+        data: {
+            country
+        }
+    });
+
 }
