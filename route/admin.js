@@ -70,6 +70,7 @@ router.put('/user/update-password/:id', isAuth, UserAPIController.updatePassword
 router.put('/user/attach/empcode/:id', isAuth, UserAPIController.attachNewUserCodeAPI);
 router.put('/user/mark/active/empcode/:id', isAuth, UserAPIController.markActiveUserCodeAPI);
 router.put('/user/status/update/:id', isAuth, UserAPIController.updateStatusAPI);
+router.post('/users/import', isAuth, UserAPIController.importAPI);
 
 router.get('/countries', isAuth, companyAPIController.getCountryAPI);
 

@@ -20,6 +20,13 @@ exports.postAPILogIn = (req, res, next) => {
                 error.statusCode = 401;
                 throw error;
             }
+
+            if (!user.status) {
+                const error = new Error("Your account is deactivated!");
+                error.statusCode = 400;
+                throw error;
+            }
+
             loadedUser = user;
             return bcrypt.compare(password, user.password);
         })
