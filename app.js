@@ -7,6 +7,7 @@ const bodyParser = require('body-parser');
 const authRoute = require('./route/auth');
 const adminRoute = require('./route/admin');
 const companyRouter = require('./route/company')
+const appMenu = require('./model/AppMenu');
 const path = require('path')
 const fs = require('fs')
 
@@ -86,9 +87,17 @@ app.use((error, req, res, next) => {
     });
 });
 
+app.use(async (req, res, next) => {
+    console.log("Hello");
+
+
+    next();
+});
+
 // DB connection
 mongoose.connect(MongoURL)
     .then(() => {
+
         app.listen(port, () => {
             console.log(`Server started on ${port}!`);
         });

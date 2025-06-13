@@ -6,17 +6,17 @@ const {
     hash,
     normalizeEmail,
     normalizePhone
-  } = require('../util/encryption');
+} = require('../util/encryption');
 
 const UserCodeSchema = new mongoose.Schema({
     code: {
-      type: String,
-      required: true,
-      unique: false // unique across users? handled manually
+        type: String,
+        required: true,
+        unique: false // unique across users? handled manually
     },
     issued_on: Date, // Optional: date when it was issued
     type: String      // Optional: internal, external, etc.
-  }, { _id: true }); // Avoids creating _id for sub-docs
+}, { _id: true }); // Avoids creating _id for sub-docs
 
 const userSchema = new Schema({
     company_id: {
@@ -206,7 +206,6 @@ const userSchema = new Schema({
 });
 
 // UserSchema.index({ 'employee_codes.code': 1 });
-
 userSchema.virtual('emp_id').get(function () {
     const activeCodeObj = (this.codes || []).find(code => code.type === 'active');
     return activeCodeObj?.code || null;
@@ -217,7 +216,7 @@ userSchema.virtual('roles', {
     localField: '_id',
     foreignField: 'user_id',
     justOne: false
-  });
+});
 
 userSchema.set('toJSON', { virtuals: true, getters: true });
 userSchema.set('toObject', { virtuals: true, getters: true });

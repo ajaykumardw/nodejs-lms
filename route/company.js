@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const isAuth = require('../middleware/is-auth')
+const languageController = require('../controller/Company/LanguageController');
 const zoneController = require('../controller/Company/ZoneAPIController');
 const regionController = require('../controller/Company/RegionAPIController');
-const isAuth = require('../middleware/is-auth')
+const appMenuController = require('../controller/Company/AppMenuController');
 const companyValidation = require('../validation/Companyvalidation')
 
 //This route is for zone
@@ -13,8 +15,20 @@ router.put('/zone/:id', isAuth, zoneController.putZoneAPI);
 
 //This route is for region
 router.get('/region', isAuth, regionController.getRegionAPI);
+router.get('/region/create', isAuth, regionController.createRegionAPI);
 router.post('/region', isAuth, regionController.postRegionAPI);
-router.post('/data/region', isAuth, regionController.postRegionAPI);
-router.get('region/create', isAuth, regionController.createRegionAPI);
+router.post('/data/region', isAuth, regionController.postRegionDataAPI);
+router.put('/data/region/:id', isAuth, regionController.putRegionData);
+
+//This route is for language
+router.get('/language', isAuth, languageController.getLanguageAPI);
+router.post('/language', isAuth, companyValidation.postLanguageAPI, languageController.postLanguageAPI);
+router.put('/language/:id', isAuth, companyValidation.postLanguageAPI, languageController.putLanguageAPI);
+
+//This route is for label
+router.get('/terminology', isAuth, appMenuController.getAppMenuAPI);
+router.get('/terminology/label/create', isAuth, appMenuController.createLabelAPI);
+router.post('/terminology/label', isAuth, appMenuController.postLabelAPI);
+router.post('/terminology/app/menu', isAuth, appMenuController.postAppMenuAPI);
 
 module.exports = router;
