@@ -3,6 +3,7 @@ const Role = require('../../model/Role');
 const RoleUser = require('../../model/RoleUser');
 const Country = require('../../model/Country');
 const PackageType = require('../../model/PackageType');
+const userService = require('../../services/userService');
 const bcrypt = require('bcryptjs')
 const { ObjectId } = require('mongoose');
 const { encryptDeterministic, hashSearchField } = require('../../util/encryption');
@@ -447,3 +448,20 @@ exports.searchUserAPI = async (req, res, next) => {
         return errorResponse(res, error, 500);
     }
 };
+
+exports.importAPI = async (req, res, next) => {
+    try {
+        const userId = req.userId;
+      
+        const { chunk, roles } = req.body;
+        if (!Array.isArray(chunk)) {
+            return errorResponse(res, 'Invalid data format', 400);
+        }
+        const response = await userService.importUsers(res, userId, chunk, roles);
+        return successResponse(res, "Data loaded", response);
+    } catch (error) {
+        console.error("Error occurred:", error);
+        return errorResponse(res, error, 500);
+    }
+};
+
