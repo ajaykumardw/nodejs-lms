@@ -24,6 +24,7 @@ router.put('/data/region/:id', isAuth, regionController.putRegionData);
 router.get('/language', isAuth, languageController.getLanguageAPI);
 router.post('/language', isAuth, companyValidation.postLanguageAPI, languageController.postLanguageAPI);
 router.put('/language/:id', isAuth, companyValidation.postLanguageAPI, languageController.putLanguageAPI);
+router.get('/language/menu', isAuth, languageController.getMenuAPI);
 
 //This route is for label
 router.get('/terminology', isAuth, appMenuController.getAppMenuAPI);

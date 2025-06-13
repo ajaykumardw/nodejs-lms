@@ -2,7 +2,6 @@ const User = require('../../model/User');
 const language = require('../../model/Language');
 const { successResponse, errorResponse, warningResponse } = require('../../util/response');
 const Language = require('../../model/Language');
-const { response } = require('express');
 
 exports.getLanguageAPI = async (req, res, next) => {
     try {
@@ -63,6 +62,21 @@ exports.putLanguageAPI = async (req, res, next) => {
         }
 
         return successResponse(res, "Language updated successfully");
+
+    } catch (error) {
+        next(error);
+    }
+}
+
+exports.getMenuAPI = async (req, res, next) => {
+    try {
+        const language = await Language.find().select('language_name short_name');
+
+        if (!language) {
+            return errorResponse(res, "Language does not exist", {}, 404)
+        }
+
+        return successResponse(res, "Language fetched successfully", language, 200);
 
     } catch (error) {
         next(error);
