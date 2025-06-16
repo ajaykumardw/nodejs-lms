@@ -170,13 +170,16 @@ const userSchema = new Schema({
     designation_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "destinations",
+        set: v => (v === '' ? undefined : v)
     },
     zone_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "zones",
+        set: v => (v === '' ? undefined : v)
     },
     dob: {
-        type: Date
+        type: Date,
+        required: false,
     },
     urn_no: {
         type: String,
@@ -201,6 +204,7 @@ const userSchema = new Schema({
     participation_type_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "participation_types",
+        set: v => (v === '' ? undefined : v)
     },
     codes: [UserCodeSchema], // Array of codes
 });

@@ -27,6 +27,16 @@ const postAPI = async (req, res, next) => {
         if (!name || typeof status === 'undefined') {
             return warningResponse(res, "Name and status are required fields.", {}, 400);
         }
+
+        const existing = await ParticipationType.findOne({
+            company_id: user._id,
+            name: { $regex: new RegExp(`^${name}$`, 'i') } // case-insensitive match
+          });
+      
+          if (existing) {
+            return warningResponse(res, "Participation Type with this name already exists.", {}, 409);
+          }
+
         const participationtype = new ParticipationType({
             company_id: user._id,
             name,
@@ -46,7 +56,22 @@ const putAPI = async (req, res, next) => {
         if (!name || typeof status === 'undefined') {
             return warningResponse(res, "Name and status are required fields.", {}, 400);
         }
+
         const participationtype = await ParticipationType.findOne({ company_id: user._id, _id: req.params.id });
+        if (!participationtype) {
+            return warningResponse(res, "Participation type not found.", {}, 404);
+        }
+
+        const duplicate = await ParticipationType.findOne({
+            company_id: user._id,
+            name: { $regex: new RegExp(`^${name}$`, 'i') },
+            _id: { $ne: req.params.id }
+        });
+    
+        if (duplicate) {
+        return warningResponse(res, "Another Participation with this name already exists.", {}, 409);
+        }
+       
         participationtype.name = name;
         participationtype.status = status;
         await participationtype.save();
