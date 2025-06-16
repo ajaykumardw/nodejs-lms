@@ -23,7 +23,7 @@ const zoneSchema = new Schema({
     },
     master_company_id: {
         type: Schema.Types.Mixed,
-        required: true,
+        required: false,
         ref: "users",
         validate: {
             validator: v => Types.ObjectId.isValid(v) || typeof v === 'number',
@@ -32,7 +32,7 @@ const zoneSchema = new Schema({
     },
     parent_company_id: {
         type: Schema.Types.Mixed,
-        required: true,
+        required: false,
         ref: "users",
         validate: {
             validator: v => Types.ObjectId.isValid(v) || typeof v === 'number',
@@ -41,7 +41,7 @@ const zoneSchema = new Schema({
     },
     created_by: {
         type: mongoose.Schema.Types.ObjectId,
-        required: true
+        required: false
     },
     updated_by: {
         type: mongoose.Schema.Types.ObjectId,
