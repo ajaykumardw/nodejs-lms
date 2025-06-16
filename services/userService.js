@@ -2,6 +2,9 @@ const Role = require('../model/Role');
 const Country = require('../model/Country');
 const RoleUser = require('../model/RoleUser');
 const User = require('../model/User');
+const Zone = require('../model/Zone');
+const Designation = require('../model/Designation');
+const ParticipationType = require('../model/ParticipationType');
 const bcrypt = require('bcryptjs')
 
 const importUsers = async (res, userId, chunk, roleIds = []) => {
@@ -18,13 +21,14 @@ const importUsers = async (res, userId, chunk, roleIds = []) => {
     const resultWithStatus = [];
 
     for (const u of chunk) {
-      const email = u.Email?.toLowerCase().trim();
-      const phone = u.PhoneNo ? String(u.PhoneNo).trim() : null;
-      const safeUser = JSON.parse(JSON.stringify(u)); // Make it plain
-      let errors = {}; // collect all errors here
+        const email = u.Email?.toLowerCase().trim();
+        const phone = u.PhoneNo ? String(u.PhoneNo).trim() : null;
+        const safeUser = JSON.parse(JSON.stringify(u)); // Make it plain
+        let errors = {}; // collect all errors here
 
-      let validate = true;
-      if (existingEmails.has(email)) {
+        let validate = true;
+        
+        if (existingEmails.has(email)) {
           errors.email = 'This email has already been taken!';
         }
 
@@ -42,6 +46,13 @@ const importUsers = async (res, userId, chunk, roleIds = []) => {
           errors.emp_id = result.message ;
         }
 
+        const location = await getLocationByName(u.Country, u.State, u.City);
+
+        if (location.errors) {
+          resultWithStatus.push({ ...safeUser, errors: location.errors });
+          continue;
+        }
+
         if (Object.keys(errors).length > 0) {
           resultWithStatus.push({ ...safeUser, errors });
           continue;
@@ -54,8 +65,10 @@ const importUsers = async (res, userId, chunk, roleIds = []) => {
           
           const passwordRaw = u.password || u.EmpID || Math.floor(1111 + Math.random() * 8888).toString();
           const hashedPassword = await bcrypt.hash(passwordRaw, 12);
-
           const location = await getLocationByName(u.Country, u.State, u.City);
+          const designationId = await getOrCreateDesignation(u.Designation, userId);
+          const participationTypeId = await getOrCreateParticipationType(u.ParticipationType, userId);
+          const zoneId = await getOrCreateZone(u.Zone, userId);
 
           usersToInsert.push({
             email,
@@ -74,17 +87,21 @@ const importUsers = async (res, userId, chunk, roleIds = []) => {
             urn_no: u.URNNumber || '',
             website: u.Website || '',
             codes: result.codes || [],
+            designation_id: designationId,
+            participation_type_id: participationTypeId,
+            zone_id: zoneId,
+            employee_type: u.EmployeeType || '',
             company_id: userId,
             master_company_id: userId,
             parent_company_id: userId,
             created_by: userId,
           });
 
-          resultWithStatus.push({ ...safeUser, error: '' });
+          resultWithStatus.push({ ...safeUser, errors: [] });
 
         } catch (innerErr) {
           console.error('User insert error:', innerErr);
-          resultWithStatus.push({ ...safeUser, error: 'Error processing this user' });
+          resultWithStatus.push({ ...safeUser, errors: { error: 'Error processing this user' } });
         }
       }
     }
@@ -132,27 +149,42 @@ const importUsers = async (res, userId, chunk, roleIds = []) => {
 
 
 const getLocationByName = async (countryName, stateName, cityName) => {
-    const countryDoc = await Country.findOne({
-        country_name: new RegExp(`^${countryName.trim()}$`, 'i') // case-insensitive exact match
-    }).lean();
-  
-    if (!countryDoc) return { country: '', state: '', city: '' };
-  
-    const stateDoc = countryDoc.states.find(
-      s => s.state_name.trim().toLowerCase() === stateName.trim().toLowerCase()
-    );
-  
-    const cityDoc = stateDoc?.cities?.find(
-      c => c.city_name.trim().toLowerCase() === cityName.trim().toLowerCase()
-    );
-  
-    return {
-      country: countryDoc.country_id,
-      state: stateDoc?.state_id || '',
-      city: cityDoc?.city_id || ''
-    };
+  const errors = {};
+
+  const countryDoc = await Country.findOne({
+    country_name: new RegExp(`^${countryName?.trim()}$`, 'i'),
+  }).lean();
+
+  if (!countryDoc) {
+    errors.country = `Country '${countryName}' not found`;
+    return { errors };
+  }
+
+  const stateDoc = countryDoc.states.find(
+    s => s.state_name.trim().toLowerCase() === stateName?.trim().toLowerCase()
+  );
+
+  if (!stateDoc) {
+    errors.state = `State '${stateName}' not found in '${countryName}'`;
+    return { errors };
+  }
+
+  const cityDoc = stateDoc.cities.find(
+    c => c.city_name.trim().toLowerCase() === cityName?.trim().toLowerCase()
+  );
+
+  if (!cityDoc) {
+    errors.city = `City '${cityName}' not found in '${stateName}'`;
+    return { errors };
+  }
+
+  return {
+    country: countryDoc.country_id,
+    state: stateDoc.state_id,
+    city: cityDoc.city_id,
+    errors: null
   };
-  
+};
 
 const processEmployeeCodesForUser = async ({ rawCodes, userId, existingUser = null }) => {
     let parsedCodes = [];
@@ -251,7 +283,67 @@ const getUserStats = async () => {
   }
 };
 
-  
+const getOrCreateDesignation = async (name, userId) => {
+  if (!name) return null;
+
+  const trimmedName = name.trim();
+
+  let designation = await Designation.findOne({
+    name: new RegExp(`^${trimmedName}$`, 'i'),
+    company_id: userId
+  });
+
+  if (!designation) {
+    designation = await Designation.create({
+      name: trimmedName,
+      status: true,
+      company_id: userId
+    });
+  }
+
+  return designation._id;
+};
+
+const getOrCreateParticipationType = async (name, userId) => {
+  if (!name) return null;
+
+  const trimmedName = name.trim();
+
+  let participationType = await ParticipationType.findOne({
+    name: new RegExp(`^${trimmedName}$`, 'i'),
+  });
+
+  if (!participationType) {
+    participationType = await ParticipationType.create({
+      name: trimmedName,
+      status: true,
+      company_id: userId
+    });
+  }
+
+  return participationType._id;
+};
+
+const getOrCreateZone = async (name, userId) => {
+  if (!name) return null;
+
+  const trimmedName = name.trim();
+
+  let zone = await Zone.findOne({
+    name: new RegExp(`^${trimmedName}$`, 'i'),
+  });
+
+  if (!zone) {
+    zone = await Zone.create({
+      name: trimmedName,
+      status: true,
+      company_id: userId
+    });
+  }
+
+  return zone._id;
+};
+
 module.exports = {
     importUsers,
     getUserStats
