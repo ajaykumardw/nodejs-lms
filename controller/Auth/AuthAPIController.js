@@ -5,14 +5,13 @@ const User = require('../../model/User');
 const jwtSecretKey = process.env.JWT_SECRET;
 const validate = require('../../util/validation')
 const expireTime = process.env.token_expire_time;
-const { hash, normalizeEmail } = require('../../util/encryption');
+const { hash, normalizeEmail, decrypt } = require('../../util/encryption');
 
 exports.postAPILogIn = (req, res, next) => {
     if (!validate(req, res)) return;
 
     const { email, password } = req.body;
     let loadedUser;
-
     User.findOne({ email_hash: hash(normalizeEmail(email)) })
         .then(user => {
             if (!user) {
@@ -45,7 +44,7 @@ exports.postAPILogIn = (req, res, next) => {
                 jwtSecretKey,
                 { expiresIn: `${expireTime}h` }
             );
-
+            
             res.status(200).json({
                 status: "Success",
                 statusCode: 200,
@@ -53,7 +52,7 @@ exports.postAPILogIn = (req, res, next) => {
                 token: token,
                 expiresAt: expirationTimestamp,
                 userId: loadedUser._id.toString(),
-                email: loadedUser.email,
+                email: decrypt(loadedUser.email),
                 name: loadedUser.first_name + " " + loadedUser.last_name
             });
         })

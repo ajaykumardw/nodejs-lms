@@ -44,10 +44,14 @@ exports.createUserAPI = async (req, res, next) => {
             'application_no', 'licence_no', 'zone_id','employee_type','participation_type_id'
         ];
 
-        const existingUser = await User.findOne({ email_hash: hash(normalizeEmail(req.body.email)) });
+        const existingUserEmail = await User.findOne({ email_hash: hash(normalizeEmail(req.body.email)), company_id: userId });
+        if (existingUserEmail) {
+            return errorResponse(res,'This email already been taken!',{}, 400);
+        }
 
-        if (existingUser) {
-            return errorResponse(res,'Email already exists',{}, 400);
+        const existingUserPhone = await User.findOne({ phone_hash: hash(normalizePhone(req.body.phone)), company_id: userId });
+        if (existingUserPhone) {
+            return errorResponse(res,'This phone already been taken!',{}, 400);
         }
 
         const userData = pick(req.body, allowedFields);
@@ -196,6 +200,26 @@ exports.updateUserAPI = async (req, res, next) => {
 
         if (!existingUser) {
             return errorResponse(res, "User not found", 404);
+        }
+
+        const existingUserEmail = await User.findOne({ 
+            email_hash: hash(normalizeEmail(req.body.email)), 
+            company_id: currentUser,
+            _id: { $ne: userId }
+        });
+
+        if (existingUserEmail) {
+            return errorResponse(res,'This email already been taken!',{}, 400);
+        }
+
+        const existingUserPhone = await User.findOne({ 
+            email_hash: hash(normalizePhone(req.body.phone)), 
+            company_id: currentUser,
+            _id: { $ne: userId }
+        });
+
+        if (existingUserPhone) {
+            return errorResponse(res,'This phone already been taken!',{}, 400);
         }
 
         const imageUrl = req.file?.filename
@@ -465,3 +489,13 @@ exports.importAPI = async (req, res, next) => {
     }
 };
 
+exports.getUserStatsAPI = async (req, res, next) => {
+    try {
+        const userId = req.userId;
+        const response = await userService.getUserStats(userId);
+        return successResponse(res, "Data loaded", response);
+    } catch (error) {
+        console.error("Error occurred:", error);
+        return errorResponse(res, error, 500);
+    }
+};

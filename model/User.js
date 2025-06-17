@@ -45,13 +45,13 @@ const userSchema = new Schema({
     },
     email: {
         type: String,
-        // set: function (val) {
-        //     console.log('val', val);
-        //     const norm = normalizeEmail(val);
-        //     this.email_hash = hash(norm); // for searching
-        //     return encrypt(norm);
-        // },
-        // get: decrypt
+        set: function (val) {
+            console.log('val', val);
+            const norm = normalizeEmail(val);
+            this.email_hash = hash(norm); // for searching
+            return encrypt(norm);
+        },
+        get: decrypt
     },
     email_hash: {
         type: String
@@ -69,15 +69,14 @@ const userSchema = new Schema({
     },
     phone: {
         type: String,
-        // set: function (val) {
-        //     const norm = normalizePhone(val);
-        //     this.phone_hash = hash(norm);
-        //     return encrypt(norm);
-        // },
-        // get: function (val) {
-        //     return decrypt(val);
-        // },
-
+        set: function (val) {
+            const norm = normalizePhone(val);
+            this.phone_hash = hash(norm);
+            return encrypt(norm);
+        },
+        get: function (val) {
+            return decrypt(val);
+        },
     },
     phone_hash: {
         type: String
