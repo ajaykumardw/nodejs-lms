@@ -143,3 +143,10 @@ exports.postDesignation = [
     body('name').notEmpty().withMessage("Name is required").isLength({ max: 255 }).withMessage("Name max length should be 255"),
     body('status').notEmpty().withMessage("Status is required").isBoolean().withMessage("Status should be boolean"),
 ];
+
+exports.putUser = [
+    body('roles')
+      .isArray({ min: 1 }).withMessage("At least one role is required")
+      .custom((arr) => arr.every(role => typeof role === 'string' || typeof role === 'object'))
+      .withMessage("Each role must be a string or object"),
+  ];
