@@ -62,7 +62,7 @@ router.delete('/participation_type/:id', isAuth, ParticipationTypeAPIController.
 
 //user routes
 router.post('/user', isAuth, UserAPIController.createUserAPI);
-router.put('/user/:id', isAuth, UserAPIController.updateUserAPI);
+router.put('/user/:id', isAuth, validation.putUser, UserAPIController.updateUserAPI);
 router.delete('/user/:id', isAuth, UserAPIController.deleteAPI);
 router.get('/user/:id/edit', isAuth, UserAPIController.editAPI);
 router.get('/user/search', isAuth, UserAPIController.searchUserAPI);
@@ -71,6 +71,7 @@ router.put('/user/attach/empcode/:id', isAuth, UserAPIController.attachNewUserCo
 router.put('/user/mark/active/empcode/:id', isAuth, UserAPIController.markActiveUserCodeAPI);
 router.put('/user/status/update/:id', isAuth, UserAPIController.updateStatusAPI);
 router.post('/users/import', isAuth, UserAPIController.importAPI);
+router.get('/users/stats', isAuth, UserAPIController.getUserStatsAPI);
 
 router.get('/countries', isAuth, companyAPIController.getCountryAPI);
 

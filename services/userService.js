@@ -6,35 +6,64 @@ const Zone = require('../model/Zone');
 const Designation = require('../model/Designation');
 const ParticipationType = require('../model/ParticipationType');
 const bcrypt = require('bcryptjs')
+const { hash, normalizeEmail, normalizePhone } = require('../util/encryption');
 
 const importUsers = async (res, userId, chunk, roleIds = []) => {
   try {
-    const emails = chunk.map(u => u.Email?.toLowerCase().trim()).filter(Boolean);
-    const existing = await User.find({ email: { $in: emails } }).select('email').lean();
-    const existingEmails = new Set(existing.map(u => u.email));
+    // const emails = chunk.map(u => u.Email?.toLowerCase().trim()).filter(Boolean);
+    // const existing = await User.find({ email: { $in: emails } }).select('email').lean();
+    // const existingEmails = new Set(existing.map(u => u.email));
 
-    const phones = chunk.map(u => u.PhoneNo ? String(u.PhoneNo).trim() : null).filter(Boolean);
-    const existing2 = await User.find({ phone: { $in: phones } }).select('phone').lean();
-    const existingPhones = new Set(existing2.map(u => u.phone));
+    // const phones = chunk.map(u => u.PhoneNo ? String(u.PhoneNo).trim() : null).filter(Boolean);
+    // const existing2 = await User.find({ phone: { $in: phones } }).select('phone').lean();
+    // const existingPhones = new Set(existing2.map(u => u.phone));
+
+    const emails = chunk.map(u => normalizeEmail(u.Email)).filter(Boolean);
+    const emailHashes = emails.map(email => hash(email));
+
+    const existingEmailUsers = await User.find({ email_hash: { $in: emailHashes } }).select('email_hash').lean();
+    const existingEmailHashes = new Set(existingEmailUsers.map(u => u.email_hash));
+
+    const phones = chunk.map(u => normalizePhone(String(u.PhoneNo || ''))).filter(Boolean);
+    const phoneHashes = phones.map(phone => hash(phone));
+
+    const existingPhoneUsers = await User.find({ phone_hash: { $in: phoneHashes } }).select('phone_hash').lean();
+    const existingPhoneHashes = new Set(existingPhoneUsers.map(u => u.phone_hash));
+
 
     const usersToInsert = [];
     const resultWithStatus = [];
 
     for (const u of chunk) {
-        const email = u.Email?.toLowerCase().trim();
-        const phone = u.PhoneNo ? String(u.PhoneNo).trim() : null;
+        // const email = u.Email?.toLowerCase().trim();
+        // const phone = u.PhoneNo ? String(u.PhoneNo).trim() : null;
+        const emailRaw = u.Email || '';
+        const phoneRaw = u.PhoneNo || '';
+        const email = normalizeEmail(emailRaw);
+        const phone = normalizePhone(String(phoneRaw));
+        const emailHash = hash(email);
+        const phoneHash = hash(phone);
+
         const safeUser = JSON.parse(JSON.stringify(u)); // Make it plain
         let errors = {}; // collect all errors here
 
         let validate = true;
-        
-        if (existingEmails.has(email)) {
+
+        if (existingEmailHashes.has(emailHash)) {
           errors.email = 'This email has already been taken!';
         }
-
-        if (existingPhones.has(phone)) {
+      
+        if (existingPhoneHashes.has(phoneHash)) {
           errors.phone = 'This phone has already been taken!';
         }
+        
+        // if (existingEmails.has(email)) {
+        //   errors.email = 'This email has already been taken!';
+        // }
+
+        // if (existingPhones.has(phone)) {
+        //   errors.phone = 'This phone has already been taken!';
+        // }
 
         const result = await processEmployeeCodesForUser({
           rawCodes: u.EmpID,
@@ -262,12 +291,12 @@ const processEmployeeCodesForUser = async ({ rawCodes, userId, existingUser = nu
     return { success: true, codes: updatedExistingCodes };
   }
 
-const getUserStats = async () => {
+const getUserStats = async (userId) => {
   try {
     const [total, active, inactive] = await Promise.all([
-      User.countDocuments(),
-      User.countDocuments({ status: true }),
-      User.countDocuments({ status: false }),
+      User.countDocuments({ company_id: userId }),
+      User.countDocuments({ company_id: userId, status: true }),
+      User.countDocuments({ company_id: userId, status: false }),
       //User.countDocuments({ last_login: { $exists: false } }) // or: { $eq: null }
     ]);
 
@@ -346,5 +375,6 @@ const getOrCreateZone = async (name, userId) => {
 
 module.exports = {
     importUsers,
+    getUserStats,
     getUserStats
 }
