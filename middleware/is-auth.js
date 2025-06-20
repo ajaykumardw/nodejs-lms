@@ -3,7 +3,6 @@ const jwtSecretKey = process.env.JWT_SECRET;
 
 module.exports = (req, res, next) => {
     const authHeader = req.get('Authorization');
-    //console.log(authHeader);
     if (!authHeader) {
         const error = new Error('Not authenticated');
         error.statusCode = 401;
@@ -22,7 +21,6 @@ module.exports = (req, res, next) => {
         error.statusCode = 401;
         throw error;
     }
-    //console.log('decodedToken',decodedToken.userId);
     req.userId = decodedToken.userId;
     req.user = decodedToken;
     req.user._id = req.userId;

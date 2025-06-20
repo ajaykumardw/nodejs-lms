@@ -65,8 +65,6 @@ exports.createUserAPI = async (req, res, next) => {
                 userId: null,         // No userId yet since new user
                 existingUser: null
             });
-
-            console.log(result);
             
             if (!result.success) {
                 return errorResponse(res,result.message,{}, 400);
@@ -97,20 +95,16 @@ exports.createUserAPI = async (req, res, next) => {
 
         const roleDocs = await Role.find({ _id: { $in: roles } });
 
-        console.log('roleDocs', roleDocs);
         const roleUserInserts = roleDocs.map(role => ({
             user_id: user._id,
             role_id: role._id,
             assigned_by: userId,
         }));
 
-        console.log('roleUserInserts', roleUserInserts);
-
         await RoleUser.insertMany(roleUserInserts);
 
         return successResponse(res, "User created successfully!", user);
     } catch (error) {
-        console.log('error', error);
         next(error);
     }
 };
@@ -135,13 +129,10 @@ const processEmployeeCodesForUser = async ({ rawCodes, userId, existingUser = nu
       .map(code => (code != null ? String(code).trim() : ''))
       .filter(Boolean);
 
-    //  console.log('normalizedCodes', normalizedCodes);
     const duplicateUsers = await User.find({
      // _id: { $ne: userId },
       'codes.code': { $in: normalizedCodes }
     }).select('codes');
-
-    //console.log('duplicateUsers', duplicateUsers);
   
     const foundCodes = new Set();
     for (const user of duplicateUsers) {
@@ -302,7 +293,6 @@ exports.attachNewUserCodeAPI = async (req, res, next) => {
   
         const updateData = {};
 
-       // console.log('existingUser', existingUser, req.body.user_code);
         // Handle employee_codes from string
         if (req.body.user_code != undefined) {
             const result = await processEmployeeCodesForUser({
@@ -311,7 +301,6 @@ exports.attachNewUserCodeAPI = async (req, res, next) => {
                 existingUser
             });
             
-            console.log('result.codes', result);
             if(!result.success){
                 return errorResponse(res, result.message, 400);
             }else{
@@ -462,10 +451,7 @@ exports.searchUserAPI = async (req, res, next) => {
     try {
         const userId = req.userId;
         const user = await User.findOne({ email_hash: hash(normalizeEmail('alok@gmail.com')) });
-        // if (user) {
-        // const obj = user.toObject({ getters: true });
-        // console.log(obj.email);  // decrypted email
-        // }
+        
         return successResponse(res, "Data loaded", user);
     } catch (error) {
         console.error("Error occurred:", error);
