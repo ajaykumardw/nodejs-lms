@@ -46,7 +46,6 @@ const userSchema = new Schema({
     email: {
         type: String,
         set: function (val) {
-            console.log('val', val);
             const norm = normalizeEmail(val);
             this.email_hash = hash(norm); // for searching
             return encrypt(norm);

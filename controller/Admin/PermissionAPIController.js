@@ -1,6 +1,9 @@
 const mongoose = require('mongoose');
 const validation = require('../../util/validation')
+const user = require('../../model/User')
+const packageType = require('../../model/PackageType')
 const PermissionModule = require('../../model/PermissionModule');
+const { errorResponse, successResponse } = require("../../util/response")
 
 exports.getPermission = async (req, res, next) => {
     const userId = req.userId?.toString();
@@ -253,5 +256,147 @@ exports.putPermission = async (req, res, next) => {
 
     } catch (error) {
         next(error);
+    }
+};
+
+const normalizeToArray = (data) => {
+    if (!data) return [];
+    if (typeof data === 'string') return [data];
+    if (Array.isArray(data)) return data.flat(Infinity).map(String);
+    if (typeof data === 'object') return Object.values(data).flat(Infinity).map(String);
+    return [];
+};
+
+exports.getPermAllowAPI = async (req, res, next) => {
+    try {
+        const userId = req.userId;
+
+        const listing = '681c58fb4cfdc0f1124c1748';
+        const edit = '681c58ee4cfdc0f1124c172d';
+        const add = '681c58e24cfdc0f1124c171b';
+        const import_data = '682d959a3cbed2993fc2c0ef';
+
+        const superAdminId = '6811ae35704460d978b84eaa';
+        const designation = '6853af54bf2b29d85a47cbf5';
+        const department = '6853af4bbf2b29d85a47cbd4'
+        const channel = '6853af38bf2b29d85a47cb41';
+        const label = '685394cabf2b29d85a47741e';
+        const users = '681c58b04cfdc0f1124c1705';
+        const branch = '685394b1bf2b29d85a4773a3';
+        const region = '685394aabf2b29d85a47738e';
+        const zone = '6853946dbf2b29d85a477379';
+
+        let isSuperAdmin = false;
+        let isCompany = false;
+
+        const permissionsStatus = {
+            hasZonePermission: false,
+            hasZoneAddPermission: false,
+            hasZoneEditPermission: false,
+            hasRegionPermission: false,
+            hasRegionAddPermission: false,
+            hasRegionEditPermission: false,
+            hasBranchPermission: false,
+            hasBranchAddPermission: false,
+            hasBranchEditPermission: false,
+            hasUserPermission: false,
+            hasUserAddPermission: false,
+            hasUserEditPermission: false,
+            hasLabelPermission: false,
+            hasUserImportPermission: false,
+            hasChannelPermission: false,
+            hasChannelAddPermission: false,
+            hasChannelEditPermission: false,
+            hasDepartmentPermission: false,
+            hasDepartmentAddPermission: false,
+            hasDepartmentlEditPermission: false,
+            hasDesignationPermission: false,
+            hasDesignationAddPermission: false,
+            hasDesignationEditPermission: false,
+        };
+
+        // If super admin, all permissions default to false (can be changed if needed)
+        if (userId?.toString().trim() === superAdminId) {
+            isSuperAdmin = true;
+        } else {
+            const User = await user.findById(userId);
+
+            if (!User) {
+                return errorResponse(res, "User does not exist", {}, 404);
+            }
+
+            const masterId = User.created_by?.toString().trim();
+
+            if (masterId === superAdminId) {
+                isCompany = true;
+
+                const packageId = User.package_id;
+
+                if (!mongoose.Types.ObjectId.isValid(packageId)) {
+                    return errorResponse(res, "Invalid package ID", {}, 400);
+                }
+
+                const packageTypeDoc = await packageType.findOne({
+                    'package.items._id': new mongoose.Types.ObjectId(packageId)
+                }).lean();
+
+                if (!packageTypeDoc) {
+                    return errorResponse(res, 'Package type does not exist', {}, 404);
+                }
+
+                const matchedItem = packageTypeDoc.package.items.find(item =>
+                    item._id.toString() === packageId.toString()
+                );
+
+                if (!matchedItem) {
+                    return errorResponse(res, 'Package does not exist', {}, 404);
+                }
+
+                const permission = matchedItem.permissions || {};
+
+                permissionsStatus.hasDesignationPermission = normalizeToArray(permission[designation]).includes(listing);
+                permissionsStatus.hasDesignationAddPermission = normalizeToArray(permission[designation]).includes(add);
+                permissionsStatus.hasDesignationEditPermission = normalizeToArray(permission[designation]).includes(edit)
+
+                permissionsStatus.hasDepartmentPermission = normalizeToArray(permission[department]).includes(listing);
+                permissionsStatus.hasDepartmentAddPermission = normalizeToArray(permission[department]).includes(add)
+                permissionsStatus.hasDepartmentlEditPermission = normalizeToArray(permission[department]).includes(edit)
+
+                permissionsStatus.hasChannelPermission = normalizeToArray(permission[channel]).includes(listing);
+                permissionsStatus.hasChannelAddPermission = normalizeToArray(permission[channel]).includes(add);
+                permissionsStatus.hasChannelEditPermission = normalizeToArray(permission[channel]).includes(edit);
+
+                permissionsStatus.hasLabelPermission = normalizeToArray(permission[label]).includes(listing);
+
+                permissionsStatus.hasUserPermission = normalizeToArray(permission[users]).includes(listing);
+                permissionsStatus.hasUserAddPermission = normalizeToArray(permission[users]).includes(add)
+                permissionsStatus.hasUserEditPermission = normalizeToArray(permission[users]).includes(edit)
+                permissionsStatus.hasUserImportPermission = normalizeToArray(permission[users]).includes(import_data);
+
+                permissionsStatus.hasBranchPermission = normalizeToArray(permission[branch]).includes(listing);
+                permissionsStatus.hasBranchAddPermission = normalizeToArray(permission[branch]).includes(add)
+                permissionsStatus.hasBranchAddPermission = normalizeToArray(permission[branch]).includes(edit)
+
+                permissionsStatus.hasRegionPermission = normalizeToArray(permission[region]).includes(listing);
+                permissionsStatus.hasRegionAddPermission = normalizeToArray(permission[region]).includes(add)
+                permissionsStatus.hasRegionEditPermission = normalizeToArray(permission[region]).includes(edit)
+
+                permissionsStatus.hasZonePermission = normalizeToArray(permission[zone]).includes(listing);
+                permissionsStatus.hasZoneAddPermission = normalizeToArray(permission[zone]).includes(add);
+                permissionsStatus.hasZoneEditPermission = normalizeToArray(permission[zone]).includes(edit);
+
+            }
+        }
+
+        const data = {
+            isSuperAdmin,
+            isCompany,
+            ...permissionsStatus
+        };
+
+        return successResponse(res, "Permission data fetched successfully", data);
+    } catch (error) {
+        console.error("Error in getPermAllowAPI:", error);
+        return errorResponse(res, "Server error", {}, 500);
     }
 };

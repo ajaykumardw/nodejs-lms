@@ -75,4 +75,6 @@ router.get('/users/stats', isAuth, UserAPIController.getUserStatsAPI);
 
 router.get('/countries', isAuth, companyAPIController.getCountryAPI);
 
+router.get('/role/allow/permission', isAuth, permissionController.getPermAllowAPI);
+
 module.exports = router;
