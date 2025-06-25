@@ -91,7 +91,7 @@ router.get('/users/stats', isAuth, UserAPIController.getUserStatsAPI);
 
 router.get('/countries', isAuth, companyAPIController.getCountryAPI);
 
-
+router.get('/role/allow/permission', isAuth, permissionController.getPermAllowAPI);
 
 router.get('/categories', isAuth, CategoryController.getCategoryAPI);
 router.post('/category', isAuth, CategoryController.postCategoryAPI);

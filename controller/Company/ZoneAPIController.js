@@ -17,7 +17,7 @@ exports.getZoneAPIData = async (req, res, next) => {
         })
 
     } catch (error) {
-        console.log("Error occured", error);
+        console.error("Error occured", error);
     }
 }
 
