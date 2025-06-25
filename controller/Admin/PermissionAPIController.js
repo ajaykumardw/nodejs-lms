@@ -375,7 +375,7 @@ exports.getPermAllowAPI = async (req, res, next) => {
 
                 permissionsStatus.hasBranchPermission = normalizeToArray(permission[branch]).includes(listing);
                 permissionsStatus.hasBranchAddPermission = normalizeToArray(permission[branch]).includes(add)
-                permissionsStatus.hasBranchAddPermission = normalizeToArray(permission[branch]).includes(edit)
+                permissionsStatus.hasBranchEditPermission = normalizeToArray(permission[branch]).includes(edit)
 
                 permissionsStatus.hasRegionPermission = normalizeToArray(permission[region]).includes(listing);
                 permissionsStatus.hasRegionAddPermission = normalizeToArray(permission[region]).includes(add)

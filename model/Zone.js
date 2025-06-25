@@ -124,41 +124,6 @@ const zoneSchema = new Schema({
                 type: Boolean,
                 default: false
             },
-            company_id: {
-                type: Schema.Types.Mixed,
-                required: true,
-                ref: "users",
-                validate: {
-                    validator: v => Types.ObjectId.isValid(v) || typeof v === 'number',
-                    message: props => `${props.value} is not a valid ObjectId or number`,
-                },
-            },
-            master_company_id: {
-                type: Schema.Types.Mixed,
-                required: true,
-                ref: "users",
-                validate: {
-                    validator: v => Types.ObjectId.isValid(v) || typeof v === 'number',
-                    message: props => `${props.value} is not a valid ObjectId or number`,
-                },
-            },
-            parent_company_id: {
-                type: Schema.Types.Mixed,
-                required: true,
-                ref: "users",
-                validate: {
-                    validator: v => Types.ObjectId.isValid(v) || typeof v === 'number',
-                    message: props => `${props.value} is not a valid ObjectId or number`,
-                },
-            },
-            created_by: {
-                type: mongoose.Schema.Types.ObjectId,
-                required: true
-            },
-            updated_by: {
-                type: mongoose.Schema.Types.ObjectId,
-                required: false
-            },
             created_at: {
                 type: Date,
                 default: Date.now(),
