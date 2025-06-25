@@ -235,13 +235,10 @@ const processEmployeeCodesForUser = async ({ rawCodes, userId, existingUser = nu
       .map(code => (code != null ? String(code).trim() : ''))
       .filter(Boolean);
 
-    //  console.log('normalizedCodes', normalizedCodes);
     const duplicateUsers = await User.find({
      // _id: { $ne: userId },
       'codes.code': { $in: normalizedCodes }
     }).select('codes');
-
-    //console.log('duplicateUsers', duplicateUsers);
   
     const foundCodes = new Set();
     for (const user of duplicateUsers) {

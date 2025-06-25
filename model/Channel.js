@@ -11,16 +11,21 @@ const subChannelSchema = new Schema({
     status: {
         type: Boolean,
         required: true,
-    }
-}, { _id: true }); // enable _id for each subchannel if needed
-
-// Define the channel schema with embedded subchannels
-const channelSchema = new Schema({
-    company_id: {
-        type: mongoose.Schema.Types.ObjectId, 
+    },
+    created_by: {
+        type: mongoose.Schema.Types.ObjectId,
         required: false,
         ref: "users"
     },
+    company_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: false,
+        ref: "users"
+    },
+}); // enable _id for each subchannel if needed
+
+// Define the channel schema with embedded subchannels
+const channelSchema = new Schema({
     name: {
         type: String,
         maxlength: 65535,
@@ -29,6 +34,16 @@ const channelSchema = new Schema({
     status: {
         type: Boolean,
         required: true,
+    },
+    created_by: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: false,
+        ref: "users"
+    },
+    company_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: false,
+        ref: "users"
     },
     sub_channels: [subChannelSchema] // embedded array of subchannels
 }, {
