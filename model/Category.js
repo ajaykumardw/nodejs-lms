@@ -18,6 +18,10 @@ const categorySchema = new Schema({
         enum: ['module', 'training'], // Only these two values are allowed
         required: true, // Assuming type is required
     },
+    status: {
+        type: Boolean,
+        required: true,
+    },
 });
 
 module.exports = mongoose.model('categories', categorySchema);

@@ -289,7 +289,7 @@ exports.updateUserAPI = async (req, res, next) => {
             return errorResponse(res, "User not found", 400);
         }
 
-        return successResponse(res, "User updated successfully!", updatedUser);
+        return successResponse(res,`${updatedUser.first_name} account changes saved!`, updatedUser);
     } catch (error) {
         next(error);
     }
