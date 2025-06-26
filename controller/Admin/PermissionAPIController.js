@@ -281,6 +281,7 @@ exports.getPermAllowAPI = async (req, res, next) => {
         const department = '6853af4bbf2b29d85a47cbd4'
         const channel = '6853af38bf2b29d85a47cb41';
         const label = '685394cabf2b29d85a47741e';
+        const role = '681c58bc4cfdc0f1124c170a';
         const users = '681c58b04cfdc0f1124c1705';
         const branch = '685394b1bf2b29d85a4773a3';
         const region = '685394aabf2b29d85a47738e';
@@ -313,6 +314,9 @@ exports.getPermAllowAPI = async (req, res, next) => {
             hasDesignationPermission: false,
             hasDesignationAddPermission: false,
             hasDesignationEditPermission: false,
+            hasRolePermission: false,
+            hasRoleAddPermission: false,
+            hasRoleEditPermission: false,
         };
 
         // If super admin, all permissions default to false (can be changed if needed)
@@ -384,6 +388,10 @@ exports.getPermAllowAPI = async (req, res, next) => {
                 permissionsStatus.hasZonePermission = normalizeToArray(permission[zone]).includes(listing);
                 permissionsStatus.hasZoneAddPermission = normalizeToArray(permission[zone]).includes(add);
                 permissionsStatus.hasZoneEditPermission = normalizeToArray(permission[zone]).includes(edit);
+
+                permissionsStatus.hasRolePermission = normalizeToArray(permission[role]).includes(listing)
+                permissionsStatus.hasRoleAddPermission = normalizeToArray(permission[role]).includes(add)
+                permissionsStatus.hasRoleEditPermission = normalizeToArray(permission[role]).includes(edit)
 
             }
         }
