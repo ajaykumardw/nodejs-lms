@@ -317,6 +317,7 @@ exports.getPermAllowAPI = async (req, res, next) => {
             hasRolePermission: false,
             hasRoleAddPermission: false,
             hasRoleEditPermission: false,
+            isUser: false,
         };
 
         // If super admin, all permissions default to false (can be changed if needed)
@@ -393,6 +394,8 @@ exports.getPermAllowAPI = async (req, res, next) => {
                 permissionsStatus.hasRoleAddPermission = normalizeToArray(permission[role]).includes(add)
                 permissionsStatus.hasRoleEditPermission = normalizeToArray(permission[role]).includes(edit)
 
+            } else {
+                permissionsStatus.isUser = true;
             }
         }
 
