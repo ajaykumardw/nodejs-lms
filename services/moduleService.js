@@ -222,7 +222,7 @@ const updateSettings = async (req) => {
     const { leaderboard_points } = req.body;
 
     if (!module.settings) module.settings = {};
-    
+
     if (leaderboard_points !== undefined) {
       module.settings.leaderboard_points = leaderboard_points;
     }
@@ -240,10 +240,85 @@ const updateSettings = async (req) => {
   }
 };
 
+
+const getPaginatedModules = async (req, res) => {
+  const companyId = req.user; // or req.query, depending on your setup
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const category = req.query.category;
+  const keyword = req.query.keyword;
+  
+  const filter = { company_id: companyId };
+
+  if (category && category != 'All' && mongoose.Types.ObjectId.isValid(category)) {
+    filter.category_id = category;
+  }
+
+  
+  if (keyword) {
+    filter.$or = [
+      { title: { $regex: keyword, $options: 'i' } },
+      // { description: { $regex: keyword, $options: 'i' } }
+    ];
+  }
+
+  try {
+    const total = await Module.countDocuments(filter);
+    const modules = await Module.find(filter).populate('category_id', 'name')
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .sort({ created_at: -1 }); // optional sorting
+
+      return {
+        status: true,
+        message: 'Module fetched',
+        data:{
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+          data: modules
+        }
+      };
+  } catch (err) {
+    console.log('get modules error:', err);
+    return { status: false, message: 'Server error' };
+  }
+};
+
+const deleteModule = async (req) => {
+  try {
+    const user = req.user;
+    const moduleId = req.params.id;
+
+    const module = await Module.findOne({ company_id: user._id, _id: moduleId });
+    if (!module) {
+      return {
+        status: false,
+        message: 'Module not found',
+      };
+    }
+
+    await module.deleteOne();
+
+    return {
+      status: true,
+      message: 'Module deleted successfully!',
+    };
+  } catch (err) {
+    return {
+      status: false,
+      message: 'Failed to delete module',
+      error: err.message
+    };
+  }
+};
+
 module.exports = {
     createOrUpdateCard,
     deleteCard,
     updateCardContentDocuments,
     updateCardContentYoutubeVideo,
-    updateSettings
+    updateSettings,
+    getPaginatedModules,
+    deleteModule
 }

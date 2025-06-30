@@ -44,7 +44,6 @@ function createUpload(allowedTypes, directory = 'uploads/', maxSizeMB = 5) {
     fileFilter
   });
 
-  // Middleware to extract PDF page count
   const extractPdfPageCount = async (req, res, next) => {
     try {
       if (
@@ -64,8 +63,19 @@ function createUpload(allowedTypes, directory = 'uploads/', maxSizeMB = 5) {
     next();
   };
 
-  // Return a middleware array: [multer.single('file'), extractPdfPageCount]
-  return (fieldName = 'file') => [upload.single(fieldName), extractPdfPageCount];
+  // ✅ Return middleware creator and upload path
+  return {
+    middleware: (fieldName = 'file') => [
+      (req, res, next) => {
+        req.uploadPath = directory;
+        next();
+      },
+      upload.single(fieldName),
+      extractPdfPageCount
+    ],
+    uploadPath
+  };
 }
+
 
 module.exports = createUpload;

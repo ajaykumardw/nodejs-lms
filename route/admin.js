@@ -24,10 +24,28 @@ const allowedTypesDocument = [
     'application/msword'
   ];
 
-  const uploadDocument = createUpload(allowedTypesDocument);
-  const uploadVideo = createUpload(['video/mp4','video/webm']);
-  const moduleocument = createUpload(['image/jpeg', 'image/png', 'image/jpg'], 'uploads/module');
+  const { middleware: uploadDocument } = createUpload(
+    allowedTypesDocument, // allowed types
+    'uploads/module/content' // directory inside /public/
+  );
 
+  const { middleware: uploadVideo } = createUpload(
+    ['video/mp4','video/webm'], // allowed types
+    'uploads/module/content' // directory inside /public/
+  );
+
+  const { middleware: imageUpload } = createUpload(
+    ['image/jpeg', 'image/png', 'image/jpg'], // allowed types
+    'uploads/images' // directory inside /public/
+  );
+
+  const { middleware: uploadScorm } = createUpload(
+    ['application/zip', 'application/x-zip-compressed'],
+    'uploads/module/content/scorm', 1024
+  );
+
+
+  
 //routes for roles
 router.get('/role', isAuth, roleController.getRoleAPI);
 router.post('/role', isAuth, validation.postRoleValidation, roleController.postRoleAPI);
@@ -98,15 +116,18 @@ router.post('/category', isAuth, CategoryController.postCategoryAPI);
 router.put('/category/:id', isAuth, CategoryController.putCategoryAPI);
 router.delete('/category/:id', isAuth, CategoryController.deleteCategoryAPI);
 
-router.get('/module', isAuth, ModuleController.getModuleAPI);
+router.get('/modules', isAuth, ModuleController.getModuleAPI);
+router.get('/modules/list', isAuth, ModuleController.getPaginatedModules);
 router.get('/module/:id', isAuth, ModuleController.getModuleByIdAPI);
-router.put('/module/:id', isAuth,  ModuleValidation.putModuleAPI, uploadDocument('file'), ModuleController.putModuleAPI);
-router.post('/module', isAuth, ModuleValidation.postModuleAPI, uploadDocument('file'), ModuleController.postModuleAPI);
+router.put('/module/:id', isAuth,  ModuleValidation.putModuleAPI, imageUpload('file'), ModuleController.putModuleAPI);
+router.delete('/module/:id', isAuth,  ModuleController.deleteModuleAPI);
+router.post('/module', isAuth, ModuleValidation.postModuleAPI, imageUpload('file'), ModuleController.postModuleAPI);
 router.post('/module/:id/cards', isAuth,uploadDocument('file'), ModuleController.createOrUpdateCard);
 router.delete('/module/:id/card/:card_id', isAuth, ModuleController.deleteCard);
 router.put('/module/:id/card/documents/:card_id', isAuth, uploadDocument('file'), ModuleController.updateCardContentDocuments);
 router.put('/module/:id/card/videos/:card_id', isAuth, uploadVideo('file'), ModuleController.updateCardContentDocuments);
 router.put('/module/:id/card/youtubeVideos/:card_id', isAuth, uploadVideo('file'), ModuleController.updateCardContentYoutubeVideo);
+router.put('/module/:id/card/scorm/:card_id', isAuth, uploadScorm('file'), ModuleController.updateCardContentScormContent);
 router.put('/module/setting/update/:id', isAuth, uploadVideo('file'), ModuleController.updateSettings);
 
 module.exports = router;
