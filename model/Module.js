@@ -80,6 +80,9 @@ const moduleSchema = new schema({
         type: Date, 
         default: Date.now
     },
+    image: {
+        type: String,
+    },
     cards: [cards], // Array of cards
     settings: settings, // Array of cards
 });
