@@ -289,6 +289,8 @@ exports.getPermAllowAPI = async (req, res, next) => {
 
         let isSuperAdmin = false;
         let isCompany = false;
+        let isUser = false;
+        let notUser = true;
 
         const permissionsStatus = {
             hasZonePermission: false,
@@ -317,7 +319,6 @@ exports.getPermAllowAPI = async (req, res, next) => {
             hasRolePermission: false,
             hasRoleAddPermission: false,
             hasRoleEditPermission: false,
-            isUser: false,
         };
 
         // If super admin, all permissions default to false (can be changed if needed)
@@ -395,13 +396,16 @@ exports.getPermAllowAPI = async (req, res, next) => {
                 permissionsStatus.hasRoleEditPermission = normalizeToArray(permission[role]).includes(edit)
 
             } else {
-                permissionsStatus.isUser = true;
+                isUser = true;
+                notUser = false;
             }
         }
 
         const data = {
             isSuperAdmin,
             isCompany,
+            isUser,
+            notUser,
             ...permissionsStatus
         };
 
