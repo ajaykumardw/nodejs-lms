@@ -2,6 +2,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const pdfParse = require('pdf-parse');
+const unzipper = require('unzipper');
 
 /**
  * Creates a multer upload instance with custom allowed file types,
@@ -25,9 +26,16 @@ function createUpload(allowedTypes, directory = 'uploads/', maxSizeMB = 5) {
       cb(null, absPath);
     },
     filename: function (req, file, cb) {
-      const uniqueName = Date.now() + '-' + file.originalname.replace(/\s+/g, '-');
+      let uniqueName;
+    
+      if (file.mimetype === 'application/zip') {
+        uniqueName = generateCustomId() + '.zip'; // optional: add extension
+      } else {
+        uniqueName = Date.now() + '-' + file.originalname.replace(/\s+/g, '-');
+      }
+    
       cb(null, uniqueName);
-    }
+    }    
   });
 
   const fileFilter = (req, file, cb) => {
@@ -44,26 +52,39 @@ function createUpload(allowedTypes, directory = 'uploads/', maxSizeMB = 5) {
     fileFilter
   });
 
-  const extractPdfPageCount = async (req, res, next) => {
+  const handleZipOrPdf = async (req, res, next) => {
     try {
-      if (
-        req.file &&
-        req.file.mimetype === 'application/pdf' &&
-        allowedTypes.includes('application/pdf')
-      ) {
-        const fullPath = path.join(absPath, req.file.filename);
+      if (!req.file) return next();
+
+      const fullPath = path.join(absPath, req.file.filename);
+
+      // ✅ Extract if it's a zip
+      if (req.file.mimetype === 'application/zip') {
+        const extractFolder = fullPath.replace(/\.zip$/, '');
+        fs.mkdirSync(extractFolder, { recursive: true });
+        console.log('extractFolder', extractFolder);
+        await fs.createReadStream(fullPath)
+          .pipe(unzipper.Extract({ path: extractFolder }))
+          .promise();
+        req.extractedPath = `${directory}/${req.file.filename.replace(/\.zip$/, '')}`; 
+        console.log('req.extractedPath', req.extractedPath);       
+      }
+
+      // ✅ Extract page count if PDF
+      if (req.file.mimetype === 'application/pdf') {
         const dataBuffer = fs.readFileSync(fullPath);
         const pdfData = await pdfParse(dataBuffer);
         req.pdfPageCount = pdfData.numpages;
       }
+
+      req.uploadDir = `${directory}/${req.file.filename}`; 
+      next();
     } catch (err) {
-      console.error('PDF parsing error:', err);
-      req.pdfPageCount = 0;
+      console.error('File processing error:', err);
+      next(err);
     }
-    next();
   };
 
-  // ✅ Return middleware creator and upload path
   return {
     middleware: (fieldName = 'file') => [
       (req, res, next) => {
@@ -71,11 +92,19 @@ function createUpload(allowedTypes, directory = 'uploads/', maxSizeMB = 5) {
         next();
       },
       upload.single(fieldName),
-      extractPdfPageCount
+      handleZipOrPdf
     ],
     uploadPath
   };
 }
 
+function generateCustomId(segmentCount = 4, segmentLength = 4) {
+  const randomSegment = () =>
+    Array.from({ length: segmentLength }, () =>
+      String.fromCharCode(97 + Math.floor(Math.random() * 26)) // a-z
+    ).join('');
+
+  return Array.from({ length: segmentCount }, randomSegment).join('-');
+}
 
 module.exports = createUpload;
