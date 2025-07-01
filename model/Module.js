@@ -1,6 +1,33 @@
 const mongoose = require('mongoose');
 const schema = mongoose.Schema;
 
+const cards = new mongoose.Schema({
+    title: {
+      type: String,
+      required: true,
+    },
+    value: {
+        type: String,
+        required: true,
+    },
+    content: {
+        type: mongoose.Schema.Types.Mixed, // flexible structure per content_type
+        default: {}
+      },
+    created_at: {
+        type: Date, 
+        default: Date.now
+    },
+  }, { _id: true });
+
+
+  const settings = new mongoose.Schema({
+    leaderboard_points: {
+      type: String,
+      required: false
+    }
+  }, { _id: false });
+
 const moduleSchema = new schema({
     company_id: {
         type: mongoose.Schema.Types.ObjectId,
@@ -19,13 +46,18 @@ const moduleSchema = new schema({
     },
     type: {
         type: Number,
-        required: true,
+        required: false,
         ref: "module_types"
+    },
+    category_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: "categories"
     },
     status: {
         type: String,
         enum: ['active', 'inactive', 'draft', 'published'],
-        required: true
+        required: false
     },
     duration: {
         type: Number, 
@@ -47,7 +79,12 @@ const moduleSchema = new schema({
     updated_at: {
         type: Date, 
         default: Date.now
-    }
+    },
+    image: {
+        type: String,
+    },
+    cards: [cards], // Array of cards
+    settings: settings, // Array of cards
 });
 
 module.exports = mongoose.model('modules', moduleSchema);
