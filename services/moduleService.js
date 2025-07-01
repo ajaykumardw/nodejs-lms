@@ -63,7 +63,7 @@ const deleteCard = async (req) => {
     // 3. Find and remove the card
     const card = module.cards.id(cardId);
     if (!card) {
-      return { status: false, message: 'Card not found' };
+      return { status: false, message: 'Content not found' };
     }
 
     module.cards = module.cards.filter(card => card._id.toString() !== cardId);
@@ -71,11 +71,11 @@ const deleteCard = async (req) => {
 
     return {
       status: true,
-      message: 'Card deleted successfully',
+      message: 'Content deleted successfully',
       cards: module.cards // return remaining cards
     };
   } catch (error) {
-    console.error('DeleteCard error:', error);
+    console.error('Delete Content error:', error);
     return { status: false, message: 'Server error' };
   }
 };
@@ -100,7 +100,7 @@ const updateCardContentDocuments = async (req) => {
     // 3. Find the card
     const card = module.cards.id(cardId);
     if (!card) {
-      return { status: false, message: 'Card not found' };
+      return { status: false, message: 'Content not found' };
     }
 
     // if (card.content_type !== 'document') {
@@ -118,7 +118,8 @@ const updateCardContentDocuments = async (req) => {
           file: req.file.filename,
           type: req.file.mimetype,
           size: req.file.size,
-          uploadedAt: new Date()
+          uploadedAt: new Date(),
+          uploadDir: req.file.mimetype === 'application/zip' ? `${req.extractedPath}/index_lms.html` : req.uploadDir
         }
       ];
 

@@ -211,7 +211,7 @@ const updateCardContentScormContent = async (req, res, next) => {
     try {
         const response = await moduleService.updateCardContentDocuments(req);
         if(response.status){
-            return successResponse(res, response.message);
+            return successResponse(res, response.message, response['data']);
         }else{
             return errorResponse(res, response.message);
         }
