@@ -12,6 +12,7 @@ exports.postAPILogIn = (req, res, next) => {
 
     const { email, password } = req.body;
     let loadedUser;
+    
     User.findOne({ email_hash: hash(normalizeEmail(email)) })
         .then(user => {
             if (!user) {
