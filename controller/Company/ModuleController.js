@@ -14,7 +14,7 @@ const getModuleAPI = async (req, res, next) => {
             filter.status = req.query.status === 'true';
         }
 
-        const data = await Module.find(filter).select('name status');
+        const data = await Module.find(filter)//.select('name status');
 
         return successResponse(res, "Module fetched successfully!", data);
     } catch (error) {
@@ -37,14 +37,23 @@ const postModuleAPI = async (req, res, next) => {
     //   if (existing) {
     //     return warningResponse(res, "Module with this name already exists.", {}, 409);
     //   }
+    let image = '';
+    if (req.file) {
+        image = `${req.uploadPath}/${req.file.filename}`;
+      }
   
       const module = new Module({
         company_id: user._id,
         title,
         description,
         category_id,
-        status
+        status,
+        image
       });
+
+
+
+
   
       await module.save();
   
@@ -73,6 +82,10 @@ const postModuleAPI = async (req, res, next) => {
       module.description = description;
       module.category_id = category_id;
       module.status = 'active';
+
+    if (req.file) {
+        module.image = `${req.uploadPath}/${req.file.filename}`;
+    }
       await module.save();
   
       return successResponse(res, "Module updated successfully!", module);
@@ -82,22 +95,6 @@ const postModuleAPI = async (req, res, next) => {
     }
   };
   
-
-const deleteModuleAPI = async (req, res, next) => {
-    try {
-        const user = req.user;
-        const moduleId = req.params.id;
-        const module = await Module.findOne({ company_id: user._id, _id: moduleId });
-        if (!module) {
-            return warningResponse(res, "Module not found.", {}, 404);
-        }
-        await module.deleteOne();
-        return successResponse(res, "Module deleted successfully!", {}, 200);
-    } catch (err) {
-        return errorResponse(res, "Failed to delete module", err, 500);
-    }
-};
-
 const getModuleByIdAPI = async (req, res, next) => {
     try {
         const companyId = req.user?._id || req.userId;
@@ -182,6 +179,48 @@ const updateSettings = async (req, res, next) => {
     }
 }
 
+const getPaginatedModules = async (req, res, next) => {
+    try {
+        const response = await moduleService.getPaginatedModules(req, res);
+        if(response['status']){
+            return successResponse(res, response['message'], response);
+        }else{
+            return errorResponse(res, response['message']);
+        }
+        
+    } catch (error) {
+        next(error);
+    }
+}
+
+const deleteModuleAPI = async (req, res, next) => {
+    try {
+        const response = await moduleService.deleteModule(req);
+        if(response.status){
+            return successResponse(res, response.message);
+        }else{
+            return errorResponse(res, response.message);
+        }
+        
+    } catch (error) {
+        next(error);
+    }
+}
+
+const updateCardContentScormContent = async (req, res, next) => {
+    try {
+        const response = await moduleService.updateCardContentDocuments(req);
+        if(response.status){
+            return successResponse(res, response.message);
+        }else{
+            return errorResponse(res, response.message);
+        }
+        
+    } catch (error) {
+        next(error);
+    }
+}
+
 module.exports = {
     getModuleAPI,
     postModuleAPI,
@@ -192,5 +231,7 @@ module.exports = {
     deleteCard,
     updateCardContentDocuments,
     updateCardContentYoutubeVideo,
-    updateSettings
+    updateSettings,
+    getPaginatedModules,
+    updateCardContentScormContent
 };

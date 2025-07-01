@@ -22,12 +22,30 @@ const allowedTypesDocument = [
     'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'application/msword'
-];
+  ];
 
-const uploadDocument = createUpload(allowedTypesDocument);
-const uploadVideo = createUpload(['video/mp4', 'video/webm']);
-const moduleocument = createUpload(['image/jpeg', 'image/png', 'image/jpg'], 'uploads/module');
+  const { middleware: uploadDocument } = createUpload(
+    allowedTypesDocument, // allowed types
+    'uploads/module/content' // directory inside /public/
+  );
 
+  const { middleware: uploadVideo } = createUpload(
+    ['video/mp4','video/webm'], // allowed types
+    'uploads/module/content' // directory inside /public/
+  );
+
+  const { middleware: imageUpload } = createUpload(
+    ['image/jpeg', 'image/png', 'image/jpg'], // allowed types
+    'uploads/images' // directory inside /public/
+  );
+
+  const { middleware: uploadScorm } = createUpload(
+    ['application/zip', 'application/x-zip-compressed'],
+    'uploads/module/content/scorm', 1024
+  );
+
+
+  
 //routes for roles
 router.get('/role', isAuth, roleController.getRoleAPI);
 router.post('/role', isAuth, validation.postRoleValidation, roleController.postRoleAPI);
@@ -59,10 +77,10 @@ router.put('/package/:packageTypeId/:packageId', isAuth, packageAPIController.pu
 
 //routes for company
 router.get('/company', isAuth, companyAPIController.getCompanyIndexAPI);
-router.post('/company', isAuth, validation.postCompany, companyAPIController.postCompanyAPI);
+router.post('/company', isAuth, validation.postCompany, uploadVideo('file'), companyAPIController.postCompanyAPI);
 router.get('/company/create', isAuth, companyAPIController.createCompanyAPI);
 router.get('/company/:id/edit', isAuth, companyAPIController.editCompanyAPI);
-router.put('/company/:id', isAuth, companyAPIController.putCompanyAPI);
+router.put('/company/:id', isAuth, uploadVideo('file'), companyAPIController.putCompanyAPI);
 router.get('/company/email/check/:email/:id', isAuth, companyAPIController.checkEmailCompanyAPI)
 
 
@@ -71,22 +89,22 @@ router.get('/designations', isAuth, designationAPIController.getDesignationAPI);
 router.put('/designation/:id', isAuth, designationAPIController.putDesignationAPI)
 router.delete('/designation/:id', isAuth, designationAPIController.deleteDesignationAPI)
 
-router.post('/participation_type', isAuth, ParticipationTypeAPIController.postAPI);
+router.post('/participation_type', isAuth, uploadVideo('file'),ParticipationTypeAPIController.postAPI);
 router.get('/participation_types', isAuth, ParticipationTypeAPIController.getAPI);
-router.put('/participation_type/:id', isAuth, ParticipationTypeAPIController.putAPI)
+router.put('/participation_type/:id', isAuth, uploadVideo('file'), ParticipationTypeAPIController.putAPI)
 router.delete('/participation_type/:id', isAuth, ParticipationTypeAPIController.deleteAPI)
 
 //user routes
 router.post('/user', isAuth, uploadVideo('file'), UserAPIController.createUserAPI);
-router.put('/user/:id', isAuth, validation.putUser, uploadVideo('file'), UserAPIController.updateUserAPI);
+router.put('/user/:id', isAuth, validation.putUser,uploadVideo('file'), UserAPIController.updateUserAPI);
 router.delete('/user/:id', isAuth, UserAPIController.deleteAPI);
 router.get('/user/:id/edit', isAuth, UserAPIController.editAPI);
 router.get('/user/search', isAuth, UserAPIController.searchUserAPI);
-router.put('/user/update-password/:id', isAuth, uploadVideo('file'), UserAPIController.updatePasswordAPI);
-router.put('/user/attach/empcode/:id', isAuth, uploadVideo('file'), UserAPIController.attachNewUserCodeAPI);
-router.put('/user/mark/active/empcode/:id', isAuth, uploadVideo('file'), UserAPIController.markActiveUserCodeAPI);
+router.put('/user/update-password/:id', isAuth,uploadVideo('file'), UserAPIController.updatePasswordAPI);
+router.put('/user/attach/empcode/:id', isAuth, uploadVideo('file'),UserAPIController.attachNewUserCodeAPI);
+router.put('/user/mark/active/empcode/:id', isAuth,uploadVideo('file'), UserAPIController.markActiveUserCodeAPI);
 router.put('/user/status/update/:id', isAuth, uploadVideo('file'), UserAPIController.updateStatusAPI);
-router.post('/users/import', isAuth, uploadVideo('file'), UserAPIController.importAPI);
+router.post('/users/import', isAuth,  uploadVideo('file'),UserAPIController.importAPI);
 router.get('/users/stats', isAuth, UserAPIController.getUserStatsAPI);
 
 router.get('/countries', isAuth, companyAPIController.getCountryAPI);
@@ -98,15 +116,18 @@ router.post('/category', isAuth, CategoryController.postCategoryAPI);
 router.put('/category/:id', isAuth, CategoryController.putCategoryAPI);
 router.delete('/category/:id', isAuth, CategoryController.deleteCategoryAPI);
 
-router.get('/module', isAuth, ModuleController.getModuleAPI);
+router.get('/modules', isAuth, ModuleController.getModuleAPI);
+router.get('/modules/list', isAuth, ModuleController.getPaginatedModules);
 router.get('/module/:id', isAuth, ModuleController.getModuleByIdAPI);
-router.put('/module/:id', isAuth, ModuleValidation.putModuleAPI, uploadDocument('file'), ModuleController.putModuleAPI);
-router.post('/module', isAuth, ModuleValidation.postModuleAPI, uploadDocument('file'), ModuleController.postModuleAPI);
-router.post('/module/:id/cards', isAuth, uploadDocument('file'), ModuleController.createOrUpdateCard);
+router.put('/module/:id', isAuth,  ModuleValidation.putModuleAPI, imageUpload('file'), ModuleController.putModuleAPI);
+router.delete('/module/:id', isAuth,  ModuleController.deleteModuleAPI);
+router.post('/module', isAuth, ModuleValidation.postModuleAPI, imageUpload('file'), ModuleController.postModuleAPI);
+router.post('/module/:id/cards', isAuth,uploadDocument('file'), ModuleController.createOrUpdateCard);
 router.delete('/module/:id/card/:card_id', isAuth, ModuleController.deleteCard);
 router.put('/module/:id/card/documents/:card_id', isAuth, uploadDocument('file'), ModuleController.updateCardContentDocuments);
 router.put('/module/:id/card/videos/:card_id', isAuth, uploadVideo('file'), ModuleController.updateCardContentDocuments);
 router.put('/module/:id/card/youtubeVideos/:card_id', isAuth, uploadVideo('file'), ModuleController.updateCardContentYoutubeVideo);
+router.put('/module/:id/card/scorm/:card_id', isAuth, uploadScorm('file'), ModuleController.updateCardContentScormContent);
 router.put('/module/setting/update/:id', isAuth, uploadVideo('file'), ModuleController.updateSettings);
 
 module.exports = router;
