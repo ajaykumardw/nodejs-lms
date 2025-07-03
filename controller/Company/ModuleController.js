@@ -25,7 +25,7 @@ const getModuleAPI = async (req, res, next) => {
 
 const postModuleAPI = async (req, res, next) => {
     try {
-      const { title, description, category_id, status } = req.body;
+      const { title, description, category_id } = req.body;
       const user = req.user;
   
     //   //Check for existing module with same name under same company
@@ -47,7 +47,7 @@ const postModuleAPI = async (req, res, next) => {
         title,
         description,
         category_id,
-        status,
+        status : 'draft',
         image
       });
 
@@ -81,7 +81,7 @@ const postModuleAPI = async (req, res, next) => {
       module.title = title;
       module.description = description;
       module.category_id = category_id;
-      module.status = 'active';
+    //   module.status = 'draft';
 
     if (req.file) {
         module.image = `${req.uploadPath}/${req.file.filename}`;
@@ -221,6 +221,20 @@ const updateCardContentScormContent = async (req, res, next) => {
     }
 }
 
+const putModuleStatusAPI = async (req, res, next) => {
+    try {
+        const response = await moduleService.updateStatus(req);
+        if(response.status){
+            return successResponse(res, response.message);
+        }else{
+            return errorResponse(res, response.message);
+        }
+        
+    } catch (error) {
+        next(error);
+    }
+}
+
 module.exports = {
     getModuleAPI,
     postModuleAPI,
@@ -233,5 +247,6 @@ module.exports = {
     updateCardContentYoutubeVideo,
     updateSettings,
     getPaginatedModules,
-    updateCardContentScormContent
+    updateCardContentScormContent,
+    putModuleStatusAPI
 };
