@@ -32,7 +32,11 @@ exports.postRegionBranchAPI = async (req, res, next) => {
     try {
         const userId = req.userId;
         const regionId = req.params.regionId;
-        const { branch } = req.body; // Expecting array of branches or a single object
+        const { branch } = req.body;
+
+        if (!branch || (Array.isArray(branch) && branch.length === 0)) {
+            return errorResponse(res, "No branch data provided", {}, 400);
+        }
 
         const Zone = await zone.findOne({
             region: {
@@ -48,7 +52,7 @@ exports.postRegionBranchAPI = async (req, res, next) => {
         }
 
         const matchedRegion = Zone.region.find(item =>
-            item._id.toString().trim() === regionId.toString().trim()
+            item._id?.toString() === regionId.toString()
         );
 
         if (!matchedRegion) {
@@ -61,24 +65,25 @@ exports.postRegionBranchAPI = async (req, res, next) => {
 
         const incomingBranches = Array.isArray(branch) ? branch : [branch];
 
-        const incomingBranchIds = new Set(
+        // Prepare a map of incoming branches by ID (if present)
+        const incomingBranchIdSet = new Set(
             incomingBranches
-                .filter(item => item.branchId)
-                .map(item => item.branchId.toString())
+                .filter(b => b.branchId)
+                .map(b => b.branchId.toString())
         );
 
-        // Update or add branches
-        incomingBranches.forEach(item => {
+        // Update or add incoming branches
+        for (const item of incomingBranches) {
             if (item.branchId) {
                 const existing = matchedRegion.branch.find(
                     b => b._id?.toString() === item.branchId.toString()
                 );
-
                 if (existing) {
                     existing.name = item.name;
                     existing.code = item.code || '';
                 } else {
                     matchedRegion.branch.push({
+                        _id: new Types.ObjectId(item.branchId), // optional
                         name: item.name,
                         code: item.code || ''
                     });
@@ -89,17 +94,17 @@ exports.postRegionBranchAPI = async (req, res, next) => {
                     code: item.code || ''
                 });
             }
-        });
+        }
 
-
-        matchedRegion.branch = matchedRegion.branch.filter(b => {
-            return !b._id || incomingBranchIds.has(b._id.toString());
-        });
+        if (incomingBranchIdSet.size > 0) {
+            matchedRegion.branch = matchedRegion.branch.filter(b => {
+                return !b._id || incomingBranchIdSet.has(b._id.toString());
+            });
+        }
 
         await Zone.save();
 
         return successResponse(res, "Branches saved successfully");
-
     } catch (error) {
         next(error);
     }
