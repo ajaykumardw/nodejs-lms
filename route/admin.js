@@ -80,13 +80,7 @@ router.get('/company', isAuth, companyAPIController.getCompanyIndexAPI);
 router.post('/company', isAuth, validation.postCompany, imageUpload('photo'), companyAPIController.postCompanyAPI);
 router.get('/company/create', isAuth, companyAPIController.createCompanyAPI);
 router.get('/company/:id/edit', isAuth, companyAPIController.editCompanyAPI);
-
-router.put('/company/:id', isAuth, imageUpload('photo'), (req, res, next) => {
-  console.log('BODY:', req.body);
-  console.log('FILE:', req.file);
-  next();
-}, companyAPIController.putCompanyAPI);
-
+router.put('/company/:id', isAuth, imageUpload('photo'), companyAPIController.putCompanyAPI);
 router.get('/company/email/check/:email/:id', isAuth, companyAPIController.checkEmailCompanyAPI)
 
 
