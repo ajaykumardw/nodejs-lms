@@ -314,6 +314,47 @@ const deleteModule = async (req) => {
   }
 };
 
+const updateStatus = async (req) => {
+  try {
+    const user = req.user;
+    const moduleId = req.params.id;
+
+    const module = await Module.findOne({ company_id: user._id, _id: moduleId });
+    if (!module) {
+      return {
+        status: false,
+        message: 'Module not found',
+      };
+    }
+
+    const { status } = req.body;
+
+    // Validate allowed statuses
+    const allowedStatuses = ['draft', 'published'];
+    if (!allowedStatuses.includes(status)) {
+      return {
+        status: false,
+        message: 'Invalid status. Allowed values are "draft" or "published".',
+      };
+    }
+
+    module.status = status;
+    await module.save();
+
+    return {
+      status: true,
+      message: `Module status updated to ${status}`,
+    };
+  } catch (err) {
+    return {
+      status: false,
+      message: 'Failed to update module status',
+      error: err.message,
+    };
+  }
+};
+
+
 module.exports = {
     createOrUpdateCard,
     deleteCard,
@@ -321,5 +362,6 @@ module.exports = {
     updateCardContentYoutubeVideo,
     updateSettings,
     getPaginatedModules,
-    deleteModule
+    deleteModule,
+    updateStatus
 }

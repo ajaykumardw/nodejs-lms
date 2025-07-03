@@ -126,6 +126,7 @@ router.get('/modules', isAuth, ModuleController.getModuleAPI);
 router.get('/modules/list', isAuth, ModuleController.getPaginatedModules);
 router.get('/module/:id', isAuth, ModuleController.getModuleByIdAPI);
 router.put('/module/:id', isAuth, ModuleValidation.putModuleAPI, imageUpload('file'), ModuleController.putModuleAPI);
+router.put('/module/update/status/:id', isAuth, ModuleValidation.putModuleStatusAPI, imageUpload('file'), ModuleController.putModuleStatusAPI);
 router.delete('/module/:id', isAuth, ModuleController.deleteModuleAPI);
 router.post('/module', isAuth, ModuleValidation.postModuleAPI, imageUpload('file'), ModuleController.postModuleAPI);
 router.post('/module/:id/cards', isAuth, uploadDocument('file'), ModuleController.createOrUpdateCard);
