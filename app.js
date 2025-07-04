@@ -54,8 +54,8 @@ app.use(express.static(path.join(__dirname, "public/uploads")));
 // app.use(multer().single('photo'));
 
 // Body parsing middleware
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json({ limit: '1000mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '1000mb' }));
 app.use(flash());
 
 // CORS middleware
