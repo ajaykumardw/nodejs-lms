@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const isAuth = require('../middleware/is-auth')
 const languageController = require('../controller/Company/LanguageController');
+const groupController = require('../controller/Company/GroupAPIContoller')
 const zoneController = require('../controller/Company/ZoneAPIController');
 const regionController = require('../controller/Company/RegionAPIController');
 const appMenuController = require('../controller/Company/AppMenuController');
@@ -62,5 +63,9 @@ router.get('/role', isAuth, roleController.getRoleAPI)
 router.get('/role/create', isAuth, roleController.createRoleAPI);
 router.post('/role', isAuth, roleController.postRoleAPI)
 router.put('/role/:roleId', isAuth, roleController.putRoleAPI)
+
+//This route is for group
+router.get('/group', isAuth, groupController.getGroupAPI);
+router.post('/group', isAuth, groupController.postGroupAPI);
 
 module.exports = router;
