@@ -10,7 +10,7 @@ const groupSchema = new Schema({
     },
     description: {
         type: String,
-        maxlength: 65535, // Maximum length for TEXT
+        maxlength: 1000, // Maximum length for TEXT
         required: false, // description is optional
     },
     status: {
@@ -21,6 +21,15 @@ const groupSchema = new Schema({
         type: String,
         required: true
     }],
+    company_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true, // company_id is required
+        ref: 'users', // Assuming there's a 'companies' collection to reference
+    },
+    created_by: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true
+    },
     created_at: {
         type: Date,
         required: false, // created_at is optional
@@ -29,11 +38,6 @@ const groupSchema = new Schema({
     updated_at: {
         type: Date,
         required: false, // updated_at is optional
-    },
-    company_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true, // company_id is required
-        ref: 'users', // Assuming there's a 'companies' collection to reference
     },
 });
 
