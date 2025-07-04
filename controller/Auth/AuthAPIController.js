@@ -12,7 +12,7 @@ exports.postAPILogIn = (req, res, next) => {
 
     const { email, password } = req.body;
     let loadedUser;
-    
+
     User.findOne({ email_hash: hash(normalizeEmail(email)) })
         .then(user => {
             if (!user) {
@@ -45,7 +45,7 @@ exports.postAPILogIn = (req, res, next) => {
                 jwtSecretKey,
                 { expiresIn: `${expireTime}h` }
             );
-            
+
             res.status(200).json({
                 status: "Success",
                 statusCode: 200,
