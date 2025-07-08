@@ -286,6 +286,7 @@ exports.getPermAllowAPI = async (req, res, next) => {
         const branch = '685394b1bf2b29d85a4773a3';
         const region = '685394aabf2b29d85a47738e';
         const zone = '6853946dbf2b29d85a477379';
+        const group = '686ceac86d9e7b6e1c8b66c7';
 
         let isSuperAdmin = false;
         let isCompany = false;
@@ -319,6 +320,10 @@ exports.getPermAllowAPI = async (req, res, next) => {
             hasRolePermission: false,
             hasRoleAddPermission: false,
             hasRoleEditPermission: false,
+            hasGroupPermission: false,
+            hasGroupAddPermission: false,
+            hasGroupEditPermission: false,
+            hasGroupImportData: false,
         };
 
         // If super admin, all permissions default to false (can be changed if needed)
@@ -395,6 +400,10 @@ exports.getPermAllowAPI = async (req, res, next) => {
                 permissionsStatus.hasRoleAddPermission = normalizeToArray(permission[role]).includes(add)
                 permissionsStatus.hasRoleEditPermission = normalizeToArray(permission[role]).includes(edit)
 
+                permissionsStatus.hasGroupAddPermission = normalizeToArray(permission[group]).includes(add)
+                permissionsStatus.hasGroupEditPermission = normalizeToArray(permission[group]).includes(edit)
+                permissionsStatus.hasGroupPermission = normalizeToArray(permission[group]).includes(listing)
+                permissionsStatus.hasGroupImportData = normalizeToArray(permission[group]).includes(import_data)
             } else {
                 isUser = true;
                 notUser = false;
