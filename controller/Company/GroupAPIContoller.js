@@ -25,10 +25,11 @@ exports.postGroupAPI = async (req, res, next) => {
 
         const userId = req.userId;
 
-        const { name, description, status, users } = req.body;
+        const { name, autoAssign, description, status, users } = req.body;
 
         const group = new Group({
             name,
+            autoAssign,
             status,
             description,
             userId: users,
@@ -93,7 +94,7 @@ exports.putGroupAPI = async (req, res, next) => {
     try {
         const userId = req.userId;
         const groupId = req.params.groupId;
-        const { name, description, status, users } = req.body;
+        const { name, autoAssign, description, status, users } = req.body;
 
         // Check if the group exists and belongs to the user
         const group = await Group.findOne({ _id: groupId, created_by: userId });
@@ -105,6 +106,7 @@ exports.putGroupAPI = async (req, res, next) => {
         await Group.findByIdAndUpdate(groupId, {
             $set: {
                 name,
+                autoAssign,
                 description,
                 status,
                 userId: [],
