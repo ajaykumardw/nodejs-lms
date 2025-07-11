@@ -17,11 +17,18 @@ require('dotenv').config();
 const MongoURL = process.env.MONGODB_URL;
 const port = process.env.PORT || 4000;
 
+const imageDir = path.join(__dirname, "/public/frames");
+
+if (!fs.existsSync(imageDir)) {
+    fs.mkdirSync(imageDir);
+}
+
 // Serve static files from "public" folder
 app.use('/public', express.static(path.join(__dirname, 'public')));
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, "public/uploads")));
+app.use(express.static(path.join(__dirname, "public/frames")));
 
 // const imageDir = path.join(__dirname, "/public/img/user-profile");
 

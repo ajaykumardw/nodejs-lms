@@ -67,5 +67,7 @@ router.put('/role/:roleId', isAuth, roleController.putRoleAPI)
 //This route is for group
 router.get('/group', isAuth, groupController.getGroupAPI);
 router.post('/group', isAuth, groupController.postGroupAPI);
+router.put('/group/:groupId', isAuth, groupController.putGroupAPI);
+router.get('/check/group/empId/:uploadData', isAuth, groupController.getCheckEmpId);
 
 module.exports = router;
