@@ -98,6 +98,50 @@ function createUpload(allowedTypes, directory = 'uploads/', maxSizeMB = 5) {
   };
 }
 
+function certificateUpload(allowedTypes, directory = 'uploads/', maxSizeMB = 5) {
+  const uploadPath = `/public/${directory}`;
+  const absPath = path.join(__dirname, '..', uploadPath);
+
+  if (!fs.existsSync(absPath)) {
+    fs.mkdirSync(absPath, { recursive: true });
+  }
+
+  const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, absPath);
+    },
+    filename: function (req, file, cb) {
+      const uniqueName = Date.now() + '-' + file.originalname.replace(/\s+/g, '-');
+      cb(null, uniqueName);
+    }
+  });
+
+  const fileFilter = (req, file, cb) => {
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type'), false);
+    }
+  };
+
+  const upload = multer({
+    storage,
+    limits: { fileSize: maxSizeMB * 1024 * 1024 },
+    fileFilter
+  });
+
+  return {
+    fieldsMiddleware: upload.fields([
+      { name: 'logoURL', maxCount: 1 },
+      { name: 'backgroundImage', maxCount: 1 },
+      { name: 'signature1URL', maxCount: 1 },
+      { name: 'signature2URL', maxCount: 1 }
+    ]),
+    uploadPath
+  };
+}
+
+
 function generateCustomId(segmentCount = 4, segmentLength = 4) {
   const randomSegment = () =>
     Array.from({ length: segmentLength }, () =>
