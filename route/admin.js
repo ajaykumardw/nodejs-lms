@@ -14,6 +14,7 @@ const ParticipationTypeAPIController = require('../controller/Admin/Participatio
 const UserAPIController = require('../controller/Admin/UserAPIController');
 const CategoryController = require('../controller/Admin/CategoryController');
 const ModuleController = require('../controller/Company/ModuleController');
+const TrainingController = require('../controller/Company/TrainingControllerAPI');
 
 const createUpload = require('../util/upload');
 
@@ -129,6 +130,15 @@ router.put('/module/:id/card/documents/:card_id', isAuth, uploadDocument('file')
 router.put('/module/:id/card/videos/:card_id', isAuth, uploadVideo('file'), ModuleController.updateCardContentDocuments);
 router.put('/module/:id/card/youtubeVideos/:card_id', isAuth, uploadVideo('file'), ModuleController.updateCardContentYoutubeVideo);
 router.put('/module/:id/card/scorm/:card_id', isAuth, uploadScorm('file'), ModuleController.updateCardContentScormContent);
+router.put('/module/:id/card/quiz/:card_id', isAuth, ModuleController.updateCardContentQuizContent);
 router.put('/module/setting/update/:id', isAuth, uploadVideo('file'), ModuleController.updateSettings);
+
+
+router.get('/trainings/list', isAuth, TrainingController.getPaginatedTrainings);
+router.get('/training/:id', isAuth, TrainingController.getTrainingByIdAPI);
+router.put('/training/:id', isAuth, ModuleValidation.putModuleAPI, imageUpload('file'), TrainingController.putTrainingAPI);
+router.put('/training/update/status/:id', isAuth, ModuleValidation.putModuleStatusAPI, imageUpload('file'), TrainingController.putTrainingStatusAPI);
+router.delete('/training/:id', isAuth, TrainingController.deleteTrainingAPI);
+router.post('/training', isAuth, ModuleValidation.postModuleAPI, imageUpload('file'), TrainingController.postTrainingAPI);
 
 module.exports = router;
