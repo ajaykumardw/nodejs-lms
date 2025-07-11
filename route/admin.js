@@ -45,8 +45,6 @@ const { middleware: uploadScorm } = createUpload(
   'uploads/module/content/scorm', 1024
 );
 
-
-
 //routes for roles
 router.get('/role', isAuth, roleController.getRoleAPI);
 router.post('/role', isAuth, validation.postRoleValidation, roleController.postRoleAPI);
