@@ -7,6 +7,7 @@ const bodyParser = require('body-parser');
 const authRoute = require('./route/auth');
 const adminRoute = require('./route/admin');
 const companyRouter = require('./route/company')
+const appConfig = require('./model/AppConfig')
 const path = require('path')
 const fs = require('fs')
 
@@ -29,36 +30,6 @@ app.use('/public', express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(express.static(path.join(__dirname, "public/uploads")));
 app.use(express.static(path.join(__dirname, "public/frames")));
-
-// const imageDir = path.join(__dirname, "/public/img/user-profile");
-
-// if (!fs.existsSync(imageDir)) {
-//     fs.mkdirSync(imageDir);
-// }
-
-// Set disk storage
-// const diskStorage = multer.diskStorage({
-//     destination: (req, file, cb) => {
-//         cb(null, path.join(__dirname, '/public/img/user-profile'));
-//     },
-//     filename: (req, file, cb) => {
-//         const timeStamp = new Date().toISOString().replace(/:/g, '-');
-//         const sanitizedName = file.originalname.replace(/\s+/g, '-');
-//         cb(null, `${timeStamp}-${sanitizedName}`);
-//     }
-// });
-
-// const fileFilter = (req, file, cb) => {
-//     const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
-//     if (validTypes.includes(file.mimetype)) {
-//         cb(null, true);
-//     } else {
-//         cb(new Error('Unsupported file type'), false);
-//     }
-// };
-
-// Multer middleware FIRST
-// app.use(multer().single('photo'));
 
 // Body parsing middleware
 app.use(bodyParser.json({ limit: '1000mb' }));

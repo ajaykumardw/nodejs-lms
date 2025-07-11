@@ -11,6 +11,14 @@ const branchController = require('../controller/Company/BranchAPIController');
 const roleController = require('../controller/Company/RoleAPIController')
 const departmentController = require('../controller/Company/DepartmentAPIController');
 const channelController = require('../controller/Company/ChannelControllerAPI')
+const certificateController = require('../controller/Company/CertificateAPIController')
+
+const certificateUpload = require('../util/uploadCertificate');
+
+const { fieldsMiddleware: certificateUploads } = certificateUpload(
+    ['image/jpeg', 'image/png', 'image/jpg', 'image/svg+xml'],
+    'company_assets'
+);
 
 //This route is for zone
 router.get('/zone', isAuth, zoneController.getZoneAPIData);
@@ -69,5 +77,9 @@ router.get('/group', isAuth, groupController.getGroupAPI);
 router.post('/group', isAuth, groupController.postGroupAPI);
 router.put('/group/:groupId', isAuth, groupController.putGroupAPI);
 router.get('/check/group/empId/:uploadData', isAuth, groupController.getCheckEmpId);
+
+//This route is for certificate
+router.get('/certificate/create', isAuth, certificateController.getCreateDataAPI)
+router.post('/certificate', isAuth, certificateUploads, certificateController.postCertificateAPI);
 
 module.exports = router;
