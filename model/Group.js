@@ -13,6 +13,10 @@ const groupSchema = new Schema({
         maxlength: 1000, // Maximum length for TEXT
         required: false, // description is optional
     },
+    autoAssign: {
+        type: Boolean,
+        default: false
+    },
     status: {
         type: Boolean,
         required: true, // status is required
