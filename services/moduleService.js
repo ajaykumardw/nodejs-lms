@@ -206,6 +206,52 @@ const updateCardContentYoutubeVideo = async (req) => {
   }
 };
 
+const updateCardContentQuizContent = async (req) => {
+  try {
+    const companyId = req.user;
+    const moduleId = req.params.id;
+    const cardId = req.params.card_id;
+
+    if (!mongoose.Types.ObjectId.isValid(moduleId) || !mongoose.Types.ObjectId.isValid(cardId)) {
+      return { status: false, message: 'Invalid ID format' };
+    }
+
+    const module = await Module.findOne({ company_id: companyId, _id: moduleId });
+    if (!module) {
+      return { status: false, message: 'Invalid module' };
+    }
+
+    // 3. Find the card
+    const card = module.cards.id(cardId);
+    if (!card) {
+      return { status: false, message: 'Card not found' };
+    }
+  
+    const { questions, title } = req.body;
+
+    card.title = title;
+    
+    if (questions !== undefined) {
+      card.content.questions = questions;
+    }
+
+    card.markModified('content');
+    await module.save();
+
+    return {
+      status: true,
+      message: 'Questions added and content updated',
+      data: {
+        cards: module.cards,
+        card: card
+      },
+    };
+  } catch (error) {
+    console.error('updateCardContent error:', error);
+    return { status: false, message: 'Server error' };
+  }
+};
+
 const updateSettings = async (req) => {
   try {
     const companyId = req.user;
@@ -363,5 +409,6 @@ module.exports = {
     updateSettings,
     getPaginatedModules,
     deleteModule,
-    updateStatus
+    updateStatus,
+    updateCardContentQuizContent
 }

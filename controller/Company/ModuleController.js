@@ -235,6 +235,20 @@ const putModuleStatusAPI = async (req, res, next) => {
     }
 }
 
+const updateCardContentQuizContent = async (req, res, next) => {
+    try {
+        const response = await moduleService.updateCardContentQuizContent(req);
+        if(response.status){
+            return successResponse(res, response.message);
+        }else{
+            return errorResponse(res, response.message);
+        }
+        
+    } catch (error) {
+        next(error);
+    }
+}
+
 module.exports = {
     getModuleAPI,
     postModuleAPI,
@@ -248,5 +262,6 @@ module.exports = {
     updateSettings,
     getPaginatedModules,
     updateCardContentScormContent,
-    putModuleStatusAPI
+    putModuleStatusAPI,
+    updateCardContentQuizContent
 };
