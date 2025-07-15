@@ -53,7 +53,6 @@ const certificateSchema = new Schema({
     signatureURL: {
         type: String,
         maxlength: 5000, // Limit the length to 255 characters
-        default: 'signature1.png',
         required: false, // name is required
     },
     signatureName2: {
@@ -69,7 +68,6 @@ const certificateSchema = new Schema({
     signatureURL2: {
         type: String,
         maxlength: 5000,
-        default: 'signature1.png',
         required: false,
     },
     company_id: {

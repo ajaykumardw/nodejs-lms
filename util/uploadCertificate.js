@@ -3,56 +3,62 @@ const path = require('path');
 const fs = require('fs');
 
 /**
- * Create a multer middleware for certificate asset uploads.
+ * This function will be used to upload data on any folder.
  * 
- * @param {string[]} allowedTypes - MIME types allowed (e.g., ['image/jpeg']).
- * @param {string} directory - Directory inside /public to save files.
- * @param {number} [maxSizeMB=5] - Max file size in MB.
- * @returns {{ fieldsMiddleware: any, uploadPath: string }}
+ * @param {string[]} allowedTypes
+ * @param {number} [maxSizeMB=5]
+ * @returns {{ uploadField: Object, uploadPaths: object }}
  */
-function certificateUpload(allowedTypes, directory, maxSizeMB = 5) {
-    const relativePath = `public/${directory}`;
-    const absPath = path.join(__dirname, '..', relativePath);
 
-    // Ensure directory exists
-    if (!fs.existsSync(absPath)) {
-        fs.mkdirSync(absPath, { recursive: true });
-    }
+function certificateUpload(allowedTypes, directFolder, folderArr, maxSizeMB = 2) {
+
+    const baseDir = path.join(__dirname, '..', 'public');
+
+    // Map field names to their directories
+    const fieldDirectoryMap = directFolder
+
+    // Ensure all target directories exist
+    Object.values(fieldDirectoryMap).map(item => {
+        const fullPath = path.join(baseDir, item)
+        if (!fs.existsSync(fullPath)) {
+
+        }
+        fs.mkdirSync(item, { recursive: true })
+    })
 
     const storage = multer.diskStorage({
         destination: (req, file, cb) => {
-            cb(null, absPath);
+            const subDir = fieldDirectoryMap[file.fieldname]
+            if (!subDir) {
+                return cb(new Error(`Invalid field: ${file.fieldname}`), null);
+            }
+            cb(null, path.join(baseDir, subDir))
         },
         filename: (req, file, cb) => {
-            const ext = path.extname(file.originalname).toLowerCase();
-            const timestamp = Math.floor(Date.now() / 1000);
-            const sanitizedField = file.fieldname.replace(/[^a-zA-Z0-9]/g, '');
-            cb(null, `${sanitizedField}-${timestamp}${ext}`);
+            const ext = path.extname(file.originalname).toLowerCase()
+            const timestamp = Math.floor(Date.now() / 1000)
+            const santized = file.fieldname.replace(/[^A-Za-z0-9]/g, '')
+            cb(null, `${santized}-${timestamp}${ext}`)
         }
-    });
+    })
 
     const fileFilter = (req, file, cb) => {
         if (allowedTypes.includes(file.mimetype)) {
             cb(null, true);
         } else {
-            cb(new Error('Invalid file type'), false);
+            cb(Error('Invalid file type'), false);
         }
     };
 
     const upload = multer({
         storage,
-        limits: { fileSize: maxSizeMB * 1024 * 1024 }, // Max size in bytes
+        limits: { fileSize: maxSizeMB * 1024 * 1024 },
         fileFilter
     });
 
     return {
-        fieldsMiddleware: upload.fields([
-            { name: 'logoURL', maxCount: 1 },
-            { name: 'backgroundImage', maxCount: 1 },
-            { name: 'signature1URL', maxCount: 1 },
-            { name: 'signature2URL', maxCount: 1 }
-        ]),
-        uploadPath: `/${directory}` // for DB or frontend use
+        uploadField: upload.fields(folderArr),
+        uploadPaths: fieldDirectoryMap
     };
 }
 

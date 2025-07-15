@@ -15,9 +15,20 @@ const certificateController = require('../controller/Company/CertificateAPIContr
 
 const certificateUpload = require('../util/uploadCertificate');
 
-const { fieldsMiddleware: certificateUploads } = certificateUpload(
+const { uploadField: certificateUploads } = certificateUpload(
     ['image/jpeg', 'image/png', 'image/jpg', 'image/svg+xml'],
-    'company_assets'
+    {
+        logoURL: 'company_logo',
+        backgroundImage: 'frames',
+        signature1URL: 'signature',
+        signature2URL: 'signature'
+    },
+    [
+        { name: 'logoURL', maxCount: 1 },
+        { name: 'backgroundImage', maxCount: 1 },
+        { name: 'signature1URL', maxCount: 1 },
+        { name: 'signature2URL', maxCount: 1 }
+    ]
 );
 
 //This route is for zone
@@ -80,6 +91,10 @@ router.get('/check/group/empId/:uploadData', isAuth, groupController.getCheckEmp
 
 //This route is for certificate
 router.get('/certificate/create', isAuth, certificateController.getCreateDataAPI)
+router.get('/certificate/data', isAuth, certificateController.getCertificateAPI)
 router.post('/certificate', isAuth, certificateUploads, certificateController.postCertificateAPI);
+router.get('/certificate/edit/:id', isAuth, certificateController.getEditCertificateAPI)
+router.post('/certificate/update/:id', isAuth, certificateUploads, certificateController.putUpdateCertificateAPI)
+router.post('/certificate/change/frame/:id', isAuth, certificateController.putChangeFrameAPI)
 
 module.exports = router;
