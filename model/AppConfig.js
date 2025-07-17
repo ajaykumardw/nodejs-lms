@@ -10,7 +10,7 @@ const appConfigSchema = new mongoose.Schema({
     logoURL: {
         type: String,
         required: false,
-        maxLength: 100  // ✅ Fixed typo: "mexLength" → "maxLength"
+        maxLength: 100
     },
     title: {
         type: String,
@@ -30,12 +30,12 @@ const appConfigSchema = new mongoose.Schema({
     frameImage: [{
         type: String,
         required: false,
-        maxLength: 100  // ✅ Fixed typo
+        maxLength: 100
     }],
     signatureURL: {
         type: String,
         required: false,
-        maxLength: 100  // ✅ Fixed typo
+        maxLength: 100
     },
     notification_data: [{
         type: {
@@ -46,7 +46,7 @@ const appConfigSchema = new mongoose.Schema({
         default_footer: {
             type: String,
             required: false,
-            maxLength: 1000  // ✅ Fixed typo: "mexLength" → "maxLength"
+            maxLength: 1000
         },
         default_logo: {
             type: String,
@@ -65,6 +65,22 @@ const appConfigSchema = new mongoose.Schema({
             maxLength: 6000,
             required: false
         }
+    }],
+    placeholder_data: [{
+        name: {
+            type: String,
+            required: false,
+            maxLength: 255,
+        },
+        variable: [
+            {
+                name: {
+                    type: String,
+                    required: false,
+                    maxLength: 255,
+                },
+            },
+        ],
     }]
 }, {
     collection: 'app_config'

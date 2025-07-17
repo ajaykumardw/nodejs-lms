@@ -8,11 +8,18 @@ exports.getCreateNotificationAPI = async (req, res, next) => {
 
         const appConfig = await AppConfig.findOne({ type: "notification" })
 
-        if (!appConfig) {
-            return errorResponse(res, "Notification does not exist", {}, 404)
+        const placeholder = await AppConfig.findOne({ type: "placeholder" })
+
+        if (!appConfig || !placeholder) {
+            return errorResponse(res, "Data does not exist", {}, 404)
         }
 
-        return successResponse(res, "Data fetched successfully", appConfig)
+        const finalData = {
+            notification: appConfig,
+            placeholder
+        }
+
+        return successResponse(res, "Data fetched successfully", finalData)
 
     } catch (error) {
         next(error)
@@ -63,15 +70,15 @@ exports.getNotificationDataAPI = async (req, res, next) => {
             {
                 $unwind: {
                     path: '$category_list',
-                    preserveNullAndEmptyArrays: true // Keep documents even if no categories
+                    preserveNullAndEmptyArrays: true
                 }
             },
             {
                 $match: {
                     $expr: {
                         $or: [
-                            { $eq: ['$category_type', null] }, // if category_type is null, allow
-                            { $eq: ['$category_type', '$category_list._id'] } // or match normally
+                            { $eq: ['$category_type', null] },
+                            { $eq: ['$category_type', '$category_list._id'] }
                         ]
                     }
                 }
@@ -102,7 +109,6 @@ exports.getNotificationDataAPI = async (req, res, next) => {
                 }
             }
         ]);
-
 
         if (!Notifications) {
             return errorResponse(res, "No notifications found", {}, 404);
