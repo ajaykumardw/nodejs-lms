@@ -12,6 +12,7 @@ const roleController = require('../controller/Company/RoleAPIController')
 const departmentController = require('../controller/Company/DepartmentAPIController');
 const channelController = require('../controller/Company/ChannelControllerAPI')
 const certificateController = require('../controller/Company/CertificateAPIController')
+const notificationController = require('../controller/Company/NotificationController');
 
 const certificateUpload = require('../util/uploadCertificate');
 
@@ -96,5 +97,12 @@ router.post('/certificate', isAuth, certificateUploads, certificateController.po
 router.get('/certificate/edit/:id', isAuth, certificateController.getEditCertificateAPI)
 router.post('/certificate/update/:id', isAuth, certificateUploads, certificateController.putUpdateCertificateAPI)
 router.post('/certificate/change/frame/:id', isAuth, certificateController.putChangeFrameAPI)
+
+//This route is for notification
+router.get('/notification', isAuth, notificationController.getNotificationDataAPI)
+router.get('/notification/create', isAuth, notificationController.getCreateNotificationAPI)
+router.post('/notification', isAuth, notificationController.postNotificationDataAPI)
+router.get('/notification/edit/:id', isAuth, notificationController.getEditNotificationAPI);
+router.put('/notification/update/:id', isAuth, notificationController.putUpdateNotificationAPI)
 
 module.exports = router;
