@@ -1,5 +1,4 @@
-// ... all the other imports
-const multer = require('multer');
+//All imports
 const express = require('express');
 const mongoose = require('mongoose');
 const flash = require('connect-flash');
@@ -13,8 +12,8 @@ const fs = require('fs')
 
 const app = express();
 
-// Load env vars
 require('dotenv').config();
+
 const MongoURL = process.env.MONGODB_URL;
 const port = process.env.PORT || 4000;
 
@@ -36,6 +35,7 @@ app.use(bodyParser.json({ limit: '1000mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '1000mb' }));
 app.use(flash());
 
+
 // CORS middleware
 app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -49,6 +49,7 @@ app.use((req, res, next) => {
     );
     next();
 });
+
 
 // Routes
 app.use('/api/auth', authRoute);
