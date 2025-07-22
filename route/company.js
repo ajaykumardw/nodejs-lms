@@ -104,5 +104,7 @@ router.get('/notification/create', isAuth, notificationController.getCreateNotif
 router.post('/notification', isAuth, notificationController.postNotificationDataAPI)
 router.get('/notification/edit/:id', isAuth, notificationController.getEditNotificationAPI);
 router.put('/notification/update/:id', isAuth, notificationController.putUpdateNotificationAPI)
+router.get('/notification/form/:id', isAuth, notificationController.getFormNotificationAPI);
+router.put('/notification/form/update/:id', isAuth, notificationController.updateNotificationAPI)
 
 module.exports = router;
