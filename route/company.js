@@ -13,8 +13,27 @@ const departmentController = require('../controller/Company/DepartmentAPIControl
 const channelController = require('../controller/Company/ChannelControllerAPI')
 const certificateController = require('../controller/Company/CertificateAPIController')
 const notificationController = require('../controller/Company/NotificationController');
+const programController = require('../controller/Company/ProgramControllerAPI')
+const contentFolderController = require('../controller/Company/ContentFolderControllerAPI')
+const moduleController = require('../controller/Company/ModuleController')
+
+const createUpload = require('../util/upload');
 
 const certificateUpload = require('../util/uploadCertificate');
+
+const { middleware: imageUpload } = createUpload(
+    [
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'image/svg+xml',
+        'image/bmp',
+        'image/tiff',
+        'image/x-icon'
+    ],
+    'program_module'
+);
 
 const { uploadField: certificateUploads } = certificateUpload(
     ['image/jpeg', 'image/png', 'image/jpg', 'image/svg+xml'],
@@ -106,5 +125,27 @@ router.get('/notification/edit/:id', isAuth, notificationController.getEditNotif
 router.put('/notification/update/:id', isAuth, notificationController.putUpdateNotificationAPI)
 router.get('/notification/form/:id', isAuth, notificationController.getFormNotificationAPI);
 router.put('/notification/form/update/:id', isAuth, notificationController.updateNotificationAPI)
+
+//This route is for program
+router.get('/program', isAuth, programController.getProgramAPI);
+router.post('/program', isAuth, imageUpload('image_url'), programController.postProgramAPI);
+router.get('/program/edit/:id', isAuth, programController.getEditDataAPI)
+router.post('/program/update/:id', isAuth, imageUpload('image_url'), programController.updateProgramDataAPI);
+router.get('/program/category/data/:category', isAuth, programController.getCategoryAPI)
+router.get('/program/create/data', isAuth, programController.getCreateDataAPI)
+router.get('/program/category/breadcumb/:stage/:id', isAuth, programController.getCategoryBreadcumb)
+
+//This route is for content folder
+router.get('/content-folder/:id', isAuth, contentFolderController.getContentFolderAPI)
+router.post('/content-folder/:id', isAuth, imageUpload('image_url'), contentFolderController.postContentFolderAPI)
+router.get('/content-folder/:id/edit/:cfId', isAuth, contentFolderController.editContentFolderAPI)
+router.post('/content-folder/:id/update/:cfId', isAuth, imageUpload('image_url'), contentFolderController.updateContentFolderAPI)
+
+//This route is for Module
+router.get('/module/:cId', isAuth, moduleController.getModuleDataAPI)
+router.get('/modules/create', isAuth, moduleController.getModuleCreateAPI)
+router.post('/module/:cId/create/:id', isAuth, imageUpload('image_url'), moduleController.postModuleFormAPI)
+router.get('/module/:cId/edit/:id', isAuth, moduleController.editModuleFormAPI)
+router.post('/module/:cId/update/:id', isAuth, imageUpload('image_url'), moduleController.updateModuleFormAPI)
 
 module.exports = router;

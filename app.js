@@ -6,7 +6,6 @@ const bodyParser = require('body-parser');
 const authRoute = require('./route/auth');
 const adminRoute = require('./route/admin');
 const companyRouter = require('./route/company')
-const appConfig = require('./model/AppConfig')
 const path = require('path')
 const fs = require('fs')
 
