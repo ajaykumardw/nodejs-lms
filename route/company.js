@@ -12,12 +12,43 @@ const roleController = require('../controller/Company/RoleAPIController')
 const departmentController = require('../controller/Company/DepartmentAPIController');
 const channelController = require('../controller/Company/ChannelControllerAPI')
 const certificateController = require('../controller/Company/CertificateAPIController')
+const notificationController = require('../controller/Company/NotificationController');
+const programController = require('../controller/Company/ProgramControllerAPI')
+const contentFolderController = require('../controller/Company/ContentFolderControllerAPI')
+const moduleController = require('../controller/Company/ModuleController')
+
+const createUpload = require('../util/upload');
 
 const certificateUpload = require('../util/uploadCertificate');
 
-const { fieldsMiddleware: certificateUploads } = certificateUpload(
+const { middleware: imageUpload } = createUpload(
+    [
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'image/svg+xml',
+        'image/bmp',
+        'image/tiff',
+        'image/x-icon'
+    ],
+    'program_module'
+);
+
+const { uploadField: certificateUploads } = certificateUpload(
     ['image/jpeg', 'image/png', 'image/jpg', 'image/svg+xml'],
-    'company_assets'
+    {
+        logoURL: 'company_logo',
+        backgroundImage: 'frames',
+        signature1URL: 'signature',
+        signature2URL: 'signature'
+    },
+    [
+        { name: 'logoURL', maxCount: 1 },
+        { name: 'backgroundImage', maxCount: 1 },
+        { name: 'signature1URL', maxCount: 1 },
+        { name: 'signature2URL', maxCount: 1 }
+    ]
 );
 
 //This route is for zone
@@ -80,6 +111,41 @@ router.get('/check/group/empId/:uploadData', isAuth, groupController.getCheckEmp
 
 //This route is for certificate
 router.get('/certificate/create', isAuth, certificateController.getCreateDataAPI)
+router.get('/certificate/data', isAuth, certificateController.getCertificateAPI)
 router.post('/certificate', isAuth, certificateUploads, certificateController.postCertificateAPI);
+router.get('/certificate/edit/:id', isAuth, certificateController.getEditCertificateAPI)
+router.post('/certificate/update/:id', isAuth, certificateUploads, certificateController.putUpdateCertificateAPI)
+router.post('/certificate/change/frame/:id', isAuth, certificateController.putChangeFrameAPI)
+
+//This route is for notification
+router.get('/notification', isAuth, notificationController.getNotificationDataAPI)
+router.get('/notification/create', isAuth, notificationController.getCreateNotificationAPI)
+router.post('/notification', isAuth, notificationController.postNotificationDataAPI)
+router.get('/notification/edit/:id', isAuth, notificationController.getEditNotificationAPI);
+router.put('/notification/update/:id', isAuth, notificationController.putUpdateNotificationAPI)
+router.get('/notification/form/:id', isAuth, notificationController.getFormNotificationAPI);
+router.put('/notification/form/update/:id', isAuth, notificationController.updateNotificationAPI)
+
+//This route is for program
+router.get('/program', isAuth, programController.getProgramAPI);
+router.post('/program', isAuth, imageUpload('image_url'), programController.postProgramAPI);
+router.get('/program/edit/:id', isAuth, programController.getEditDataAPI)
+router.post('/program/update/:id', isAuth, imageUpload('image_url'), programController.updateProgramDataAPI);
+router.get('/program/category/data/:category', isAuth, programController.getCategoryAPI)
+router.get('/program/create/data', isAuth, programController.getCreateDataAPI)
+router.get('/program/category/breadcumb/:stage/:id', isAuth, programController.getCategoryBreadcumb)
+
+//This route is for content folder
+router.get('/content-folder/:id', isAuth, contentFolderController.getContentFolderAPI)
+router.post('/content-folder/:id', isAuth, imageUpload('image_url'), contentFolderController.postContentFolderAPI)
+router.get('/content-folder/:id/edit/:cfId', isAuth, contentFolderController.editContentFolderAPI)
+router.post('/content-folder/:id/update/:cfId', isAuth, imageUpload('image_url'), contentFolderController.updateContentFolderAPI)
+
+//This route is for Module
+router.get('/module/:cId', isAuth, moduleController.getModuleDataAPI)
+router.get('/modules/create', isAuth, moduleController.getModuleCreateAPI)
+router.post('/module/:cId/create/:id', isAuth, imageUpload('image_url'), moduleController.postModuleFormAPI)
+router.get('/module/:cId/edit/:id', isAuth, moduleController.editModuleFormAPI)
+router.post('/module/:cId/update/:id', isAuth, imageUpload('image_url'), moduleController.updateModuleFormAPI)
 
 module.exports = router;

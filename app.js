@@ -1,5 +1,4 @@
-// ... all the other imports
-const multer = require('multer');
+//All imports
 const express = require('express');
 const mongoose = require('mongoose');
 const flash = require('connect-flash');
@@ -7,14 +6,13 @@ const bodyParser = require('body-parser');
 const authRoute = require('./route/auth');
 const adminRoute = require('./route/admin');
 const companyRouter = require('./route/company')
-const appConfig = require('./model/AppConfig')
 const path = require('path')
 const fs = require('fs')
 
 const app = express();
 
-// Load env vars
 require('dotenv').config();
+
 const MongoURL = process.env.MONGODB_URL;
 const port = process.env.PORT || 4000;
 
@@ -35,6 +33,7 @@ app.use(express.static(path.join(__dirname, "public/frames")));
 app.use(bodyParser.json({ limit: '1000mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '1000mb' }));
 app.use(flash());
+
 
 // CORS middleware
 app.use((req, res, next) => {
