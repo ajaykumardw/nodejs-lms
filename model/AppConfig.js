@@ -81,6 +81,29 @@ const appConfigSchema = new mongoose.Schema({
                 },
             },
         ],
+    }],
+    module_data: [{
+        title: {
+            type: String,
+            required: true,
+            maxLength: 255
+        },
+        description: {
+            type: String,
+            required: true,
+            maxLength: 1000
+        },
+        image_url: {
+            type: String,
+            required: true,
+            maxLength: 1000
+        }
+    }],
+    live_session: [{
+        title: {
+            type: String,
+            required: true
+        }
     }]
 }, {
     collection: 'app_config'
