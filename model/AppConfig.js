@@ -104,6 +104,28 @@ const appConfigSchema = new mongoose.Schema({
             type: String,
             required: true
         }
+    }],
+    activity_data: [{
+        title: {
+            type: String,
+            required: true,
+            maxLength: 255
+        },
+        description: {
+            type: String,
+            required: true,
+            maxLength: 5000
+        },
+        svg_content: {
+            type: String,
+            required: true,
+            maxLength: 5000,
+        },
+        status: {
+            type: Boolean,
+            required: true,
+            default: true
+        }
     }]
 }, {
     collection: 'app_config'
