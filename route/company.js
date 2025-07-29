@@ -16,6 +16,7 @@ const notificationController = require('../controller/Company/NotificationContro
 const programController = require('../controller/Company/ProgramControllerAPI')
 const contentFolderController = require('../controller/Company/ContentFolderControllerAPI')
 const moduleController = require('../controller/Company/ModuleController')
+const activityController = require('../controller/Company/ActivityController')
 
 const createUpload = require('../util/upload');
 
@@ -33,6 +34,20 @@ const { middleware: imageUpload } = createUpload(
         'image/x-icon'
     ],
     'program_module'
+);
+
+const activityUpload = createUpload(
+    [
+        'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+        'image/svg+xml', 'image/bmp', 'image/tiff', 'image/x-icon',
+        'application/pdf', 'application/zip',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+        'video/mp4'
+    ],
+    'activity', // Folder inside /public
+    500 // Max size in MB
 );
 
 const { uploadField: certificateUploads } = certificateUpload(
@@ -147,5 +162,18 @@ router.get('/modules/create', isAuth, moduleController.getModuleCreateAPI)
 router.post('/module/:cId/create/:id', isAuth, imageUpload('image_url'), moduleController.postModuleFormAPI)
 router.get('/module/:cId/edit/:id', isAuth, moduleController.editModuleFormAPI)
 router.post('/module/:cId/update/:id', isAuth, imageUpload('image_url'), moduleController.updateModuleFormAPI)
+
+//This route is for app config
+router.get('/activity/:moduleId', isAuth, activityController.getActivityAPI)
+router.get('/activity/create/data', isAuth, activityController.getCreateFormAPI)
+router.post('/activity/form/:moduleId/:typeId', isAuth, activityController.postActivityFormAPI)
+router.delete('/activity/delete/:moduleId/:id', isAuth, activityController.deleteActivityAPI)
+router.post('/activity/set-name/:moduleId/:id', isAuth, activityController.setNameActivityAPI)
+router.post(
+    '/activity/data/:moduleId/:moduleTypeId/:id',
+    isAuth,
+    ...activityUpload.middleware('file'), // Handles all types in a single field
+    activityController.postActivityDataAPI
+);
 
 module.exports = router;
