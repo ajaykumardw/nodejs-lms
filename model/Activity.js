@@ -17,6 +17,7 @@ const activitySchema = new mongoose.Schema({
     },
     document_data: {
         title: { type: String, maxLength: 255 },
+        page_no: { type: String, maxLength: 255 },
         image_url: { type: String, maxLength: 255 },
         downloadable: { type: Boolean, default: false },
         shareable: { type: Boolean, default: false }
