@@ -8,6 +8,7 @@ const adminRoute = require('./route/admin');
 const companyRouter = require('./route/company')
 const path = require('path')
 const fs = require('fs')
+const cors = require('cors')
 
 const app = express();
 
@@ -17,6 +18,9 @@ const MongoURL = process.env.MONGODB_URL;
 const port = process.env.PORT || 4000;
 
 const imageDir = path.join(__dirname, "/public/frames");
+
+
+app.use(cors());
 
 if (!fs.existsSync(imageDir)) {
     fs.mkdirSync(imageDir);
@@ -46,6 +50,10 @@ app.use((req, res, next) => {
         'Access-Control-Allow-Headers',
         'Content-Type, Authorization'
     );
+    // Handle preflight (OPTIONS) requests
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
     next();
 });
 
