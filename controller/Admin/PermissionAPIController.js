@@ -291,6 +291,7 @@ exports.getPermAllowAPI = async (req, res, next) => {
         let isSuperAdmin = false;
         let isCompany = false;
         let isUser = false;
+        let isSecurity = false;
         let notUser = true;
 
         const permissionsStatus = {
