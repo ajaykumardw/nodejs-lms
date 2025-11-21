@@ -23,11 +23,12 @@ exports.getModuleAPIController = async (req, res, next) => {
         const id = req?.params?.id;
 
         const contentFolder = await ContentFolder.findById(id)
+            .populate('activity_logs');
 
         const module = await Module.find({
             content_folder_id: id,
             created_by: masterId
-        })
+        }).populate('activity_logs');
 
         if (!module) {
             return errorResponse(res, "Module does not exist", {}, 404)
