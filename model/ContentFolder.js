@@ -37,6 +37,12 @@ contentFolderSchema.virtual('modules', {
     foreignField: ''
 })
 
+contentFolderSchema.virtual('activity_logs', {
+  ref: 'ActivityLog',
+  localField: '_id',
+  foreignField: 'content_folder_id'
+});
+
 contentFolderSchema.set('toObject', { virtuals: true })
 contentFolderSchema.set('toJSON', { virtuals: true })
 

@@ -13,4 +13,6 @@ router.get('/activity/data/:id', isAuth, activityController.getActivityData);
 
 router.get('/activity/fetch/data/:id', isAuth, activityController.getFetchActivity);
 
+router.post('/activity/set/report/data/:moduleId/:contentFolderId/:activityId/:moduleTypeId', isAuth, activityController.postReportController);
+
 module.exports = router;
