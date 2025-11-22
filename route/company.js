@@ -150,6 +150,11 @@ router.get('/program/category/data/:category', isAuth, programController.getCate
 router.get('/program/create/data', isAuth, programController.getCreateDataAPI)
 router.get('/program/category/breadcumb/:stage/:id', isAuth, programController.getCategoryBreadcumb)
 
+//This route is for prgram schedule
+router.get('/program/schedule/create', isAuth, programController.getProgramScheduleUser)
+router.post('/program/schedule/:moduleId', isAuth, programController.getProgramScheduleUser)
+
+
 //This route is for content folder
 router.get('/content-folder/:id', isAuth, contentFolderController.getContentFolderAPI)
 router.post('/content-folder/:id', isAuth, imageUpload('image_url'), contentFolderController.postContentFolderAPI)
