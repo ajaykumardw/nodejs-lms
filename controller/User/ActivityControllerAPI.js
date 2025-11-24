@@ -56,8 +56,8 @@ exports.getFetchActivity = async (req, res, next) => {
 
         const activity = await Activity.findOne({
             _id: id,
-            created_by: masterId,
-        })
+            created_by: masterId
+        }).populate('logs');
 
         return successResponse(res, "Activity fetched", activity)
 
