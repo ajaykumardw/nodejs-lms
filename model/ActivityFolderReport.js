@@ -57,4 +57,5 @@ const UserActivityLog = new mongoose.Schema({
     collection: "activity_logs"
 })
 
-module.exports = mongoose.model("ActivityLog", UserActivityLog)
+
+module.exports = mongoose.model("ActivityLog", UserActivityLog) 
