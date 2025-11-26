@@ -27,7 +27,7 @@ exports.getActivityData = async (req, res, next) => {
         const activity = await Activity.find({
             module_id: id,
             created_by: masterId,
-        })
+        }).populate('logs');
 
         return successResponse(res, "Activity fetched successfully", {
             moduleInfo: module,
