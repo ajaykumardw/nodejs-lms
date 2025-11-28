@@ -79,7 +79,10 @@ exports.postReportController = async (req, res, next) => {
         const {
             currentPage,
             totalPages,
-            viewedPages
+            viewedPages,
+            currentVideoTime,
+            totalVideoTime,
+            viewedVideoTime
         } = req.body
 
         const contentFolder = await ContentFolder.findById(contentFolderId)
@@ -90,9 +93,17 @@ exports.postReportController = async (req, res, next) => {
             activity_id: activityId
         })
 
-        const viewed = viewedPages.length;
+        let perComplete;
 
-        const perComplete = (Number(viewed) / Number(totalPages)) * 100
+        if (moduleTypeId == "688723af5dd97f4ccae68834") {
+
+            const viewed = viewedPages.length;
+
+            perComplete = (Number(viewed) / Number(totalPages)) * 100
+        } else if (moduleTypeId == "688723af5dd97f4ccae68836" || moduleTypeId == "688723af5dd97f4ccae68835") {
+            perComplete = (Number(currentVideoTime) / Number(totalVideoTime)) * 100
+        }
+
 
         if (!activityReport) {
 
@@ -107,7 +118,11 @@ exports.postReportController = async (req, res, next) => {
                 completion_percentage: perComplete,
                 total_page_no: totalPages,
                 current_page_no: currentPage,
-                view_page_no: viewedPages
+                view_page_no: viewedPages,
+                viewed_video_time: viewedVideoTime,
+                current_video_time: currentVideoTime,
+                total_video_time: totalVideoTime
+
             })
 
             await activity_report.save()
@@ -129,7 +144,10 @@ exports.postReportController = async (req, res, next) => {
                 completion_percentage: perComplete,
                 total_page_no: totalPages,
                 current_page_no: currentPage,
-                view_page_no: viewedPages
+                view_page_no: viewedPages,
+                viewed_video_time: viewedVideoTime,
+                current_video_time: currentVideoTime,
+                total_video_time: totalVideoTime
             })
 
         }
