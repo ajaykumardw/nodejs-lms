@@ -101,7 +101,9 @@ exports.postReportController = async (req, res, next) => {
 
             perComplete = (Number(viewed) / Number(totalPages)) * 100
         } else if (moduleTypeId == "688723af5dd97f4ccae68836" || moduleTypeId == "688723af5dd97f4ccae68835") {
-            perComplete = (Number(currentVideoTime) / Number(totalVideoTime)) * 100
+            perComplete = Number(totalVideoTime) > 0 ?
+                (Number(viewedVideoTime) / Number(totalVideoTime)) * 100 :
+                0;
         }
 
 
