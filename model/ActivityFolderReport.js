@@ -39,6 +39,15 @@ const UserActivityLog = new mongoose.Schema({
     current_page_no: {
         type: String,
     },
+    total_video_time: {
+        type: String,
+    },
+    current_video_time: {
+        type: String,
+    },
+    viewed_video_time: {
+        type: String,
+    },
     completion_percentage: {
         type: String,
     },
@@ -58,4 +67,4 @@ const UserActivityLog = new mongoose.Schema({
 })
 
 
-module.exports = mongoose.model("ActivityLog", UserActivityLog) 
+module.exports = mongoose.model("ActivityLog", UserActivityLog)
