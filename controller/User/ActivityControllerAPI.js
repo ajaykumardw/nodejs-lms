@@ -123,8 +123,8 @@ exports.postReportController = async (req, res, next) => {
                 total_page_no: totalPages,
                 current_page_no: currentPage,
                 view_page_no: viewedPages,
-                viewed_video_time: viewedVideoTime,
-                current_video_time: currentVideoTime,
+                viewed_video_time: Math.round(Number(viewedVideoTime)),
+                current_video_time: Math.round(Number(currentVideoTime)),
                 total_video_time: totalVideoTime
 
             })
@@ -149,8 +149,8 @@ exports.postReportController = async (req, res, next) => {
                 total_page_no: totalPages,
                 current_page_no: currentPage,
                 view_page_no: viewedPages,
-                viewed_video_time: viewedVideoTime,
-                current_video_time: currentVideoTime,
+                viewed_video_time: Math.round(Number(viewedVideoTime)),
+                current_video_time: Math.round(Number(currentVideoTime)),
                 total_video_time: totalVideoTime
             })
 
