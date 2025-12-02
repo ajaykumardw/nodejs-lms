@@ -14,15 +14,19 @@ const channelController = require('../controller/Company/ChannelControllerAPI')
 const certificateController = require('../controller/Company/CertificateAPIController')
 const notificationController = require('../controller/Company/NotificationController');
 const programController = require('../controller/Company/ProgramControllerAPI')
+const quizAPIController = require('../controller/Company/QuizOptionController')
 const contentFolderController = require('../controller/Company/ContentFolderControllerAPI')
 const moduleController = require('../controller/Company/ModuleController')
 const activityController = require('../controller/Company/ActivityController')
+const programScheduleController = require('../controller/Company/ProgramScheduleController')
 
 const createUpload = require('../util/upload');
 
 const certificateUpload = require('../util/uploadCertificate');
 
-const { middleware: imageUpload } = createUpload(
+const {
+    middleware: imageUpload
+} = createUpload(
     [
         'image/jpeg',
         'image/png',
@@ -50,19 +54,31 @@ const activityUpload = createUpload(
     500 // Max size in MB
 );
 
-const { uploadField: certificateUploads } = certificateUpload(
-    ['image/jpeg', 'image/png', 'image/jpg', 'image/svg+xml'],
-    {
+const {
+    uploadField: certificateUploads
+} = certificateUpload(
+    ['image/jpeg', 'image/png', 'image/jpg', 'image/svg+xml'], {
         logoURL: 'company_logo',
         backgroundImage: 'frames',
         signature1URL: 'signature',
         signature2URL: 'signature'
     },
-    [
-        { name: 'logoURL', maxCount: 1 },
-        { name: 'backgroundImage', maxCount: 1 },
-        { name: 'signature1URL', maxCount: 1 },
-        { name: 'signature2URL', maxCount: 1 }
+    [{
+            name: 'logoURL',
+            maxCount: 1
+        },
+        {
+            name: 'backgroundImage',
+            maxCount: 1
+        },
+        {
+            name: 'signature1URL',
+            maxCount: 1
+        },
+        {
+            name: 'signature2URL',
+            maxCount: 1
+        }
     ]
 );
 
@@ -150,11 +166,6 @@ router.get('/program/category/data/:category', isAuth, programController.getCate
 router.get('/program/create/data', isAuth, programController.getCreateDataAPI)
 router.get('/program/category/breadcumb/:stage/:id', isAuth, programController.getCategoryBreadcumb)
 
-//This route is for prgram schedule
-router.get('/program/schedule/create', isAuth, programController.getProgramScheduleUser)
-router.post('/program/schedule/:moduleId', isAuth, programController.getProgramScheduleUser)
-
-
 //This route is for content folder
 router.get('/content-folder/:id', isAuth, contentFolderController.getContentFolderAPI)
 router.post('/content-folder/:id', isAuth, imageUpload('image_url'), contentFolderController.postContentFolderAPI)
@@ -180,5 +191,15 @@ router.post(
     ...activityUpload.middleware('file'), // Handles all types in a single field
     activityController.postActivityDataAPI
 );
+
+//This route is for quiz question
+router.get('/quiz/question/:moduleId/:activityId', isAuth, quizAPIController.getQuizOptionAPI)
+router.post('/quiz/question/:moduleId/:activityId', isAuth, quizAPIController.postQuizOptionAPI)
+router.put('/quiz/question/:moduleId/:activityId', isAuth, quizAPIController.putQuizOptionAPI)
+
+//This route is for program schedule
+router.get('/program/schedule/data/:contentFolderId', isAuth, programScheduleController.getProgramScheduleAPI)
+router.get('/program/schedule/create', isAuth, programScheduleController.getCreateDataAPI)
+router.post('/program/schedule/:contentFolderId', isAuth, programScheduleController.postProgramScheduleAPI)
 
 module.exports = router;
