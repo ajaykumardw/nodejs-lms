@@ -122,6 +122,18 @@ activitySchema.virtual('logs', {
     foreignField: 'activity_id'
 });
 
+activitySchema.virtual('questions', {
+    ref: 'questions',
+    localField: '_id',
+    foreignField: 'activity_id'
+});
+
+activitySchema.virtual("quiz_reports", {
+    ref: "quiz_result_report",
+    localField: "_id",
+    foreignField: "activity_id"
+});
+
 activitySchema.set('toObject', {
     virtuals: true
 });
