@@ -48,8 +48,17 @@ const UserActivityLog = new mongoose.Schema({
     viewed_video_time: {
         type: String,
     },
+    is_completed: {
+        type: Boolean,
+        default: false,
+    },
     completion_percentage: {
         type: String,
+    },
+    completed_at_time: {
+        type: Date,
+        required: false,
+        default: null
     },
     created_by: {
         type: mongoose.Schema.Types.ObjectId
