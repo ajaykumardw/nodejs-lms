@@ -16,8 +16,9 @@ const questionSchema = new Schema({
         type: mongoose.Schema.Types.ObjectId,
         required: true,
     },
-    question_level: {
-        type: Number,
+    question_type: {
+        type: String,
+        maxlength: 50,
         required: false
     },
     question: {
@@ -48,11 +49,15 @@ const questionSchema = new Schema({
         maxlength: 10,
         required: true,
     },
-    correct_answer: {
-        type: String,
-        maxlength: 1,
+    use_answer_explanation: {
+        type: Boolean,
         required: true,
+        default: false,
     },
+    correct_answer: [{
+        type: String,
+        required: true,
+    }],
     score: {
         type: String,
         maxlength: 10,
@@ -61,6 +66,7 @@ const questionSchema = new Schema({
     diffculty: {
         type: String,
         maxlength: 1,
+        default: "1",
         required: true,
     },
     answer_explanation: {

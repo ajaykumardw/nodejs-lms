@@ -25,11 +25,14 @@ const quizReportSchema = new Schema({
         required: true,
         default: false
     },
-    selected_option_no: {
+    selected_option_no: [{
         type: String,
-    },
+    }],
     mark: {
         type: String,
+    },
+    total_mark: {
+        type: String
     },
     created_by: {
         type: mongoose.Schema.Types.ObjectId,

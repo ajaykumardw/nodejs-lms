@@ -57,12 +57,24 @@ const activitySchema = new mongoose.Schema({
             maxLength: 255
         }
     },
-    scrom_data: {
+    scorm_data: {
         title: {
             type: String,
             maxLength: 255
         },
         content_url: {
+            type: String,
+            maxLength: 255
+        },
+        folder_url: {
+            type: String,
+            maxLength: 255
+        },
+        folder_name: {
+            type: String,
+            maxLength: 255
+        },
+        launch_file: {
             type: String,
             maxLength: 255
         }
@@ -133,6 +145,12 @@ activitySchema.virtual("quiz_reports", {
     localField: "_id",
     foreignField: "activity_id"
 });
+
+activitySchema.virtual("QuizSetting", {
+    ref: "quiz_setting",
+    localField: "_id",
+    foreignField: "activity_id"
+})
 
 activitySchema.set('toObject', {
     virtuals: true

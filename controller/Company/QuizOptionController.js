@@ -1,4 +1,5 @@
 const Question = require('../../model/Question');
+const QuizSetting = require("../../model/QuizSetting")
 const {
     successResponse
 } = require('../../util/response');
@@ -46,21 +47,32 @@ exports.postQuizOptionAPI = async (req, res, next) => {
             activity_id: activityId,
             module_id: moduleId,
             question: item?.Question,
-            option1: item?. ['Option 1'] !== undefined && item?. ['Option 1'] !== "" ? String(item['Option 1']) : null,
-            option2: item?. ['Option 2'] !== undefined && item?. ['Option 2'] !== "" ? String(item['Option 2']) : null,
-            option3: item?. ['Option 3'] !== undefined && item?. ['Option 3'] !== "" ? String(item['Option 3']) : null,
-            option4: item?. ['Option 4'] !== undefined && item?. ['Option 4'] !== "" ? String(item['Option 4']) : null,
-            option5: item?. ['Option 5'] !== undefined && item?. ['Option 5'] !== "" ? String(item['Option 5']) : null,
-            option6: item?. ['Option 6'] !== undefined && item?. ['Option 6'] !== "" ? String(item['Option 6']) : null,
+            option1: item?.['Option1'] !== undefined && item?.['Option1'] !== "" ? String(item['Option1']) : null,
+            option2: item?.['Option2'] !== undefined && item?.['Option2'] !== "" ? String(item['Option2']) : null,
+            option3: item?.['Option3'] !== undefined && item?.['Option3'] !== "" ? String(item['Option3']) : null,
+            option4: item?.['Option4'] !== undefined && item?.['Option4'] !== "" ? String(item['Option4']) : null,
+            option5: item?.['Option5'] !== undefined && item?.['Option5'] !== "" ? String(item['Option5']) : null,
+            option6: item?.['Option6'] !== undefined && item?.['Option6'] !== "" ? String(item['Option6']) : null,
             section: item?.Section || null,
             score: 10,
-            correct_answer: item?. ['Correct Answer'] || null,
-            diffculty: item?. ['Difficulty Level'] || null,
-            answer_explanation: item?. ['Answer Explanation'] || null
+            question_type: item?.['QuestionType'] || "Single Correct",
+            use_answer_explanation: item?.["UseAnswerExplanation"] || false,
+            correct_answer: item?.['CorrectAnswer'] || [],
+            diffculty: item?.['DifficultyLevel'] || "1",
+            answer_explanation: item?.['AnswerExplanation'] || null
         }));
+
+        const quizSetting = new QuizSetting({
+            module_id: moduleId,
+            user_id: userId,
+            activity_id: activityId,
+            created_by: userId
+        })
 
         // Save multiple documents at once
         await Question.insertMany(finalData);
+
+        await quizSetting.save();
 
         return successResponse(res, "Quiz questions saved successfully");
 
@@ -75,11 +87,14 @@ exports.postQuizOptionAPI = async (req, res, next) => {
 
 exports.putQuizOptionAPI = async (req, res, next) => {
     try {
+
         const userId = req.userId; // middleware sets this
+
         const {
             activityId,
             moduleId
         } = req.params;
+
         const {
             data,
             section
@@ -90,6 +105,13 @@ exports.putQuizOptionAPI = async (req, res, next) => {
                 message: "Invalid data format: 'data' must be an array"
             });
         }
+
+        const quizSetting = await QuizSetting.findOne({
+            module_id: moduleId,
+            activity_id: activityId,
+            user_id: userId,
+            created_by: userId
+        })
 
         await Promise.all(
             data.map(async (item) => {
@@ -110,11 +132,14 @@ exports.putQuizOptionAPI = async (req, res, next) => {
                     company_id: userId,
                     activity_id: activityId,
                     module_id: moduleId,
+                    score: 10,
+                    section: item?.section_name || "",
+                    use_answer_explanation: item?.use_answer_explanation || false,
+                    answer_explanation: item?.answer_explanation || "",
+                    question_type: item.question_type,
                     question: item.question || "",
-                    correct_answer: item.correct_answer || "",
-                    diffculty: item.difficulty || 1, // fallback difficulty 1
-                    answer_explanation: item.explanation || "",
-                    section: section || "default",
+                    correct_answer: item.correct_answer || [],
+                    diffculty: item.difficulty || 1, // fallback difficulty 1   
                     ...optionFields,
                     updated_at: new Date(),
                 };
@@ -132,6 +157,18 @@ exports.putQuizOptionAPI = async (req, res, next) => {
                 }
             })
         );
+
+        if (!quizSetting) {
+            const quiz_setting = new QuizSetting({
+                module_id: moduleId,
+                user_id: userId,
+                activity_id: activityId,
+                created_by: userId
+            })
+
+            await quiz_setting.save()
+
+        }
 
         return res.status(200).json({
             message: "Questions updated/created successfully"

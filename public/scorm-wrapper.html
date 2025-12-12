@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>SCORM Wrapper</title>
+</head>
+
+<body>
+    <iframe id="scormContent" src="" width="100%" height="100%" frameborder="0"></iframe>
+
+    <script>
+        // Find the launch file from URL param
+        const urlParams = new URLSearchParams(window.location.search);
+        const launch = urlParams.get('launch');
+
+        const iframe = document.getElementById('scormContent');
+        iframe.src = launch;
+
+        // Minimal SCORM API object
+        window.API = {
+            LMSInitialize: function () { return "true"; },
+            LMSFinish: function () { return "true"; },
+            LMSGetValue: function () { return ""; },
+            LMSSetValue: function () { return "true"; },
+            LMSCommit: function () { return "true"; },
+            LMSGetLastError: function () { return "0"; },
+            LMSGetErrorString: function () { return "No error"; },
+            LMSGetDiagnostic: function () { return ""; }
+        };
+    </script>
+</body>
+
+</html>

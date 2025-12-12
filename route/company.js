@@ -19,6 +19,7 @@ const contentFolderController = require('../controller/Company/ContentFolderCont
 const moduleController = require('../controller/Company/ModuleController')
 const activityController = require('../controller/Company/ActivityController')
 const programScheduleController = require('../controller/Company/ProgramScheduleController')
+const quizSettingController = require("../controller/Company/QuizSettingController")
 
 const createUpload = require('../util/upload');
 
@@ -44,41 +45,46 @@ const activityUpload = createUpload(
     [
         'image/jpeg', 'image/png', 'image/gif', 'image/webp',
         'image/svg+xml', 'image/bmp', 'image/tiff', 'image/x-icon',
-        'application/pdf', 'application/zip',
+        'application/pdf',
+        'application/zip',
+        'application/x-zip-compressed',
+        'multipart/x-zip',
+        'application/octet-stream',
         'application/msword',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'application/vnd.openxmlformats-officedocument.presentationml.presentation',
         'video/mp4'
     ],
-    'activity', // Folder inside /public
-    500 // Max size in MB
+    'activity',
+    2000
 );
+
 
 const {
     uploadField: certificateUploads
 } = certificateUpload(
     ['image/jpeg', 'image/png', 'image/jpg', 'image/svg+xml'], {
-        logoURL: 'company_logo',
-        backgroundImage: 'frames',
-        signature1URL: 'signature',
-        signature2URL: 'signature'
-    },
+    logoURL: 'company_logo',
+    backgroundImage: 'frames',
+    signature1URL: 'signature',
+    signature2URL: 'signature'
+},
     [{
-            name: 'logoURL',
-            maxCount: 1
-        },
-        {
-            name: 'backgroundImage',
-            maxCount: 1
-        },
-        {
-            name: 'signature1URL',
-            maxCount: 1
-        },
-        {
-            name: 'signature2URL',
-            maxCount: 1
-        }
+        name: 'logoURL',
+        maxCount: 1
+    },
+    {
+        name: 'backgroundImage',
+        maxCount: 1
+    },
+    {
+        name: 'signature1URL',
+        maxCount: 1
+    },
+    {
+        name: 'signature2URL',
+        maxCount: 1
+    }
     ]
 );
 
@@ -185,10 +191,12 @@ router.get('/activity/create/data', isAuth, activityController.getCreateFormAPI)
 router.post('/activity/form/:moduleId/:typeId', isAuth, activityController.postActivityFormAPI)
 router.delete('/activity/delete/:moduleId/:id', isAuth, activityController.deleteActivityAPI)
 router.post('/activity/set-name/:moduleId/:id', isAuth, activityController.setNameActivityAPI)
+
+//This is used for router uploading scrom, other files
 router.post(
     '/activity/data/:moduleId/:moduleTypeId/:id',
     isAuth,
-    ...activityUpload.middleware('file'), // Handles all types in a single field
+    ...activityUpload.middleware('file'),
     activityController.postActivityDataAPI
 );
 
@@ -201,5 +209,9 @@ router.put('/quiz/question/:moduleId/:activityId', isAuth, quizAPIController.put
 router.get('/program/schedule/data/:contentFolderId', isAuth, programScheduleController.getProgramScheduleAPI)
 router.get('/program/schedule/create', isAuth, programScheduleController.getCreateDataAPI)
 router.post('/program/schedule/:contentFolderId', isAuth, programScheduleController.postProgramScheduleAPI)
+
+//This route is for quiz setting
+router.get('/quiz/setting/post/:mId/:aId', isAuth, quizSettingController?.getQuizSettingData)
+router.post('/quiz/setting/post/:mId/:aId', isAuth, quizSettingController?.postQuizSettingController)
 
 module.exports = router;

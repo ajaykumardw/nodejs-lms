@@ -33,8 +33,16 @@ exports.getActivityAPI = async (req, res, next) => {
                     preserveNullAndEmptyArrays: true
                 }
             },
+            // Populate virtual 'questions'
+            {
+                $lookup: {
+                    from: 'questions',            // collection name
+                    localField: '_id',            // Activity _id
+                    foreignField: 'activity_id',  // questions.activity_id
+                    as: 'questions'               // result array
+                }
+            }
         ]);
-
 
         if (!activities) {
             return errorResponse(res, "Activity does not exist", {}, 404)
@@ -137,47 +145,84 @@ exports.setNameActivityAPI = async (req, res, next) => {
 
 exports.postActivityDataAPI = async (req, res, next) => {
     try {
-        const {moduleId, moduleTypeId, id } = req.params;
-
+        const { moduleId, moduleTypeId, id } = req.params;
         const userId = req.userId;
 
-        const activity = await Activity.findOne({ created_by: userId, module_id: moduleId, module_type_id: moduleTypeId, _id: id });
-        if (!activity) return errorResponse(res, "Activity does not exist", {}, 404);
+        const activity = await Activity.findOne({
+            created_by: userId,
+            module_id: moduleId,
+            module_type_id: moduleTypeId,
+            _id: id
+        });
+
+        if (!activity)
+            return errorResponse(res, "Activity does not exist", {}, 404);
 
         const { title, video_url } = req.body;
         const file = req.file;
 
         const updatePayload = {};
 
+        // ------------------------
+        // DOCUMENT UPLOAD
+        // ------------------------
+
         if (moduleTypeId === "688723af5dd97f4ccae68834") {
-            // Document Upload
             updatePayload.document_data = {
                 title,
                 image_url: file?.filename || activity.document_data?.image_url || ""
             };
-        } else if (moduleTypeId === "688723af5dd97f4ccae68835") {
-            // Video Upload
+        }
+
+        // ------------------------
+        // VIDEO UPLOAD
+        // ------------------------
+        else if (moduleTypeId === "688723af5dd97f4ccae68835") {
             updatePayload.video_data = {
                 title,
-                video_url: file?.filename || activity.video_data?.file_url || ""
+                video_url: file?.filename || activity.video_data?.video_url || ""
             };
-        } else if (moduleTypeId === "688723af5dd97f4ccae68836") {
-            // YouTube Video
+        }
+
+        // ------------------------
+        // YOUTUBE VIDEO
+        // ------------------------
+        else if (moduleTypeId === "688723af5dd97f4ccae68836") {
             updatePayload.video_data = {
                 title,
                 video_url: video_url || activity.video_data?.video_url || ""
             };
-        } else if (moduleTypeId === "688723af5dd97f4ccae68837") {
-            // SCORM Upload
+        }
+
+        // ------------------------
+        // SCORM UPLOAD
+        // ------------------------
+        else if (moduleTypeId === "688723af5dd97f4ccae68837") {
+
+            if (!req.scormExtractedPath)
+                return errorResponse(res, "Invalid SCORM ZIP file", {}, 400);
+
+            const folderPath = req.scormExtractedPath;        // activity/<folderName>
+            const folderName = folderPath.split('/').pop();   // only folderName
+
             updatePayload.scorm_data = {
                 title,
-                content_url: file?.filename || activity.scorm_data?.file_url || ""
+                folder_url: folderPath,                        // path relative to public
+                folder_name: folderName,
+                launch_file: req.scormLaunchFile || null       // save launch HTML file
             };
-        } else {
+        }
+
+        else {
             return errorResponse(res, "Unsupported moduleTypeId", {}, 400);
         }
 
-        await Activity.findOneAndUpdate({ created_by: userId, module_id: moduleId, module_type_id: moduleTypeId, _id: id }, { $set: updatePayload });
+        await Activity.findByIdAndUpdate(
+            id,
+            { $set: updatePayload },
+            { new: true }
+        );
+
         return successResponse(res, "Activity data uploaded successfully");
 
     } catch (error) {

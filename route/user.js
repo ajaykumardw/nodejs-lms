@@ -15,6 +15,10 @@ router.get('/activity/fetch/data/:id', isAuth, activityController.getFetchActivi
 
 router.post('/activity/set/report/data/:moduleId/:contentFolderId/:activityId/:moduleTypeId', isAuth, activityController.postReportController);
 
+router.post('/activity/set/scorm/data/:moduleId/:contentFolderId/:activityId/:moduleTypeId', isAuth, activityController.postScormData);
+
 router.post('/activity/insert/report/data/:moduleId/:contentFolderId/:activityId/:moduleTypeId', isAuth, activityController.postInsertReportController);
+
+router.get("/activity/attempt/check/:moduleId/:contentFolderId/:activityId/:moduleTypeId", isAuth, activityController.getAttemptCheck)
 
 module.exports = router;
