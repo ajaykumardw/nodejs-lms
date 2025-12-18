@@ -30,13 +30,13 @@ exports.getProgramScheduleAPI = async (req, res, next) => {
 
         const ContentFolderId = Module.content_folder_id;
 
-        const ProgramSchedule = await programSchedule.findOne({
+        let ProgramSchedule = await programSchedule.findOne({
             company_id: userId,
             content_folder_id: ContentFolderId
         }).lean();
 
         if (!ProgramSchedule) {
-            return errorResponse(res, "Program schedule does not exist", {}, 404);
+            ProgramSchedule = {};
         }
 
         const scheduleTypes = await scheduleType.find({
@@ -46,6 +46,7 @@ exports.getProgramScheduleAPI = async (req, res, next) => {
 
         // 🔑 Normalize into frontend format
         const grouped = {};
+
         scheduleTypes.forEach(su => {
             if (!grouped[su.type]) grouped[su.type] = [];
             grouped[su.type].push(String(su.type_id));
@@ -213,7 +214,7 @@ exports.postProgramScheduleAPI = async (req, res, next) => {
             const bulkUsers = [];
 
             if (schedule_type && schedule_type.length > 0) {
-                
+
                 for (const item of schedule_type) {
 
                     const type = item.type;
@@ -226,22 +227,22 @@ exports.postProgramScheduleAPI = async (req, res, next) => {
 
                         const userDesignation = await user.find({ designation_id: typeId }).select('_id');
                         ids = userDesignation.map(u => u._id);
-                    
+
                     } else if (type == 2) {
-                    
+
                         const userDepartment = await user.find({ department_id: typeId }).select('_id');
                         ids = userDepartment.map(u => u._id);
-                    
+
                     } else if (type == 3) {
-                    
+
                         const userGroup = await group.find({ _id: typeId }).select('_id');
                         ids = userGroup.map(g => g._id);
-                    
+
                     } else if (type == 4) {
-                    
+
                         const userRegion = await user.find({ region_id: typeId }).select('_id');
                         ids = userRegion.map(u => u._id);
-                    
+
                     }
 
                     if (ids.length > 0) {

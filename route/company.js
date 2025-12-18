@@ -20,6 +20,8 @@ const moduleController = require('../controller/Company/ModuleController')
 const activityController = require('../controller/Company/ActivityController')
 const programScheduleController = require('../controller/Company/ProgramScheduleController')
 const quizSettingController = require("../controller/Company/QuizSettingController")
+const surveySettingController = require("../controller/Company/SurveySettingController")
+const moduleSettingController = require("../controller/Company/ModuleSettingController")
 
 const createUpload = require('../util/upload');
 
@@ -213,5 +215,13 @@ router.post('/program/schedule/:contentFolderId', isAuth, programScheduleControl
 //This route is for quiz setting
 router.get('/quiz/setting/post/:mId/:aId', isAuth, quizSettingController?.getQuizSettingData)
 router.post('/quiz/setting/post/:mId/:aId', isAuth, quizSettingController?.postQuizSettingController)
+
+//This is the route for module survey setting
+router.get('/module/survey/setting/:moduleId', isAuth, surveySettingController.getSurveySettingAPI);
+router.post('/module/survey/setting/:moduleId', isAuth, surveySettingController.postSurveySettingAPI);
+
+// This route is fpr module setting
+router.get('/modules/save/settings/:moduleId', isAuth, moduleSettingController.getModuleSettingAPI);
+router.post('/modules/save/settings/:moduleId', isAuth, moduleSettingController.postModuleSettingAPI);
 
 module.exports = router;
