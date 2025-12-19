@@ -42,6 +42,8 @@ exports.postSurveySettingAPI = async (req, res, next) => {
             moduleId,
             question: questionObj.text,
             questionsType: questionObj.type,
+            multiOption: questionObj.multiOption || false,
+            options: questionObj?.options || [],
             mandatory: questionObj.mandatory || false,
             createdBy: userId
         }));

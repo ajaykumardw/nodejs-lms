@@ -21,4 +21,6 @@ router.post('/activity/insert/report/data/:moduleId/:contentFolderId/:activityId
 
 router.get("/activity/attempt/check/:moduleId/:contentFolderId/:activityId/:moduleTypeId", isAuth, activityController.getAttemptCheck)
 
+router.get("/module/survey/data/:moduleId", isAuth, activityController.getModuleActivityData);
+
 module.exports = router;

@@ -37,7 +37,6 @@ function parseScormData(scormData) {
     };
 }
 
-
 exports.getActivityData = async (req, res, next) => {
     try {
 
@@ -550,3 +549,38 @@ exports.postScormData = async (req, res, next) => {
     }
 };
 
+exports.getModuleActivityData = async (req, res, next) => {
+    try {
+
+        const userId = req?.userId
+
+        const moduleId = req?.params?.moduleId;
+
+        const user = await User.findById(userId)
+
+        if (!user) {
+            return errorResponse(res, "User does not exist", {}, 404)
+        }
+
+        const masterId = user?.master_company_id;
+
+        const moduleData = await Module.findOne({
+            created_by: masterId,
+            _id: moduleId
+        })
+            .populate({
+                path: 'moduleSetting',
+                populate: {
+                    path: 'selectedCertificateId',
+                    model: 'certificates'
+                }
+            })
+            .populate('moduleSurvey');
+
+
+        return successResponse(res, "Module fetched successfully", moduleData)
+
+    } catch (error) {
+        next(error)
+    }
+}

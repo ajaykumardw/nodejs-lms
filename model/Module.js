@@ -52,6 +52,19 @@ moduleSchema.virtual('activity_logs', {
     foreignField: 'module_id'
 });
 
+moduleSchema.virtual("moduleSetting", {
+    ref: "ModuleSetting",
+    localField: "_id",
+    foreignField: "moduleId",
+    justOne: true
+})
+
+moduleSchema.virtual("moduleSurvey", {
+    ref: "ModuleSurvey",
+    localField: "_id",
+    foreignField: "moduleId",
+})
+
 moduleSchema.set('toObject', { virtuals: true })
 moduleSchema.set('toJSON', { virtuals: true })
 
