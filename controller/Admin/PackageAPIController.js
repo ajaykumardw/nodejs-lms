@@ -9,7 +9,7 @@ exports.getPackageAPI = async (req, res, next) => {
     try {
 
         // Get all package types created by this user
-        const packageTypes = await PackageType.find({ created_by: userId }, { package: 1 });
+        const packageTypes = await PackageType.find({ created_by: userId }, { package: 1, name: 1 });
 
         const totalPackageType = await PackageType.find({ 'package.items.0': { $exists: true } });
 
@@ -25,6 +25,7 @@ exports.getPackageAPI = async (req, res, next) => {
 
         totalPackageType.forEach((totPackType) => {
             const packgId = totPackType._id;
+            const packageTypeName = totPackType.name;
             if (totPackType?.package?.items?.length) {
                 totPackType.package.items.forEach((item, index) => {
                     totalPackage.push({
@@ -32,6 +33,7 @@ exports.getPackageAPI = async (req, res, next) => {
                         permissions: item.permissions, // convert Mongoose subdocument to plain object
                         package_type_id: packgId,
                         index: index,
+                        packageTypeName: packageTypeName
                     });
                 })
             }
@@ -39,6 +41,7 @@ exports.getPackageAPI = async (req, res, next) => {
 
         packageTypes.forEach((pkgTypeDoc) => {
             const packageTypeId = pkgTypeDoc._id;
+            const packageTypeName = pkgTypeDoc.name;
 
             if (pkgTypeDoc.package?.items?.length) {
                 pkgTypeDoc.package.items.forEach((item, index) => {
@@ -46,6 +49,7 @@ exports.getPackageAPI = async (req, res, next) => {
                         ...item.toObject(), // convert Mongoose subdocument to plain object
                         permissions: item.permissions, // convert Mongoose subdocument to plain object
                         package_type_id: packageTypeId,
+                        packageTypeName: packageTypeName,
                         index: index,
                     });
                 });

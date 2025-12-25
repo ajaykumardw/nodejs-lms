@@ -4,32 +4,77 @@ const Schema = mongoose.Schema;
 
 const questionSchema = new Schema({
     company_id: {
-        type: mongoose.Schema.Types.ObjectId, // BIGINT
-        required: true, // company_id is required
-        ref: 'users', // Reference to 'companies' collection
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: 'users',
     },
-    title: {
-        type: String, // TEXT(65535)
-        maxlength: 65535, // Maximum length for TEXT
-        required: true, // title is required
+    activity_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
     },
-    description: {
-        type: String, // TEXT(65535)
-        maxlength: 65535, // Maximum length for TEXT
-        required: true, // description is required
+    module_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+    },
+    question_level: {
+        type: Number,
+        required: false
+    },
+    question: {
+        type: String,
+        maxlength: 5000,
+        required: true,
+    },
+    option1: {
+        type: String,
+    },
+    option2: {
+        type: String,
+    },
+    option3: {
+        type: String,
+    },
+    option4: {
+        type: String,
+    },
+    option5: {
+        type: String,
+    },
+    option6: {
+        type: String,
+    },
+    section: {
+        type: String,
+        maxlength: 10,
+        required: true,
+    },
+    correct_answer: {
+        type: String,
+        maxlength: 1,
+        required: true,
     },
     score: {
-        type: Number, // FLOAT
-        required: true, // score is required
+        type: String,
+        maxlength: 10,
+        required: true,
+    },
+    diffculty: {
+        type: String,
+        maxlength: 1,
+        required: true,
+    },
+    answer_explanation: {
+        type: String,
+        maxlength: 500,
     },
     created_at: {
-        type: Date, // DATETIME
-        required: true, // created_at is required
-        default: Date.now, // Default to current date/time
+        type: Date,
+        required: true,
+        default: Date.now,
     },
     updated_at: {
-        type: Date, // TIMESTAMP
-        required: false, // updated_at is optional
+        type: Date,
+        required: false,
     },
 });
 

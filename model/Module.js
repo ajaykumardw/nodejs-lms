@@ -2,10 +2,10 @@ const mongoose = require('mongoose');
 const schema = mongoose.Schema;
 
 const moduleSchema = new schema({
-    company_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true,
-        ref: "users"
+    content_folder_id: {
+        type: schema.Types.ObjectId,
+        ref: "ContentFolder",
+        required: true
     },
     title: {
         type: String,
@@ -17,37 +17,42 @@ const moduleSchema = new schema({
         required: true,
         maxlength: 5000,
     },
-    type: {
-        type: Number,
-        required: true,
-        ref: "module_types"
-    },
-    status: {
+    image_url: {
         type: String,
-        enum: ['active', 'inactive', 'draft', 'published'],
-        required: true
+        required: true,
+        maxLength: 255
     },
-    duration: {
-        type: Number, 
+    live_session_id: {
+        type: mongoose.Schema.Types.ObjectId,
         required: false
     },
-    certificate_id: {
-        type: Number, 
-        required: false,
-        ref: "certificates"
+    module_type_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
     },
     created_by: {
-        type: Number, 
-        required: false
+        type: mongoose.Schema.Types.ObjectId,
+        required: true
     },
     created_at: {
-        type: Date, 
+        type: Date,
         default: Date.now
     },
     updated_at: {
-        type: Date, 
+        type: Date,
         default: Date.now
     }
+}, {
+    collection: "modules"
 });
 
-module.exports = mongoose.model('modules', moduleSchema);
+moduleSchema.virtual('activity_logs', {
+    ref: 'ActivityLog',
+    localField: '_id',
+    foreignField: 'module_id'
+});
+
+moduleSchema.set('toObject', { virtuals: true })
+moduleSchema.set('toJSON', { virtuals: true })
+
+module.exports = mongoose.model('Module', moduleSchema);

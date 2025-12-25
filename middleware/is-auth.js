@@ -22,5 +22,7 @@ module.exports = (req, res, next) => {
         throw error;
     }
     req.userId = decodedToken.userId;
+    req.user = decodedToken;
+    req.user._id = req.userId;
     next();
 }

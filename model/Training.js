@@ -4,7 +4,7 @@ const Schema = mongoose.Schema;
 
 const trainingSchema = new Schema({
     category_id: {
-        type: Number, // Matches INTEGER
+        type: mongoose.Schema.Types.ObjectId,
         required: false, // Can be null
         ref: "categories"
     },
@@ -61,7 +61,7 @@ const trainingSchema = new Schema({
     },
     status: {
         type: String, // ENUM
-        enum: ['active', 'inactive'], // Only these two values are allowed
+        enum: ['active', 'inactive', 'draft', 'published'], // Only these two values are allowed
         required: false,
     },
 });
