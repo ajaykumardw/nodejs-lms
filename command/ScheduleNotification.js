@@ -10,6 +10,8 @@ const scheduleNotificationCommand = async () => {
         const activityLog = await ActivityLog.find({ is_send_notification: false })
 
         for (const [index, item] of scheduleNotification.entries()) {
+
+            //return
             // console.log("Item", item);
         }
 
