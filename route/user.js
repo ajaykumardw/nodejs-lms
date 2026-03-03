@@ -6,19 +6,13 @@ const activityController = require("../controller/User/ActivityControllerAPI")
 const moduleController = require('../controller/User/ModuleControllerAPI')
 
 router.get('/program/data', isAuth, programController.getCourseAPIController);
-
 router.get('/module/data/:id', isAuth, moduleController.getModuleAPIController);
 
 router.get('/activity/data/:id', isAuth, activityController.getActivityData);
-
 router.get('/activity/fetch/data/:id', isAuth, activityController.getFetchActivity);
-
 router.post('/activity/set/report/data/:moduleId/:contentFolderId/:activityId/:moduleTypeId', isAuth, activityController.postReportController);
-
 router.post('/activity/set/scorm/data/:moduleId/:contentFolderId/:activityId/:moduleTypeId', isAuth, activityController.postScormData);
-
 router.post('/activity/insert/report/data/:moduleId/:contentFolderId/:activityId/:moduleTypeId', isAuth, activityController.postInsertReportController);
-
 router.get("/activity/attempt/check/:moduleId/:contentFolderId/:activityId/:moduleTypeId", isAuth, activityController.getAttemptCheck)
 
 router.get("/module/survey/data/:moduleId", isAuth, activityController.getModuleActivityData);

@@ -1,12 +1,26 @@
 const User = require('../../model/User');
 const Country = require('../../model/Country');
 const PackageType = require('../../model/PackageType');
-const bcrypt = require('bcryptjs')
+
+const bcrypt = require('bcryptjs');
+
+const mongoose = require('mongoose')
+
+const {
+    errorResponse,
+    successResponse
+} = require('../../util/response');
+
+const {
+    decrypt
+} = require('../../util/encryption');
 
 exports.getCompanyIndexAPI = async (req, res, next) => {
 
     const userId = req.userId;
-    const company = await User.find({ created_by: userId });
+    const company = await User.find({
+        created_by: userId
+    });
 
     res.status(200).json({
         'status': 'Success',
@@ -24,7 +38,11 @@ exports.createCompanyAPI = async (req, res, next) => {
 
     const userId = req.userId;
 
-    const packageTypes = await PackageType.find({ created_by: userId }, { package: 1 });
+    const packageTypes = await PackageType.find({
+        created_by: userId
+    }, {
+        package: 1
+    });
 
     if (!packageTypes) {
         const error = new Error("Package type does not exist!");
@@ -68,9 +86,22 @@ exports.postCompanyAPI = async (req, res, next) => {
         const imageUrl = req.file ? req.file.filename : '';
 
         const {
-            first_name, last_name, company_name, email, password,
-            country_id, state_id, city_id, address, status,
-            phone, website, package_id, pincode, gst_no, pan_no
+            first_name,
+            last_name,
+            company_name,
+            email,
+            password,
+            country_id,
+            state_id,
+            city_id,
+            address,
+            status,
+            phone,
+            website,
+            package_id,
+            pincode,
+            gst_no,
+            pan_no
         } = req.body;
 
         // Optional: hash password
@@ -116,13 +147,19 @@ exports.checkEmailCompanyAPI = async (req, res, next) => {
     const email = req.params.email;
     const id = req.params.id;
 
-    const query = { email: email };
+    const query = {
+        email: email
+    };
     if (id && id !== 'null' && id !== 'undefined') {
-        query._id = { $ne: id };
+        query._id = {
+            $ne: id
+        };
     }
 
     const userExist = await User.findOne(query);
-    res.json({ exists: !!userExist }); // returns { exists: true } or { exists: false }
+    res.json({
+        exists: !!userExist
+    }); // returns { exists: true } or { exists: false }
 };
 
 exports.editCompanyAPI = async (req, res, next) => {
@@ -131,29 +168,143 @@ exports.editCompanyAPI = async (req, res, next) => {
         const userId = req.userId;
         const companyId = req.params.id;
 
-        const company = await User.findOne({ _id: companyId, created_by: userId });
+        const users = await User.aggregate([{
+                $match: {
+                    _id: new mongoose.Types.ObjectId(companyId),
+                    created_by: new mongoose.Types.ObjectId(userId)
+                }
+            },
+            {
+                $lookup: {
+                    from: "countries",
+                    let: {
+                        cid: "$country_id"
+                    },
+                    pipeline: [{
+                        $match: {
+                            $expr: {
+                                $eq: [
+                                    "$country_id",
+                                    {
+                                        $toInt: "$$cid"
+                                    }
+                                ]
+                            }
+                        }
+                    }],
+                    as: "country"
+                }
+            },
+            {
+                $lookup: {
+                    from: "package_types",
+                    let: {
+                        pid: "$package_id"
+                    },
+                    pipeline: [{
+                            $unwind: "$package.items"
+                        },
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: ["$package.items._id", "$$pid"]
+                                }
+                            }
+                        },
+                        {
+                            $project: {
+                                _id: 0,
+                                name: "$package.items.name",
+                                amount: "$package.items.amount",
+                                status: "$package.items.status"
+                            }
+                        }
+                    ],
+                    as: "package"
+                }
+            },
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "_id",
+                    foreignField: "created_by",
+                    pipeline: [{
+                        $project: {
+                            first_name: 1,
+                            last_name: 1,
+                            email: 1,
+                            photo: 1,
+                            phone: 1,
+                        }
+                    }],
+                    as: "company_user"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$package",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $unwind: {
+                    path: "$country",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+
+            {
+                $project: {
+                    email: 1,
+                    phone: 1,
+                    status: 1,
+                    first_name: 1,
+                    last_name: 1,
+                    package_id: 1,
+                    photo: 1,
+                    country: "$country.country_name",
+                    company_user: 1,
+                    package: "$package.name",
+                    package_amount: "$package.amount"
+                }
+            }
+        ]);
+
+        const company = users?. [0] || null;
 
         if (!company) {
-            return res.status(404).json({
-                status: "Error",
-                statusCode: 404,
-                message: "Company not found or access denied",
-            });
+
+            return errorResponse(res, "Company not found or access denied", {}, 404)
         }
 
-        return res.status(200).json({
-            status: "Success",
-            statusCode: 200,
-            message: "Data fetched successfully",
-            data: company,
-        });
+        const finalData = {
+            ...company,
+            email: decrypt(company?.email),
+            phone: decrypt(company?.phone),
+            company_user: company.company_user?.map(user => ({
+                ...user,
+                email: user?.email ? decrypt(user.email) : null,
+                phone: user?.phone ? decrypt(user.phone) : null
+            })) || []
+        };
+
+        return successResponse(res, "Data fetched successfully", finalData)
     } catch (error) {
-        console.error("Error occurred:", error);
-        return res.status(500).json({
-            status: "Error",
-            statusCode: 500,
-            message: "Internal server error",
-        });
+
+        return errorResponse(res, "Internal server error", {}, 500);
+    }
+};
+
+exports.deleteCompanyAPI = async (req, res, next) => {
+    try {
+        const id = req.params.id;
+
+        await User.findByIdAndDelete(id)
+
+        return successResponse(res, "User deleted successfully")
+    } catch (error) {
+
+        return errorResponse(res, "Internal server error", {}, 500);
     }
 };
 
@@ -162,14 +313,29 @@ exports.putCompanyAPI = async (req, res, next) => {
         const userId = req.userId;
         const id = req.params.id;
 
-        const data = await User.findOne({ created_by: userId, _id: id });
+        const data = await User.findOne({
+            created_by: userId,
+            _id: id
+        });
 
         const imageUrl = req.file ? req.file.filename : '';
 
         const {
-            first_name, last_name, company_name, email,
-            country_id, state_id, city_id, address, status,
-            phone, website, package_id, pincode, gst_no, pan_no
+            first_name,
+            last_name,
+            company_name,
+            email,
+            country_id,
+            state_id,
+            city_id,
+            address,
+            status,
+            phone,
+            website,
+            package_id,
+            pincode,
+            gst_no,
+            pan_no
         } = req.body;
 
         data.first_name = first_name;

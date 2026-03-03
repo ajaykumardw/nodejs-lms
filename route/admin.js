@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const isAuth = require('../middleware/is-auth')
 const validation = require('../validation/Adminvalidation');
-const ModuleValidation = require('../validation/ModuleValidation');
 const roleController = require('../controller/Admin/RoleAPIController');
 const packageAPIController = require('../controller/Admin/PackageAPIController');
 const permissionController = require('../controller/Admin/PermissionAPIController');
@@ -13,8 +12,6 @@ const designationAPIController = require('../controller/Admin/DesignationAPICont
 const ParticipationTypeAPIController = require('../controller/Admin/ParticipationTypeAPIController');
 const UserAPIController = require('../controller/Admin/UserAPIController');
 const CategoryController = require('../controller/Admin/CategoryController');
-const ModuleController = require('../controller/Company/ModuleController');
-const TrainingController = require('../controller/Company/TrainingControllerAPI');
 
 const createUpload = require('../util/upload');
 
@@ -25,24 +22,18 @@ const allowedTypesDocument = [
   'application/msword'
 ];
 
-const { middleware: uploadDocument } = createUpload(
-  allowedTypesDocument, // allowed types
-  'uploads/module/content' // directory inside /public/
-);
-
-const { middleware: uploadVideo } = createUpload(
+const {
+  middleware: uploadVideo
+} = createUpload(
   ['video/mp4', 'video/webm'], // allowed types
   'uploads/module/content' // directory inside /public/
 );
 
-const { middleware: imageUpload } = createUpload(
+const {
+  middleware: imageUpload
+} = createUpload(
   ['image/jpeg', 'image/png', 'image/jpg'], // allowed types
   'uploads/images' // directory inside /public/
-);
-
-const { middleware: uploadScorm } = createUpload(
-  ['application/zip', 'application/x-zip-compressed'],
-  'uploads/module/content/scorm', 1024
 );
 
 //routes for roles
@@ -79,6 +70,7 @@ router.get('/company', isAuth, companyAPIController.getCompanyIndexAPI);
 router.post('/company', isAuth, validation.postCompany, imageUpload('photo'), companyAPIController.postCompanyAPI);
 router.get('/company/create', isAuth, companyAPIController.createCompanyAPI);
 router.get('/company/:id/edit', isAuth, companyAPIController.editCompanyAPI);
+router.delete('/company/:id/delete', isAuth, companyAPIController.deleteCompanyAPI);
 router.put('/company/:id', isAuth, imageUpload('photo'), companyAPIController.putCompanyAPI);
 router.get('/company/email/check/:email/:id', isAuth, companyAPIController.checkEmailCompanyAPI)
 
@@ -130,7 +122,6 @@ router.delete('/category/:id', isAuth, CategoryController.deleteCategoryAPI);
 // router.put('/module/:id/card/scorm/:card_id', isAuth, uploadScorm('file'), ModuleController.updateCardContentScormContent);
 // router.put('/module/:id/card/quiz/:card_id', isAuth, ModuleController.updateCardContentQuizContent);
 // router.put('/module/setting/update/:id', isAuth, uploadVideo('file'), ModuleController.updateSettings);
-
 
 // router.get('/trainings/list', isAuth, TrainingController.getPaginatedTrainings);
 // router.get('/training/:id', isAuth, TrainingController.getTrainingByIdAPI);
