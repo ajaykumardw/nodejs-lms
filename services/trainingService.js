@@ -76,7 +76,7 @@ const getPaginatedTrainings = async (req, res) => {
         }
       };
   } catch (err) {
-    console.log('get trainings error:', err);
+    
     return { status: false, message: 'Server error' };
   }
 };

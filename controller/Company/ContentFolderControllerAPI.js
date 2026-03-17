@@ -8,19 +8,32 @@ exports.getContentFolderAPI = async (req, res, next) => {
         const userId = req.userId;
         const id = req.params.id;
 
+        const page = Math.max(0, parseInt(req.query.page) || 0)
+        const limit = Math.max(1, parseInt(req.query.limit) || 10)
+        const skip = page * limit
+
         const program = await Program.findById(id);
 
         if (!program) {
             return errorResponse(res, "Program does not exist", {}, 404)
         }
 
+        const totalItems = await ContentFolder.countDocuments({ created_by: userId, program_id: id })
+
         const contentFolder = await ContentFolder.find({ created_by: userId, program_id: id })
+            .skip(skip)
+            .limit(limit)
 
         if (!contentFolder) {
             return errorResponse(res, "Content folder does not exist", {}, 404)
         }
 
-        return successResponse(res, "Content folder fetched successfully", contentFolder)
+        return successResponse(res, "Content folder fetched successfully", {
+            data: contentFolder,
+            totalItems,
+            page,
+            limit,
+        })
 
     } catch (error) {
         next(error)

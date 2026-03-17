@@ -5,64 +5,69 @@ const appConfigSchema = new mongoose.Schema({
         type: String,
         unique: true,
         required: true,
-        maxLength: 100
+        maxlength: 100
     },
     logoURL: {
         type: String,
         required: false,
-        maxLength: 100
+        maxlength: 100
     },
     title: {
         type: String,
         required: false,
-        maxLength: 100
+        maxlength: 100
     },
     content: {
         type: String,
         required: false,
-        maxLength: 100
+        maxlength: 100
     },
     content2: {
         type: String,
         required: false,
-        maxLength: 100
+        maxlength: 100
     },
     frameImage: [{
         type: String,
         required: false,
-        maxLength: 100
+        maxlength: 100
     }],
     signatureURL: {
         type: String,
         required: false,
-        maxLength: 100
+        maxlength: 100
+    },
+    default_email_layout: {
+        type: String,
+        required: false,
+        maxlength: 10000
     },
     notification_data: [{
         type: {
             type: String,
-            maxLength: 255,
+            maxlength: 255,
             required: false
         },
         default_footer: {
             type: String,
             required: false,
-            maxLength: 1000
+            maxlength: 1000
         },
         default_logo: {
             type: String,
-            maxLength: 255,
+            maxlength: 255,
             required: false
         },
         category: [{
             name: {
                 type: String,
-                maxLength: 255,
+                maxlength: 255,
                 required: false
             }
         }],
         default_message: {
             type: String,
-            maxLength: 6000,
+            maxlength: 6000,
             required: false
         }
     }],
@@ -70,14 +75,14 @@ const appConfigSchema = new mongoose.Schema({
         name: {
             type: String,
             required: false,
-            maxLength: 255,
+            maxlength: 255,
         },
         variable: [
             {
                 name: {
                     type: String,
                     required: false,
-                    maxLength: 255,
+                    maxlength: 255,
                 },
             },
         ],
@@ -86,17 +91,17 @@ const appConfigSchema = new mongoose.Schema({
         title: {
             type: String,
             required: true,
-            maxLength: 255
+            maxlength: 255
         },
         description: {
             type: String,
             required: true,
-            maxLength: 1000
+            maxlength: 1000
         },
         image_url: {
             type: String,
             required: true,
-            maxLength: 1000
+            maxlength: 1000
         }
     }],
     live_session: [{
@@ -109,17 +114,17 @@ const appConfigSchema = new mongoose.Schema({
         title: {
             type: String,
             required: true,
-            maxLength: 255
+            maxlength: 255
         },
         description: {
             type: String,
             required: true,
-            maxLength: 5000
+            maxlength: 5000
         },
         svg_content: {
             type: String,
             required: true,
-            maxLength: 5000,
+            maxlength: 5000,
         },
         status: {
             type: Boolean,

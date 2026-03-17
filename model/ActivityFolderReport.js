@@ -11,6 +11,11 @@ const UserActivityLog = new mongoose.Schema({
         required: true,
         ref: "Program"
     },
+    current_attempt: {
+        type: Number,
+        required: true,
+        default: 1,
+    },
     content_folder_id: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
@@ -28,6 +33,11 @@ const UserActivityLog = new mongoose.Schema({
     user_id: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
+    },
+    progress_status: {
+        type: String,
+        required: true,
+        default: "1"
     },
     view_page_no: [{
         type: String,
@@ -78,6 +88,16 @@ const UserActivityLog = new mongoose.Schema({
         default: "0"
     },
     passed_at_time: {
+        type: Date,
+        required: false,
+        default: null
+    },
+    start_activity_time: {
+        type: Date,
+        required: false,
+        default: null
+    },
+    end_activity_time: {
         type: Date,
         required: false,
         default: null

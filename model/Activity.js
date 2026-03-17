@@ -4,7 +4,7 @@ const activitySchema = new mongoose.Schema({
     name: {
         type: String,
         required: false,
-        maxLength: 255
+        maxlength: 255
     },
     module_id: {
         type: mongoose.Schema.Types.ObjectId,
@@ -18,15 +18,15 @@ const activitySchema = new mongoose.Schema({
     document_data: {
         title: {
             type: String,
-            maxLength: 255
+            maxlength: 255
         },
         page_no: {
             type: String,
-            maxLength: 255
+            maxlength: 255
         },
         image_url: {
             type: String,
-            maxLength: 255
+            maxlength: 255
         },
         downloadable: {
             type: Boolean,
@@ -40,60 +40,60 @@ const activitySchema = new mongoose.Schema({
     video_data: {
         title: {
             type: String,
-            maxLength: 255
+            maxlength: 255
         },
         video_url: {
             type: String,
-            maxLength: 255
+            maxlength: 255
         }
     },
     youtube_data: {
         title: {
             type: String,
-            maxLength: 255
+            maxlength: 255
         },
         video_url: {
             type: String,
-            maxLength: 255
+            maxlength: 255
         }
     },
     scorm_data: {
         title: {
             type: String,
-            maxLength: 255
+            maxlength: 255
         },
         content_url: {
             type: String,
-            maxLength: 255
+            maxlength: 255
         },
         folder_url: {
             type: String,
-            maxLength: 255
+            maxlength: 255
         },
         folder_name: {
             type: String,
-            maxLength: 255
+            maxlength: 255
         },
         launch_file: {
             type: String,
-            maxLength: 255
+            maxlength: 255
         }
     },
     quiz_data: {
         title: {
             type: String,
-            maxLength: 255
+            maxlength: 255
         },
         question_data: [{
             title: {
                 type: String,
                 required: true,
-                maxLength: 255
+                maxlength: 255
             },
             explanation: {
                 type: String,
                 required: true,
-                maxLength: 500
+                maxlength: 500
             },
             mark: {
                 type: Number,
@@ -107,7 +107,7 @@ const activitySchema = new mongoose.Schema({
                 title: {
                     type: String,
                     required: true,
-                    maxLength: 255
+                    maxlength: 255
                 }
             }]
         }]
@@ -144,6 +144,12 @@ activitySchema.virtual("quiz_reports", {
     ref: "quiz_result_report",
     localField: "_id",
     foreignField: "activity_id"
+});
+activitySchema.virtual('moduleSetting', {
+    ref: 'ModuleSetting',
+    localField: 'module_id',   // Activity.module_id
+    foreignField: 'moduleId',  // ModuleSetting.moduleId
+    justOne: true
 });
 
 activitySchema.virtual("QuizSetting", {

@@ -4,9 +4,8 @@ const fs = require("fs");
 const pdfParse = require("pdf-parse");
 const unzipper = require("unzipper");
 
-const { DOMParser } = require("xmldom"); // npm i xmldom
-
 function createUpload(allowedTypes, directory = "uploads/", maxSizeMB = 2000) {
+
   const uploadPath = `/public/${directory}`;
   const absPath = path.join(__dirname, "..", uploadPath);
 
@@ -33,21 +32,18 @@ function createUpload(allowedTypes, directory = "uploads/", maxSizeMB = 2000) {
     },
   });
 
-  // FIXED & SAFE HANDLER
   const handleZipOrPdf = async (req, res, next) => {
     try {
       if (!req.file) return next();
 
       const filePath = path.join(absPath, req.file.filename);
 
-      // PDF Processing
       if (req.file.mimetype === "application/pdf") {
         const buffer = fs.readFileSync(filePath);
         const data = await pdfParse(buffer);
         req.pdfPageCount = data.numpages;
       }
 
-      // SCORM ZIP Extraction
       if (
         req.file.mimetype === "application/zip" ||
         req.file.mimetype === "application/x-zip-compressed" ||
@@ -60,7 +56,6 @@ function createUpload(allowedTypes, directory = "uploads/", maxSizeMB = 2000) {
           fs.mkdirSync(extractPath);
         }
 
-        // STREAMED EXTRACTION — FIXES CRASHING
         await new Promise((resolve, reject) => {
           fs.createReadStream(filePath)
             .pipe(unzipper.Extract({ path: extractPath }))
@@ -68,7 +63,7 @@ function createUpload(allowedTypes, directory = "uploads/", maxSizeMB = 2000) {
             .on("error", reject);
         });
 
-        fs.unlinkSync(filePath); // Delete ZIP only AFTER extraction
+        fs.unlinkSync(filePath);
 
         req.scormExtractedPath = `${directory}/${folderName}`;
       }

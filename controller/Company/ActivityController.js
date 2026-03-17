@@ -2,6 +2,7 @@ const AppConfig = require('../../model/AppConfig');
 const Activity = require('../../model/Activity')
 const mongoose = require('mongoose')
 const { errorResponse, successResponse } = require('../../util/response');
+const Module = require('../../model/Module');
 
 exports.getActivityAPI = async (req, res, next) => {
     try {
@@ -11,8 +12,8 @@ exports.getActivityAPI = async (req, res, next) => {
         const activities = await Activity.aggregate([
             {
                 $match: {
-                    created_by: new mongoose.Types.ObjectId(userId),
-                    module_id: new mongoose.Types.ObjectId(module_id)
+                    created_by: mongoose.Types.ObjectId.createFromHexString(userId),
+                    module_id: mongoose.Types.ObjectId.createFromHexString(module_id)
                 }
             },
             {
@@ -85,6 +86,11 @@ exports.postActivityFormAPI = async (req, res, next) => {
         })
 
         await activity.save()
+
+        await Module.findByIdAndUpdate(mId, {
+            is_survey_completed: false,
+            is_survey_done: false
+        })
 
         return successResponse(res, "Activity saved successfully")
 
@@ -163,57 +169,57 @@ exports.postActivityDataAPI = async (req, res, next) => {
 
         const updatePayload = {};
 
-        // ------------------------
-        // DOCUMENT UPLOAD
-        // ------------------------
-
         if (moduleTypeId === "688723af5dd97f4ccae68834") {
+
+            if (!activity?.document_data?.image_url && !file?.filename) {
+
+                return errorResponse(res, "File does not exist", {}, 400);
+            }
+
             updatePayload.document_data = {
                 title,
                 image_url: file?.filename || activity.document_data?.image_url || ""
             };
-        }
+        } else if (moduleTypeId === "688723af5dd97f4ccae68835") {
 
-        // ------------------------
-        // VIDEO UPLOAD
-        // ------------------------
-        else if (moduleTypeId === "688723af5dd97f4ccae68835") {
+            if (!activity?.video_data?.video_url && !file?.filename) {
+
+                return errorResponse(res, "File does not exist", {}, 404);
+            }
+
             updatePayload.video_data = {
                 title,
                 video_url: file?.filename || activity.video_data?.video_url || ""
             };
-        }
+        } else if (moduleTypeId === "688723af5dd97f4ccae68836") {
 
-        // ------------------------
-        // YOUTUBE VIDEO
-        // ------------------------
-        else if (moduleTypeId === "688723af5dd97f4ccae68836") {
+            if (!activity?.video_data?.video_url && !video_url) {
+
+                return errorResponse(res, "File does not exist", {}, 404);
+            }
+
             updatePayload.video_data = {
                 title,
                 video_url: video_url || activity.video_data?.video_url || ""
             };
-        }
+        } else if (moduleTypeId === "688723af5dd97f4ccae68837") {
 
-        // ------------------------
-        // SCORM UPLOAD
-        // ------------------------
-        else if (moduleTypeId === "688723af5dd97f4ccae68837") {
 
-            if (!req.scormExtractedPath)
+            const folderPath = req?.scormExtractedPath;        // activity/<folderName>
+            const folderName = folderPath?.split('/')?.pop();   // only folderName
+
+            if (!activity && !req.scormExtractedPath) {
+
                 return errorResponse(res, "Invalid SCORM ZIP file", {}, 400);
-
-            const folderPath = req.scormExtractedPath;        // activity/<folderName>
-            const folderName = folderPath.split('/').pop();   // only folderName
+            }
 
             updatePayload.scorm_data = {
                 title,
-                folder_url: folderPath,                        // path relative to public
-                folder_name: folderName,
+                folder_url: folderPath || activity?.scorm_data?.folder_url,                        // path relative to public
+                folder_name: folderName || activity?.scorm_data?.folder_name,
                 launch_file: req.scormLaunchFile || null       // save launch HTML file
             };
-        }
-
-        else {
+        } else {
             return errorResponse(res, "Unsupported moduleTypeId", {}, 400);
         }
 
@@ -229,3 +235,59 @@ exports.postActivityDataAPI = async (req, res, next) => {
         next(error);
     }
 };
+
+exports.getLiveSessionController = async (req, res, next) => {
+    try {
+
+        const userId = req?.userId;
+        const { moduleId } = req?.params;
+
+        const module = await Module.findOne({
+            created_by: userId,
+            _id: moduleId
+        })
+
+        if (!module) {
+            return errorResponse(res, "Module not found", {}, 404)
+        }
+
+        return successResponse(res, "Module fetched successfully", module)
+
+    } catch (error) {
+        next(error)
+    }
+}
+
+exports.postLiveSessionController = async (req, res, next) => {
+    try {
+
+        const userId = req?.userId;
+
+        const { moduleId } = req?.params;
+
+        const { presenter, startDateTime, endDateTime } = req?.body;
+
+        const module = await Module.findOne({
+            created_by: userId,
+            _id: moduleId
+        })
+
+        if (!module) {
+            return errorResponse(res, "Module not found", {}, 404)
+        }
+
+        await Module.findOneAndUpdate({
+            created_by: userId,
+            _id: moduleId
+        }, {
+            presenter_id: presenter,
+            start_live_time: startDateTime,
+            end_live_time: endDateTime
+        })
+
+        return successResponse(res, "Live session saved successfully")
+
+    } catch (error) {
+        next(error)
+    }
+}

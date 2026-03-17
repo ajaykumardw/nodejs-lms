@@ -22,10 +22,18 @@ const programScheduleController = require('../controller/Company/ProgramSchedule
 const quizSettingController = require("../controller/Company/QuizSettingController")
 const surveySettingController = require("../controller/Company/SurveySettingController")
 const moduleSettingController = require("../controller/Company/ModuleSettingController")
+const reportController = require("../controller/Company/ReportAPIController")
+const mailTemplateController = require("../controller/Company/MailTemplateController")
+const exportCenterController = require("../controller/Company/ExportCenterAPIController")
+const scheduleNotificationController = require('../controller/Company/ScheduleNotificationController');
+
+
 
 const createUpload = require('../util/upload');
 
 const certificateUpload = require('../util/uploadCertificate');
+
+const uploadNotificationFiles = require('../util/createUploader');
 
 const {
     middleware: imageUpload
@@ -159,11 +167,12 @@ router.post('/certificate/change/frame/:id', isAuth, certificateController.putCh
 //This route is for notification
 router.get('/notification', isAuth, notificationController.getNotificationDataAPI)
 router.get('/notification/create', isAuth, notificationController.getCreateNotificationAPI)
-router.post('/notification', isAuth, notificationController.postNotificationDataAPI)
+router.post('/notification', isAuth, uploadNotificationFiles, notificationController.postNotificationDataAPI)
 router.get('/notification/edit/:id', isAuth, notificationController.getEditNotificationAPI);
-router.put('/notification/update/:id', isAuth, notificationController.putUpdateNotificationAPI)
+router.put('/notification/update/:id', isAuth, uploadNotificationFiles, notificationController.putUpdateNotificationAPI)
 router.get('/notification/form/:id', isAuth, notificationController.getFormNotificationAPI);
-router.put('/notification/form/update/:id', isAuth, notificationController.updateNotificationAPI)
+router.put('/notification/form/update/:id', isAuth, uploadNotificationFiles, notificationController.updateNotificationAPI)
+router.put("/notification/check/select/:id", isAuth, notificationController.getCheckSelectNotificationAPI)
 
 //This route is for program
 router.get('/program', isAuth, programController.getProgramAPI);
@@ -208,9 +217,9 @@ router.post('/quiz/question/:moduleId/:activityId', isAuth, quizAPIController.po
 router.put('/quiz/question/:moduleId/:activityId', isAuth, quizAPIController.putQuizOptionAPI)
 
 //This route is for program schedule
-router.get('/program/schedule/data/:contentFolderId', isAuth, programScheduleController.getProgramScheduleAPI)
+router.get('/program/schedule/data/:moduleId', isAuth, programScheduleController.getProgramScheduleAPI)
 router.get('/program/schedule/create', isAuth, programScheduleController.getCreateDataAPI)
-router.post('/program/schedule/:contentFolderId', isAuth, programScheduleController.postProgramScheduleAPI)
+router.post('/program/schedule/:moduleId', isAuth, programScheduleController.postProgramScheduleAPI)
 
 //This route is for quiz setting
 router.get('/quiz/setting/post/:mId/:aId', isAuth, quizSettingController?.getQuizSettingData)
@@ -223,5 +232,43 @@ router.post('/module/survey/setting/:moduleId', isAuth, surveySettingController.
 // This route is fpr module setting
 router.get('/modules/save/settings/:moduleId', isAuth, moduleSettingController.getModuleSettingAPI);
 router.post('/modules/save/settings/:moduleId', isAuth, moduleSettingController.postModuleSettingAPI);
+
+//This route is for Live session
+router.get("/live/session/:moduleId", isAuth, activityController.getLiveSessionController)
+router.post('/live/session/:moduleId', isAuth, activityController.postLiveSessionController)
+
+//This route is for Dashboard completion report
+router.get('/dashboard/completion/report', isAuth, reportController.getDashboardCompleteRatioReport)
+router.get('/dashboard/module/report', isAuth, reportController.getByModuleReportController)
+router.get("/dashboard/program/report", isAuth, reportController.getByProgramReportController)
+router.get("/dashboard/learner/report", isAuth, reportController.getByLearnerController)
+router.get("/dashboard/filter/data", isAuth, reportController.getFilterDataController)
+router.get("/dashboard/module/type/data/:moduleTypeId/:status", isAuth, reportController.getModuleTypeUserData)
+router.get('/dashboard/advance/training/report', isAuth, reportController.getAdvanceTrainingReport)
+router.get("/dashboard/miscellaneous/report", isAuth, reportController.getMiscellaneousReportController)
+
+//This route is for Quiz assessment report
+router.get("/quiz/assessment/report", isAuth, reportController.getQuizAssessmentReportController)
+
+//This route is for scorm report data
+router.get("/scorm/report/data", isAuth, reportController.getScormReportDataController)
+router.get("/login/report/data", isAuth, reportController.getLogInReportController)
+router.get('/user/report/data', isAuth, reportController.getUserReportController);
+
+//This route is for mail template
+router.get("/mail/template/data", isAuth, mailTemplateController.getMailTemplateController)
+router.post("/mail/template/data", isAuth, mailTemplateController.postMailTemplateController)
+router.put("/mail/template/data/:id", isAuth, mailTemplateController.putMailTemplateController)
+
+//This route is for export center
+router.get("/export/center/data", isAuth, exportCenterController.getExportCenterController)
+router.post("/export/center/create", isAuth, exportCenterController.postExportCenterController)
+
+//This route is for schedule notification
+router.get("/schedule/notification", isAuth, scheduleNotificationController.getScheduleNotification)
+router.post("/schedule/notification/data", isAuth, scheduleNotificationController.postScheduleNotification)
+router.get('/schedule/notification/edit/data/:id', isAuth, scheduleNotificationController.getEditSchedNotification)
+router.get("/schedule/notification/create/data", isAuth, scheduleNotificationController.getCreateScheduleNotification)
+router.delete("/schedule/notification/delete/:id", isAuth, scheduleNotificationController.deleteScheduleNotificationController)
 
 module.exports = router;

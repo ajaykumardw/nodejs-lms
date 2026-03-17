@@ -33,7 +33,7 @@ exports.getNotificationDataAPI = async (req, res, next) => {
         const Notifications = await notification.aggregate([
             {
                 $match: {
-                    created_by: new mongoose.Types.ObjectId(userId)
+                    created_by: mongoose.Types.ObjectId.createFromHexString(userId)
                 }
             },
             {
@@ -132,8 +132,23 @@ exports.postNotificationDataAPI = async (req, res, next) => {
             subject,
             message,
             footer,
+            show_footer_logo,
+            header_logo_align,
+            footer_logo_align,
             default_select
         } = req.body
+
+        let headerLogo = "";
+        let footerLogo = "";
+
+        // save file paths if uploaded
+        if (req.files?.header_logo) {
+            headerLogo = req.files.header_logo[0].path
+        }
+
+        if (req.files?.footer_logo) {
+            footerLogo = req.files.footer_logo[0].path
+        }
 
         const Notification = new notification({
             template_name,
@@ -141,6 +156,11 @@ exports.postNotificationDataAPI = async (req, res, next) => {
             notification_type,
             default_select,
             subject,
+            header_logo_align,
+            footer_logo_align,
+            show_footer_logo,
+            header_logo: headerLogo,
+            footer_logo: footerLogo,
             message,
             footer,
             created_by: userId
@@ -178,10 +198,8 @@ exports.getEditNotificationAPI = async (req, res, next) => {
 
 exports.putUpdateNotificationAPI = async (req, res, next) => {
     try {
-
-        const userId = req.userId;
-
-        const id = req.params.id;
+        const userId = req.userId
+        const id = req.params.id
 
         const {
             template_name,
@@ -189,26 +207,45 @@ exports.putUpdateNotificationAPI = async (req, res, next) => {
             category_type,
             subject,
             message,
+            show_footer_logo,
+            header_logo_align,
+            footer_logo_align,
             footer,
-            default_select,
+            default_select
         } = req.body
 
-        await notification.findOneAndUpdate({ created_by: userId, _id: id },
-            {
-                $set: {
-                    template_name,
-                    notification_type,
-                    category_type,
-                    subject,
-                    message,
-                    footer,
-                    default_select
-                }
-            }
+        const updateData = {
+            template_name,
+            notification_type,
+            category_type,
+            show_footer_logo,
+            header_logo_align,
+            footer_logo_align,
+            subject,
+            message,
+            footer,
+            default_select
+        }
+
+
+        // save file paths if uploaded
+        if (req.files?.header_logo) {
+            updateData.header_logo =
+                req.files.header_logo[0].path
+        }
+
+        if (req.files?.footer_logo) {
+            updateData.footer_logo =
+                req.files.footer_logo[0].path
+        }
+
+        await notification.findOneAndUpdate(
+            { created_by: userId, _id: id },
+            { $set: updateData },
+            { new: true }
         )
 
-        return successResponse(res, "Notification updated successfully")
-
+        return successResponse(res, 'Notification updated successfully')
     } catch (error) {
         next(error)
     }
@@ -224,7 +261,7 @@ exports.getFormNotificationAPI = async (req, res, next) => {
         const Notification = await notification.aggregate([
             {
                 $match: {
-                    notification_type: new mongoose.Types.ObjectId(typeId)
+                    notification_type: mongoose.Types.ObjectId.createFromHexString(typeId)
                 }
             },
             {
@@ -236,7 +273,7 @@ exports.getFormNotificationAPI = async (req, res, next) => {
                                     input: '$user_input',
                                     as: 'input',
                                     cond: {
-                                        $eq: ['$$input.created_by', new mongoose.Types.ObjectId(userId)]
+                                        $eq: ['$$input.created_by', mongoose.Types.ObjectId.createFromHexString(userId)]
                                     }
                                 }
                             },
@@ -289,6 +326,21 @@ exports.getFormNotificationAPI = async (req, res, next) => {
                     },
                     default_select: {
                         $ifNull: ['$matched_user_input.default_select', '$default_select']
+                    },
+                    show_footer_logo: {
+                        $ifNull: ['$matched_user_input.show_footer_logo', '$show_footer_logo']
+                    },
+                    header_logo: {
+                        $ifNull: ['$matched_user_input.header_logo', '$header_logo']
+                    },
+                    footer_logo: {
+                        $ifNull: ['$matched_user_input.footer_logo', '$footer_logo']
+                    },
+                    header_logo_align: {
+                        $ifNull: ['$matched_user_input.header_logo_align', '$header_logo_align']
+                    },
+                    footer_logo_align: {
+                        $ifNull: ['$matched_user_input.footer_logo_align', '$footer_logo_align']
                     }
                 }
             },
@@ -318,7 +370,32 @@ exports.updateNotificationAPI = async (req, res, next) => {
         const id = req.params.id;
         const userId = req.userId;
 
-        const { subject, footer, message, default_select } = req.body;
+        const {
+            template_name,
+            notification_type,
+            category_type,
+            subject,
+            message,
+            show_footer_logo,
+            header_logo_align,
+            footer_logo_align,
+            footer,
+            default_select
+        } = req.body
+
+        const updateData = {
+            template_name,
+            notification_type,
+            category_type,
+            show_footer_logo,
+            header_logo_align,
+            footer_logo_align,
+            subject,
+            message,
+            footer,
+            default_select,
+            created_by: userId
+        }
 
         const existNotification = await notification.findOne({
             _id: id,
@@ -327,14 +404,38 @@ exports.updateNotificationAPI = async (req, res, next) => {
 
         let Notification;
 
+        if (req.files?.header_logo) {
+            updateData.header_logo =
+                req.files.header_logo[0].path
+        } else if (existNotification && existNotification?.user_input?.[0]?.header_logo) {
+            updateData.header_logo = existNotification?.user_input?.[0]?.header_logo;
+        } else {
+            updateData.header_logo = existNotification?.header_logo;
+        }
+
+        if (req.files?.footer_logo) {
+            updateData.footer_logo =
+                req.files.footer_logo[0].path
+        } else if (existNotification && existNotification?.user_input?.[0]?.footer_logo) {
+            updateData.footer_logo = existNotification?.user_input?.[0]?.footer_logo;
+        } else {
+            updateData.footer_logo = existNotification?.footer_logo;
+        }
+
         if (existNotification) {
 
             Notification = await notification.updateOne({ _id: id, 'user_input.created_by': userId }, {
                 $set: {
-                    'user_input.$.subject': subject,
-                    'user_input.$.message': message,
-                    'user_input.$.footer': footer,
-                    'user_input.$.default_select': default_select,
+                    'user_input.$.subject': updateData.subject,
+                    'user_input.$.message': updateData.message,
+                    'user_input.$.footer': updateData.footer,
+                    'user_input.$.default_select': updateData.default_select,
+                    'user_input.$.header_logo_align': updateData.header_logo_align,
+                    'user_input.$.show_footer_logo': updateData.show_footer_logo,
+                    'user_input.$.header_logo': updateData.header_logo,
+                    'user_input.$.footer_logo': updateData.footer_logo,
+                    'user_input.$.footer_logo_align': updateData.footer_logo_align,
+                    'user_input.$.created_by': userId
                 }
             })
 
@@ -342,13 +443,7 @@ exports.updateNotificationAPI = async (req, res, next) => {
 
             Notification = await notification.findByIdAndUpdate(id, {
                 $push: {
-                    user_input: {
-                        subject,
-                        message,
-                        footer,
-                        default_select,
-                        created_by: userId
-                    }
+                    user_input: updateData
                 }
             })
 
@@ -363,4 +458,73 @@ exports.updateNotificationAPI = async (req, res, next) => {
     } catch (error) {
         next(error)
     }
+}
+
+exports.getCheckSelectNotificationAPI = async (req, res, next) => {
+    try {
+        const id = req.params.id;
+        const userId = req.userId;
+
+        const {
+            template_name,
+            notification_type,
+            category_type,
+            subject,
+            message,
+            show_footer_logo,
+            header_logo_align,
+            footer_logo_align,
+            header_logo,
+            footer_logo,
+            footer,
+            default_select
+        } = req.body
+
+        const updateData = {
+            template_name,
+            notification_type,
+            category_type,
+            show_footer_logo,
+            header_logo_align,
+            footer_logo_align,
+            subject,
+            message,
+            footer,
+            header_logo,
+            footer_logo,
+            default_select,
+            created_by: userId
+        }
+
+        const existNotification = await notification.findOne({
+            _id: id,
+            'user_input.created_by': userId
+        })
+
+        if (existNotification) {
+
+            await notification.updateOne({ _id: id, 'user_input.created_by': userId }, {
+                $set: {
+                    'user_input.$.subject': updateData.subject,
+                    'user_input.$.message': updateData.message,
+                    'user_input.$.footer': updateData.footer,
+                    'user_input.$.default_select': updateData.default_select,
+                    'user_input.$.header_logo_align': updateData.header_logo_align,
+                    'user_input.$.show_footer_logo': updateData.show_footer_logo,
+                    'user_input.$.header_logo': updateData.header_logo,
+                    'user_input.$.footer_logo': updateData.footer_logo,
+                    'user_input.$.footer_logo_align': updateData.footer_logo_align,
+                    'user_input.$.created_by': userId
+                }
+            })
+
+        }
+
+        return successResponse(res, "Notification updated successfully")
+
+    } catch (error) {
+
+        next(error)
+    }
+
 }

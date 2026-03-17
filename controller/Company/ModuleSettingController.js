@@ -1,5 +1,5 @@
 const ModuleSetting = require("../../model/ModuleSetting");
-const { successResponse, errorResponse } = require("../../util/response");
+const { successResponse } = require("../../util/response");
 
 exports.getModuleSettingAPI = async (req, res, next) => {
     try {
@@ -12,11 +12,7 @@ exports.getModuleSettingAPI = async (req, res, next) => {
             createdBy: userId
         });
 
-        if (!moduleSetting) {
-            return errorResponse(res, "Module settings not found", {}, 404);
-        }
-
-        return successResponse(res, "Module settings retrieved successfully", moduleSetting);
+        return successResponse(res, "Module settings retrieved successfully", moduleSetting || {});
 
     }
     catch (error) {

@@ -1,19 +1,18 @@
+const bcrypt = require('bcryptjs')
 const User = require('../../model/User');
 const Country = require('../../model/Country');
 const PackageType = require('../../model/PackageType');
-
-const bcrypt = require('bcryptjs');
-
-const mongoose = require('mongoose')
+const replaceTemplateField = require("../../util/ReplaceTemplateField");
 
 const {
     errorResponse,
     successResponse
 } = require('../../util/response');
-
 const {
     decrypt
 } = require('../../util/encryption');
+
+const mongoose  = require('mongoose');
 
 exports.getCompanyIndexAPI = async (req, res, next) => {
 
@@ -132,6 +131,16 @@ exports.postCompanyAPI = async (req, res, next) => {
         });
 
         await user.save();
+
+        await replaceTemplateField({
+            userId: user._id.toString(),
+            notificationId: "6878cd0351dcbae6759e8912",
+            to: email.trim(),
+            event: "Company Registration",
+            means: "Company Registration",
+            explanation: "Company registration successfully",
+            userPassword: password
+        });
 
         res.status(200).json({
             status: 'Success',

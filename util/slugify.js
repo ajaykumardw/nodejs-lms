@@ -3,10 +3,10 @@ function generateSlug(text) {
         ?.toString()
         .trim()
         .toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '') // remove non-alphanumeric except space and hyphen
-        .replace(/\s+/g, '-')         // replace spaces with hyphens
-        .replace(/-+/g, '-')          // collapse multiple hyphens
-        .replace(/^-+|-+$/g, '');     // trim hyphens from start and end
+        .replace(/[^a-z0-9\s-]/g, '') 
+        .replace(/\s+/g, '-')         
+        .replace(/-+/g, '-')          
+        .replace(/^-+|-+$/g, '');     
 }
 
 module.exports = generateSlug

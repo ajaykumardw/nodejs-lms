@@ -9850,7 +9850,10 @@ var TinCan;
             if (TinCan.DEBUG && typeof console !== "undefined" && console.log) {
                 src = src || this.LOG_SRC || "TinCan";
 
+<<<<<<< HEAD
                 console.log("TinCan." + src + ": " + msg);
+=======
+>>>>>>> 3723eb7b6800127efe064c67a65a3d9542d62953
             }
         },
 

@@ -4,7 +4,7 @@ const Schema = mongoose.Schema;
 
 const activityLogSchema = new Schema({
     company_id: {
-        type: mongoose.Schema.Types.ObjectId, 
+        type: mongoose.Schema.Types.ObjectId,
         required: true, // company_id is required
         ref: 'users', // Reference to 'companies' collection
     },
@@ -14,17 +14,21 @@ const activityLogSchema = new Schema({
         required: true, // log_title is required
     },
     log: {
-        type: String, 
+        type: String,
         maxlength: 65535, // Maximum length for LONGTEXT
         required: true, // log is required
     },
+    is_send_notification: {
+        type: Boolean,
+        default: true
+    },
     created_at: {
-        type: Date, 
+        type: Date,
         required: true, // created_at is required
         default: Date.now, // Default to current date/time
     },
     updated_at: {
-        type: Date, 
+        type: Date,
         required: false, // updated_at is optional
     },
 });

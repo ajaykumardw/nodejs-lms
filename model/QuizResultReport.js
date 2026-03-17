@@ -8,6 +8,11 @@ const quizReportSchema = new Schema({
         required: true,
         ref: 'users',
     },
+    log_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: "ActivityLog"
+    },
     activity_id: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,

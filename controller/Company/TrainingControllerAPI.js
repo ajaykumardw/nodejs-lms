@@ -59,7 +59,6 @@ try {
 
     return successResponse(res, "Training created successfully!", training);
 } catch (err) {
-    console.log('err', err);
     return errorResponse(res, "Failed to create training", err, 500);
 }
 };
@@ -67,7 +66,6 @@ try {
 const putTrainingAPI = async (req, res, next) => {
 try {
 
-    console.log('req.body', req.body);
     const { title, description, category_id, status } = req.body;
     const user = req.user;
 
@@ -88,7 +86,6 @@ if (req.file) {
 
     return successResponse(res, "Training updated successfully!", training);
 } catch (err) {
-    console.log('err', err)
     return errorResponse(res, "Failed to update training", err, 500);
 }
 };

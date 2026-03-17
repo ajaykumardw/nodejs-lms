@@ -18,13 +18,13 @@ const quizSettingSchema = new mongoose.Schema({
         type: String,
         required: true,
         default: "all",
-        maxLength: 255
+        maxlength: 255
     },
     orderSetting: {
         type: String,
         required: true,
         default: "sameOrder",
-        maxLength: 255
+        maxlength: 255
     },
     passCriteria: {
         type: Number,
@@ -37,7 +37,7 @@ const quizSettingSchema = new mongoose.Schema({
     timing: {
         type: {
             type: String,
-            maxLength: 255,
+            maxlength: 255,
             default: "notTimed"
         },
         duration: {

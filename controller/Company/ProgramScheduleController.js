@@ -8,7 +8,10 @@ const user = require('../../model/User')
 const activity = require('../../model/Activity')
 const contentFolder = require('../../model/ContentFolder')
 const modules = require('../../model/Module')
+const UserModuleEnroll = require("../../model/UserModuleEnroll")
+const UserSelfEnroll = require("../../model/UserSelfEnroll")
 const Zone = require('../../model/Zone')
+const ReplaceTemplateField = require("../../util/ReplaceTemplateField")
 const scheduleType = require('../../model/ScheduleType')
 const scheduleUser = require('../../model/ScheduleUser')
 
@@ -17,12 +20,14 @@ const {
     errorResponse
 } = require('../../util/response')
 
+const { decrypt } = require('../../util/encryption')
+
 exports.getProgramScheduleAPI = async (req, res, next) => {
     try {
         const userId = req.userId;
-        const { contentFolderId } = req.params;
+        const { moduleId } = req.params;
 
-        const Module = await modules.findById(contentFolderId);
+        const Module = await modules.findById(moduleId);
 
         if (!Module) {
             return errorResponse(res, "Module not found", {}, 404);
@@ -32,6 +37,7 @@ exports.getProgramScheduleAPI = async (req, res, next) => {
 
         let ProgramSchedule = await programSchedule.findOne({
             company_id: userId,
+            module_id: moduleId,
             content_folder_id: ContentFolderId
         }).lean();
 
@@ -44,7 +50,7 @@ exports.getProgramScheduleAPI = async (req, res, next) => {
             company_id: userId
         }).lean();
 
-        // 🔑 Normalize into frontend format
+        // Normalize into frontend format
         const grouped = {};
 
         scheduleTypes.forEach(su => {
@@ -75,7 +81,7 @@ exports.getCreateDataAPI = async (req, res, next) => {
 
         const finalData = {};
 
-        const objectId = new mongoose.Types.ObjectId(userId);
+        const objectId = mongoose.Types.ObjectId.createFromHexString(userId);
 
         const regions = await Zone.aggregate([
             {
@@ -92,7 +98,7 @@ exports.getCreateDataAPI = async (req, res, next) => {
         finalData['department'] = await department.find({ created_by: userId, status: true })
         finalData['designation'] = await designation.find({ company_id: userId, status: true })
         finalData['group'] = await group.find({ company_id: userId, status: true })
-        finalData['user'] = await user.find({ created_by: userId, status: true })
+        finalData['user'] = await user.find({ created_by: userId, status: true }).populate('company_id')
         finalData['region'] = regions
 
         return successResponse(res, "Create data fetched successfully", finalData)
@@ -109,159 +115,233 @@ exports.postProgramScheduleAPI = async (req, res, next) => {
             dueDays,
             lockModule,
             pushEnrollmentSetting,
+            start_date,
+            end_date,
             selfEnrollmentSetting,
             targetPairs,
             dueType
         } = req.body;
 
-        const { contentFolderId } = req.params;
+        const { moduleId } = req.params;
         const userId = req.userId;
 
-        // Resolve module, contentFolder, program
-        const Module = await modules.findById(contentFolderId);
+        const finalUserSet = new Set();
+
+        const Module = await modules.findById(moduleId);
+
+        const users = await user.find({ created_by: userId }).select("_id");
 
         if (!Module) {
+
             return errorResponse(res, "Module not found", {}, 404);
         }
 
-        const ContentFolderId = Module.content_folder_id;
-        const content_folder = await contentFolder.findById(ContentFolderId);
+        const content_folder = await contentFolder.findById(Module.content_folder_id);
 
         if (!content_folder) {
+
             return errorResponse(res, "Content folder not found", {}, 404);
         }
 
+        const moduleTypeId = Module.module_type_id;
         const programId = content_folder.program_id;
 
-        const Activity = await activity.find({ module_id: Module._id }).select("_id");
-        const activityIds = Activity.map(doc => doc._id);
+        const activities = await activity
+            .find({ module_id: moduleId })
+            .select("_id")
+            .lean();
 
-        // Create or update ProgramSchedule
+        const activityIds = activities.map(a => a._id);
+
         let program = await programSchedule.findOne({
-            created_by: userId,
-            company_id: userId,
-            module_id: Module._id,
-            content_folder_id: ContentFolderId,
+            module_id: moduleId,
+            content_folder_id: Module.content_folder_id,
             program_id: programId,
+            company_id: userId
         });
+
+        const schedulePayload = {
+            lockModule,
+            dueType,
+            dueDate: dueType === "fixed"
+                ? {
+                    start_date: new Date(start_date),
+                    end_date: new Date(end_date)
+                }
+                : {
+                    start_date: null,
+                    end_date: null
+                },
+            dueDays: dueType === "relative" ? dueDays : null,
+            pushEnrollmentSetting,
+            published_date: Date.now(),
+            selfEnrollmentSetting,
+            module_id: moduleId,
+            content_folder_id: Module.content_folder_id,
+            program_id: programId,
+            activity_id: activityIds,
+            company_id: userId,
+            updated_at: new Date()
+        };
 
         if (!program) {
             program = new programSchedule({
-                lockModule,
-                dueDate: dueType === "fixed" && dueDate ? new Date(dueDate) : null,
-                dueDays: dueType === "relative" ? dueDays : null,
-                pushEnrollmentSetting,
-                selfEnrollmentSetting,
-                dueType,
-                module_id: Module._id,
-                content_folder_id: ContentFolderId,
-                program_id: programId,
-                activity_id: activityIds,
-                company_id: userId,
+                ...schedulePayload,
                 created_by: userId,
-                created_at: new Date(),
-                updated_at: new Date()
+                created_at: new Date()
             });
         } else {
-            program.lockModule = lockModule;
-            program.dueDate = dueType === "fixed" && dueDate ? new Date(dueDate) : null;
-            program.dueDays = dueType === "relative" ? dueDays : null;
-            program.pushEnrollmentSetting = pushEnrollmentSetting;
-            program.selfEnrollmentSetting = selfEnrollmentSetting;
-            program.dueType = dueType;
-            program.module_id = Module._id;
-            program.content_folder_id = ContentFolderId;
-            program.program_id = programId;
-            program.activity_id = activityIds;
-            program.updated_at = new Date();
+            Object.assign(program, schedulePayload);
         }
 
         await program.save();
 
-        // Manage schedule_types
-        await scheduleType.deleteMany({ schedule_id: program._id, company_id: userId });
+        await scheduleType.deleteMany({
+            schedule_id: program._id,
+            company_id: userId
+        });
 
-        if (Array.isArray(targetPairs)) {
-            const bulkTypes = [];
+        await scheduleUser.deleteMany({
+            schedule_id: program._id,
+            company_id: userId
+        });
 
-            targetPairs.forEach(pair => {
-                if (pair.target && Array.isArray(pair.options)) {
-                    pair.options.forEach(optionId => {
-                        bulkTypes.push({
-                            company_id: userId,
-                            schedule_id: program._id,
-                            type: pair.target,
-                            type_id: mongoose.Types.ObjectId.isValid(optionId)
-                                ? new mongoose.Types.ObjectId(optionId)
-                                : optionId
-                        });
-                    });
-                }
-            });
+        if (!Array.isArray(targetPairs) || targetPairs.length === 0) {
+            return successResponse(res, "Settings saved successfully");
+        }
 
-            if (bulkTypes.length > 0) {
-                await scheduleType.insertMany(bulkTypes);
+        const scheduleTypes = [];
+
+        for (const pair of targetPairs) {
+            if (!pair.target || !Array.isArray(pair.options)) continue;
+
+            for (const optionId of pair.options) {
+                scheduleTypes.push({
+                    company_id: userId,
+                    schedule_id: program._id,
+                    module_id: moduleId,
+                    type: Number(pair.target),
+                    type_id: mongoose.Types.ObjectId.isValid(optionId)
+                        ? mongoose.Types.ObjectId.createFromHexString(optionId)
+                        : optionId
+                });
+            }
+        }
+
+        if (scheduleTypes.length === 0) {
+
+            return successResponse(res, "Settings saved successfully");
+        }
+
+        await scheduleType.insertMany(scheduleTypes);
+
+        const bulkUsers = [];
+
+        for (const item of scheduleTypes) {
+
+            const { type, type_id } = item;
+            let targetUsers = [];
+
+            switch (type) {
+                case 1:
+                    targetUsers = await user.find({ designation_id: type_id }).select("_id");
+                    break;
+                case 2:
+                    targetUsers = await user.find({ department_id: type_id }).select("_id");
+                    break;
+                case 3:
+                    targetUsers = await user.find({ group_id: type_id }).select("_id");
+                    break;
+                case 4:
+                    targetUsers = await user.find({ region_id: type_id }).select("_id");
+                    break;
+                case 5:
+                    finalUserSet.add(type_id.toString());
+                    continue;
             }
 
-            // Create schedule_users
-            await scheduleUser.deleteMany({ schedule_id: program._id, company_id: userId });
-
-            const schedule_type = await scheduleType.find({
-                company_id: userId,
-                schedule_id: program._id
-            });
-
-            const bulkUsers = [];
-
-            if (schedule_type && schedule_type.length > 0) {
-
-                for (const item of schedule_type) {
-
-                    const type = item.type;
-                    const typeId = item.type_id;
-                    const scheduleId = item.schedule_id;
-
-                    let ids = [];
-
-                    if (type == 1) {
-
-                        const userDesignation = await user.find({ designation_id: typeId }).select('_id');
-                        ids = userDesignation.map(u => u._id);
-
-                    } else if (type == 2) {
-
-                        const userDepartment = await user.find({ department_id: typeId }).select('_id');
-                        ids = userDepartment.map(u => u._id);
-
-                    } else if (type == 3) {
-
-                        const userGroup = await group.find({ _id: typeId }).select('_id');
-                        ids = userGroup.map(g => g._id);
-
-                    } else if (type == 4) {
-
-                        const userRegion = await user.find({ region_id: typeId }).select('_id');
-                        ids = userRegion.map(u => u._id);
-
-                    }
-
-                    if (ids.length > 0) {
-                        ids.forEach(uid => {
-                            bulkUsers.push({
-                                schedule_type: type,
-                                schedule_id: scheduleId,
-                                schedule_type_id: typeId,
-                                company_id: userId,
-                                user_id: uid
-                            });
-                        });
-                    }
-                }
-
-                if (bulkUsers.length > 0) {
-                    await scheduleUser.insertMany(bulkUsers);
-                }
+            for (const u of targetUsers) {
+                finalUserSet.add(u._id.toString());
+                bulkUsers.push({
+                    schedule_id: program._id,
+                    module_id: moduleId,
+                    company_id: userId,
+                    type,
+                    type_id,
+                    user_id: u._id
+                });
             }
+        }
+
+        if (bulkUsers.length) {
+            await scheduleUser.insertMany(bulkUsers);
+        }
+
+        const finalUsers = [...finalUserSet].map(id => ({
+            user_id: mongoose.Types.ObjectId.createFromHexString(id),
+            schedule_id: program._id,
+            module_id: moduleId,
+            created_by: userId,
+            created_at: new Date()
+        }));
+
+        await UserModuleEnroll.deleteMany({
+            module_id: moduleId,
+            schedule_id: program._id
+        });
+
+        await UserSelfEnroll.deleteMany({
+            module_id: moduleId,
+            schedule_id: program._id
+        });
+
+        if (
+            (pushEnrollmentSetting === "2" ||
+                moduleTypeId == "688219557b6953e899cb57d3") &&
+            finalUsers.length
+        ) {
+            await UserModuleEnroll.insertMany(finalUsers);
+        }
+
+        else if (pushEnrollmentSetting === "1") {
+            const uniqueUserIds = [
+                ...new Set(users.map(u => u._id.toString()))
+            ];
+
+            const allUsersEnroll = uniqueUserIds.map(id => ({
+                user_id: mongoose.Types.ObjectId.createFromHexString(id),
+                schedule_id: program._id,
+                module_id: moduleId,
+                created_by: userId,
+                created_at: new Date()
+            }));
+
+            if (allUsersEnroll.length) {
+                await UserModuleEnroll.insertMany(allUsersEnroll);
+            }
+        }
+
+        if (selfEnrollmentSetting === "3" && finalUsers.length) {
+            await UserSelfEnroll.insertMany(finalUsers);
+        }
+
+        for (const id of finalUserSet) {
+
+            const userDoc = await user.findById(id).lean();
+
+            if (!userDoc) continue;
+
+            const email = userDoc.email;
+
+            await ReplaceTemplateField({
+                userId: id.toString(),
+                notificationId: "699415f604d510db61a1c128",
+                to: decrypt(email),
+                event: "Training Schedule Update",
+                means: "Training Schedule Update",
+                explanation: "Training schedule updated successfully",
+                userPassword: ""
+            });
         }
 
         return successResponse(res, "Settings data saved successfully");

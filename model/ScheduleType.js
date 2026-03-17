@@ -8,6 +8,11 @@ const scheduleTypeSchema = new Schema({
         required: true,
         ref: "companies"
     },
+    module_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: "Module"
+    },
     schedule_id: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,

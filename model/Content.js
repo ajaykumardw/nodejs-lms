@@ -8,17 +8,17 @@ const contentSchema = new mongoose.Schema({
     title: {
         type: String,
         required: true,
-        maxLength: 255,
+        maxlength: 255,
     },
     description: {
         type: String,
         required: true,
-        maxLength: 1000,
+        maxlength: 1000,
     },
     image_url: {
         type: String,
         required: true,
-        maxLength: 255,
+        maxlength: 255,
     },
     created_by: {
         type: mongoose.Schema.Types.ObjectId,

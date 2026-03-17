@@ -162,7 +162,7 @@ exports.putBranchUpdateAPI = async (req, res, next) => {
         const branchId = req.params.branchId;
 
         const objectIdBranchId = mongoose.Types.ObjectId.isValid(branchId)
-            ? new mongoose.Types.ObjectId(branchId)
+            ? mongoose.Types.ObjectId.createFromHexString(branchId)
             : branchId;
 
         const { name, code, regionId } = req.body;
@@ -196,7 +196,7 @@ exports.putBranchUpdateAPI = async (req, res, next) => {
 
             await zone.updateOne(
                 {
-                    "region._id": new mongoose.Types.ObjectId(regionId),
+                    "region._id": mongoose.Types.ObjectId.createFromHexString(regionId),
                     "region.branch._id": objectIdBranchId
                 },
                 {
@@ -207,7 +207,7 @@ exports.putBranchUpdateAPI = async (req, res, next) => {
                 },
                 {
                     arrayFilters: [
-                        { "regionElem._id": new mongoose.Types.ObjectId(regionId) },
+                        { "regionElem._id": mongoose.Types.ObjectId.createFromHexString(regionId) },
                         { "branchElem._id": objectIdBranchId }
                     ]
                 }
@@ -223,7 +223,7 @@ exports.putBranchUpdateAPI = async (req, res, next) => {
             // Remove from old region
             await zone.updateOne(
                 {
-                    "region._id": new mongoose.Types.ObjectId(foundRegionId)
+                    "region._id": mongoose.Types.ObjectId.createFromHexString(foundRegionId)
                 },
                 {
                     $pull: {
@@ -235,7 +235,7 @@ exports.putBranchUpdateAPI = async (req, res, next) => {
             // Add to new region
             await zone.updateOne(
                 {
-                    "region._id": new mongoose.Types.ObjectId(regionId)
+                    "region._id": mongoose.Types.ObjectId.createFromHexString(regionId)
                 },
                 {
                     $push: {

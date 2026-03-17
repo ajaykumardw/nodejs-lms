@@ -8,17 +8,17 @@ const contentFolderSchema = new mongoose.Schema({
     title: {
         type: String,
         required: true,
-        maxLength: 255,
+        maxlength: 255,
     },
     description: {
         type: String,
         required: true,
-        maxLength: 255,
+        maxlength: 255,
     },
     image_url: {
         type: String,
         required: true,
-        maxLength: 255,
+        maxlength: 255,
     },
     created_by: {
         type: mongoose.Schema.Types.ObjectId,

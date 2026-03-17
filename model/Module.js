@@ -17,10 +17,26 @@ const moduleSchema = new schema({
         required: true,
         maxlength: 5000,
     },
+    presenter_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "users",
+        required: false,
+        default: null
+    },
+    start_live_time: {
+        type: Date,
+        required: false,
+        default: null
+    },
+    end_live_time: {
+        type: Date,
+        required: false ,
+        default: null
+    },
     image_url: {
         type: String,
         required: true,
-        maxLength: 255
+        maxlength: 255
     },
     live_session_id: {
         type: mongoose.Schema.Types.ObjectId,
@@ -29,6 +45,16 @@ const moduleSchema = new schema({
     module_type_id: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
+    },
+    is_survey_done: {
+        type: Boolean,
+        required: true,
+        default: false
+    },
+    is_survey_completed: {
+        type: Boolean,
+        required: true,
+        default: false
     },
     created_by: {
         type: mongoose.Schema.Types.ObjectId,

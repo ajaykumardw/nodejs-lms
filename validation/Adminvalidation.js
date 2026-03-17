@@ -1,7 +1,7 @@
 const { body, check } = require('express-validator');
 
 exports.loginPostValidation = [
-    check('email').isEmail().withMessage("Please enter a valid email").normalizeEmail(),
+    check('email').isEmail().withMessage("Please enter a valid email")  ,
     body('password').trim().isLength({ min: 6, max: 32 }).withMessage("Password should be min of 6 digit and max 32 digit")
 ];
 
@@ -146,7 +146,7 @@ exports.postDesignation = [
 
 exports.putUser = [
     body('roles')
-      .isArray({ min: 1 }).withMessage("At least one role is required")
-      .custom((arr) => arr.every(role => typeof role === 'string' || typeof role === 'object'))
-      .withMessage("Each role must be a string or object"),
-  ];
+        .isArray({ min: 1 }).withMessage("At least one role is required")
+        .custom((arr) => arr.every(role => typeof role === 'string' || typeof role === 'object'))
+        .withMessage("Each role must be a string or object"),
+];

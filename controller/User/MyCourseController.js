@@ -29,7 +29,7 @@ exports.getCourseAPIController = async (req, res, next) => {
 
         // // Find program schedules
         // const programSchedule = await ProgramSchedule.find({
-        //     _id: { $in: mergedScheduleIds.map(id => new mongoose.Types.ObjectId(id)) }
+        //     _id: { $in: mergedScheduleIds.map(id => mongoose.Types.ObjectId.createFromHexString(id)) }
         // });
 
         // const typeProgramIds = programSchedule.map(item => item.program_id.toString());
@@ -37,7 +37,7 @@ exports.getCourseAPIController = async (req, res, next) => {
         // Fetch program with related content_folders
         // const programs = await Program.find({
         //         _id: {
-        //             $in: typeProgramIds.map(id => new mongoose.Types.ObjectId(id))
+        //             $in: typeProgramIds.map(id => mongoose.Types.ObjectId.createFromHexString(id))
         //         }
         //     })
         //     .populate('content_folders');

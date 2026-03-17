@@ -4,7 +4,7 @@ const notificationSchema = new mongoose.Schema({
     template_name: {
         type: String,
         required: true,
-        maxLength: 255
+        maxlength: 255
     },
     notification_type: {
         type: mongoose.Schema.Types.ObjectId,
@@ -19,40 +19,88 @@ const notificationSchema = new mongoose.Schema({
         required: true,
         default: true
     },
+    header_logo: {
+        type: String,
+        maxlength: 1000,
+        required: true
+    },
+    header_logo_align: {
+        type: String,
+        maxlength: 10,
+        required: true
+    },
+    show_footer_logo: {
+        type: Boolean,
+        default: false,
+    },
+    footer_logo: {
+        type: String,
+        maxlength: 1000,
+        required: false
+    },
+    footer_logo_align: {
+        type: String,
+        maxlength: 10,
+        required: false
+    },
     subject: {
         type: String,
         required: true,
-        maxLength: 255
+        maxlength: 255
     },
     message: {
         type: String,
         required: true,
-        maxLength: 5000
+        maxlength: 5000
     },
     footer: {
         type: String,
         required: true,
-        maxLength: 1000
+        maxlength: 1000
     },
     user_input: [{
         subject: {
             type: String,
             required: false,
-            maxLength: 255
+            maxlength: 255
         },
         message: {
             type: String,
             required: false,
-            maxLength: 5000
+            maxlength: 5000
         },
         footer: {
             type: String,
             required: false,
-            maxLength: 1000
+            maxlength: 1000
         },
         default_select: {
             type: Boolean,
             required: true,
+        },
+        header_logo: {
+            type: String,
+            maxlength: 1000,
+            required: true
+        },
+        header_logo_align: {
+            type: String,
+            maxlength: 10,
+            required: true
+        },
+        show_footer_logo: {
+            type: Boolean,
+            default: false,
+        },
+        footer_logo: {
+            type: String,
+            maxlength: 1000,
+            required: false
+        },
+        footer_logo_align: {
+            type: String,
+            maxlength: 10,
+            required: false
         },
         created_by: {
             type: mongoose.Schema.Types.ObjectId,

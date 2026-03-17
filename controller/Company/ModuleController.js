@@ -271,24 +271,41 @@ const ContentFolder = require('../../model/ContentFolder');
 
 exports.getModuleDataAPI = async (req, res, next) => {
     try {
+        const userId = req.userId
+        const cId = req.params.cId
 
-        const userId = req.userId;
-        const cId = req.params.cId;
+        // Pagination params
+        const page = Math.max(0, parseInt(req.query.page) || 0)
+        const limit = Math.max(1, parseInt(req.query.limit) || 10)
+        const skip = page * limit
 
-        const contentFolder = await ContentFolder.findById(cId);
+        // Validate content folder
+        const contentFolder = await ContentFolder.findById(cId)
 
         if (!contentFolder) {
-            return errorResponse(res, "Content folder does not exist", {}, 404);
+            return errorResponse(res, 'Content folder does not exist', {}, 404)
         }
 
-        const module = await Module.find({ created_by: userId, content_folder_id: cId })
+        // Total count (IMPORTANT)
+        const totalItems = await Module.countDocuments({
+            created_by: userId,
+            content_folder_id: cId,
+        })
 
-        if (!module) {
-            return errorResponse(res, "Module does not exist", {}, 404)
-        }
+        // Fetch paginated data
+        const modules = await Module.find({
+            created_by: userId,
+            content_folder_id: cId,
+        })
+            .skip(skip)
+            .limit(limit)
 
-        return successResponse(res, "Module data fetched successfully", module)
-
+        return successResponse(res, 'Module data fetched successfully', {
+            data: modules,
+            totalItems,
+            page,
+            limit,
+        })
     } catch (error) {
         next(error)
     }

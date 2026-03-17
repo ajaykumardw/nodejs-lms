@@ -6,17 +6,17 @@ const {
     hash,
     normalizeEmail,
     normalizePhone
-  } = require('../util/encryption');
+} = require('../util/encryption');
 
 const UserCodeSchema = new mongoose.Schema({
     code: {
-      type: String,
-      required: true,
-      unique: false // unique across users? handled manually
+        type: String,
+        required: true,
+        unique: false // unique across users? handled manually
     },
     issued_on: Date, // Optional: date when it was issued
     type: String      // Optional: internal, external, etc.
-  }, { _id: true }); // Avoids creating _id for sub-docs
+}, { _id: true }); // Avoids creating _id for sub-docs
 
 const userSchema = new Schema({
     company_id: {
@@ -91,7 +91,7 @@ const userSchema = new Schema({
     pincode: {
         type: String,
         required: false,
-        minLength: 6,
+        minlength: 6,
         maxlength: 10
     },
     package_id: {
@@ -131,6 +131,11 @@ const userSchema = new Schema({
     is_verified: {
         type: Boolean
     },
+    is_send_notification: {
+        type: Boolean,
+        required: true,
+        default: false
+    },
     created_at: {
         type: Date,
         default: Date.now
@@ -167,7 +172,17 @@ const userSchema = new Schema({
     },
     designation_id: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "destinations",
+        ref: "designations",
+        set: v => (v === '' ? undefined : v)
+    },
+    department_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "departments",
+        set: v => (v === '' ? undefined : v)
+    },
+    region_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "regions",
         set: v => (v === '' ? undefined : v)
     },
     zone_id: {
@@ -207,8 +222,6 @@ const userSchema = new Schema({
     codes: [UserCodeSchema], // Array of codes
 });
 
-// UserSchema.index({ 'employee_codes.code': 1 });
-
 userSchema.virtual('emp_id').get(function () {
     const activeCodeObj = (this.codes || []).find(code => code.type === 'active');
     return activeCodeObj?.code || null;
@@ -219,16 +232,9 @@ userSchema.virtual('roles', {
     localField: '_id',
     foreignField: 'user_id',
     justOne: false
-  });
+});
 
 userSchema.set('toJSON', { virtuals: true, getters: true });
 userSchema.set('toObject', { virtuals: true, getters: true });
-
-// userSchema.pre('save', function (next) {
-//     if (this.isModified('first_name')) {
-//       this.first_name = encrypt(this.first_name.toLowerCase());
-//     }
-//     next();
-//   });
 
 module.exports = mongoose.model("users", userSchema);

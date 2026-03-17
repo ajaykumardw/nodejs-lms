@@ -4,14 +4,11 @@ const fs = require('fs');
 const pdfParse = require('pdf-parse');
 const unzipper = require('unzipper');
 
-// npm packages for conversion
 const docxConverter = require('docx2pdf-converter');
-const pptx2pdf = require('pptx2pdf'); // replace ppt-pdf
+const pptx2pdf = require('pptx2pdf');
 
-/**
- * Convert Office file to PDF using npm packages
- */
 async function convertOfficeToPDF(inputPath) {
+
     const ext = path.extname(inputPath).toLowerCase();
     const outputPath = inputPath.replace(ext, '.pdf');
 
@@ -25,18 +22,16 @@ async function convertOfficeToPDF(inputPath) {
     }
 
     if (ext === '.ppt' || ext === '.pptx') {
-        // pptx2pdf returns a promise
         return pptx2pdf(inputPath, outputPath).then(() => outputPath);
     }
 
     throw new Error('Unsupported file type for conversion');
 }
 
-/**
- * Multer upload factory
- */
 function createUpload(allowedTypes, directory = 'uploads/', maxSizeMB = 10) {
+
     const absPath = path.join(__dirname, '..', 'public', directory);
+
     if (!fs.existsSync(absPath)) fs.mkdirSync(absPath, {
         recursive: true
     });
@@ -69,11 +64,10 @@ function createUpload(allowedTypes, directory = 'uploads/', maxSizeMB = 10) {
             const fullPath = path.join(absPath, req.file.filename);
             const mimetype = req.file.mimetype;
 
-            //-----------------------------------------------------
-            // 1️⃣ If ZIP → extract it
-            //-----------------------------------------------------
             if (mimetype === 'application/zip') {
+
                 const extractFolder = fullPath.replace(/\.zip$/, '');
+
                 fs.mkdirSync(extractFolder, {
                     recursive: true
                 });
@@ -87,26 +81,22 @@ function createUpload(allowedTypes, directory = 'uploads/', maxSizeMB = 10) {
                 req.extractedPath = `${directory}/${req.file.filename.replace(/\.zip$/, '')}`;
             }
 
-            //-----------------------------------------------------
-            // 2️⃣ If Office file → convert to PDF
-            //-----------------------------------------------------
             const officeTypes = [
-                'application/msword', // .doc
-                'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
-                'application/vnd.ms-powerpoint', // .ppt
-                'application/vnd.openxmlformats-officedocument.presentationml.presentation' // .pptx
+                'application/msword',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'application/vnd.ms-powerpoint',
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation'
             ];
 
             if (officeTypes.includes(mimetype)) {
                 try {
+
                     const pdfPath = await convertOfficeToPDF(fullPath);
 
-                    // Replace uploaded file info with PDF
                     req.file.filename = path.basename(pdfPath);
                     req.file.path = pdfPath;
                     req.file.mimetype = 'application/pdf';
 
-                    // Delete original Office file
                     if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
 
                 } catch (err) {
@@ -114,18 +104,13 @@ function createUpload(allowedTypes, directory = 'uploads/', maxSizeMB = 10) {
                 }
             }
 
-            //-----------------------------------------------------
-            // 3️⃣ Extract PDF Page Count
-            //-----------------------------------------------------
             if (req.file.mimetype === 'application/pdf') {
+
                 const buffer = fs.readFileSync(req.file.path);
                 const pdfData = await pdfParse(buffer);
                 req.pdfPageCount = pdfData.numpages;
             }
 
-            //-----------------------------------------------------
-            // 4️⃣ Save final file location to req
-            //-----------------------------------------------------
             req.uploadDir = `${directory}/${req.file.filename}`;
             next();
 
