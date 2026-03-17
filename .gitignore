@@ -2,3 +2,4 @@
 .env
 queues.zip
 *.zip
+"node_modules/" 
