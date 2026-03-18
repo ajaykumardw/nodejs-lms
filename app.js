@@ -88,12 +88,12 @@ mongoose.connect(MongoURL)
         console.error("MongoDB connection error:", err);
     });
 
-cron.schedule('* * * * *', async () => {
-    console.log('Running notification cron:', new Date().toISOString());
+// cron.schedule('* * * * *', async () => {
+//     console.log('Running notification cron:', new Date().toISOString());
 
-    try {
-        await scheduleNotificationCommand();
-    } catch (err) {
-        console.error('Cron error:', err);
-    }
-});
+//     try {
+//         await scheduleNotificationCommand();
+//     } catch (err) {
+//         console.error('Cron error:', err);
+//     }
+// });

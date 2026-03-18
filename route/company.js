@@ -27,8 +27,6 @@ const mailTemplateController = require("../controller/Company/MailTemplateContro
 const exportCenterController = require("../controller/Company/ExportCenterAPIController")
 const scheduleNotificationController = require('../controller/Company/ScheduleNotificationController');
 
-
-
 const createUpload = require('../util/upload');
 
 const certificateUpload = require('../util/uploadCertificate');
@@ -102,7 +100,6 @@ const {
 router.get('/zone', isAuth, zoneController.getZoneAPIData);
 router.post('/zone', isAuth, zoneController.postZoneAPI);
 router.put('/zone/:id', isAuth, zoneController.putZoneAPI);
-
 
 //This route is for region
 router.get('/region', isAuth, regionController.getRegionAPI);
@@ -204,12 +201,7 @@ router.delete('/activity/delete/:moduleId/:id', isAuth, activityController.delet
 router.post('/activity/set-name/:moduleId/:id', isAuth, activityController.setNameActivityAPI)
 
 //This is used for router uploading scrom, other files
-router.post(
-    '/activity/data/:moduleId/:moduleTypeId/:id',
-    isAuth,
-    ...activityUpload.middleware('file'),
-    activityController.postActivityDataAPI
-);
+router.post('/activity/data/:moduleId/:moduleTypeId/:id', isAuth, ...activityUpload.middleware('file'), activityController.postActivityDataAPI);
 
 //This route is for quiz question
 router.get('/quiz/question/:moduleId/:activityId', isAuth, quizAPIController.getQuizOptionAPI)
