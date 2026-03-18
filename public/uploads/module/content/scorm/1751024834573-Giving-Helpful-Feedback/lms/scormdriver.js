@@ -9851,7 +9851,10 @@ var TinCan;
                 src = src || this.LOG_SRC || "TinCan";
 
 <<<<<<< HEAD
+<<<<<<< HEAD
                 console.log("TinCan." + src + ": " + msg);
+=======
+>>>>>>> 3723eb7b6800127efe064c67a65a3d9542d62953
 =======
 >>>>>>> 3723eb7b6800127efe064c67a65a3d9542d62953
             }
