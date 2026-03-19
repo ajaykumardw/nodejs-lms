@@ -97,6 +97,13 @@ exports.postScheduleNotification = async (req, res, next) => {
 
         if (existSchedNotif) {
 
+            let attemptNo = 1;
+
+            if (existSchedNotif?.repeat_type === "2" && existSchedNotif?.schedule_days !== schedule_days) {
+
+                attemptNo = Number(existSchedNotif?.attemptNo || 0) + 1;
+            }
+
             await ScheduleNotification.findOneAndUpdate({
                 template_id,
                 notification_type,
@@ -108,6 +115,7 @@ exports.postScheduleNotification = async (req, res, next) => {
                 title,
                 schedule_user_id: scheduleUserId,
                 notification_type,
+                attemptNo,
                 schedule_target,
                 audience,
                 schedule_type,
@@ -123,6 +131,7 @@ exports.postScheduleNotification = async (req, res, next) => {
                 created_by: userId,
                 schedule_user_id: scheduleUserId,
                 title,
+                attemptNo: 1,
                 notification_type,
                 schedule_target,
                 audience,
@@ -357,7 +366,7 @@ exports.getEditSchedNotification = async (req, res, next) => {
 
         if (schedNotification) {
 
-             finalData = {
+            finalData = {
                 ...schedNotification,
                 users,
                 audience: (schedNotification?.schedule_target === 5) ? users.map(u => String(u._id)) : schedNotification?.audience,

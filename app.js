@@ -64,7 +64,6 @@ app.get('/ping', (req, res) => {
     res.send("pong");
 });
 
-
 // Error handler
 app.use((error, req, res, next) => {
     res.status(error.statusCode || 500).json({
@@ -88,12 +87,12 @@ mongoose.connect(MongoURL)
         console.error("MongoDB connection error:", err);
     });
 
-// cron.schedule('* * * * *', async () => {
-//     console.log('Running notification cron:', new Date().toISOString());
+cron.schedule('0 11,17 * * *', async () => {
+    console.log('Running notification cron:', new Date().toISOString());
 
-//     try {
-//         await scheduleNotificationCommand();
-//     } catch (err) {
-//         console.error('Cron error:', err);
-//     }
-// });
+    try {
+        await scheduleNotificationCommand();
+    } catch (err) {
+        console.error('Cron error:', err);
+    }
+});

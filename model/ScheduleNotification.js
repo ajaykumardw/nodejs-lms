@@ -15,6 +15,11 @@ const scheduleNotificationSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         required: true,
     }],
+    attemptNo: {
+        type: Number,
+        required: true,
+        default: 1
+    },
     title: {
         type: String,
         maxLength: 255,
