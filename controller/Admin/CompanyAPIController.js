@@ -12,7 +12,7 @@ const {
     decrypt
 } = require('../../util/encryption');
 
-const mongoose  = require('mongoose');
+const mongoose = require('mongoose');
 
 exports.getCompanyIndexAPI = async (req, res, next) => {
 
@@ -178,108 +178,123 @@ exports.editCompanyAPI = async (req, res, next) => {
         const companyId = req.params.id;
 
         const users = await User.aggregate([{
-                $match: {
-                    _id: new mongoose.Types.ObjectId(companyId),
-                    created_by: new mongoose.Types.ObjectId(userId)
-                }
-            },
-            {
-                $lookup: {
-                    from: "countries",
-                    let: {
-                        cid: "$country_id"
-                    },
-                    pipeline: [{
-                        $match: {
-                            $expr: {
-                                $eq: [
-                                    "$country_id",
-                                    {
-                                        $toInt: "$$cid"
-                                    }
-                                ]
-                            }
-                        }
-                    }],
-                    as: "country"
-                }
-            },
-            {
-                $lookup: {
-                    from: "package_types",
-                    let: {
-                        pid: "$package_id"
-                    },
-                    pipeline: [{
-                            $unwind: "$package.items"
-                        },
-                        {
-                            $match: {
-                                $expr: {
-                                    $eq: ["$package.items._id", "$$pid"]
-                                }
-                            }
-                        },
-                        {
-                            $project: {
-                                _id: 0,
-                                name: "$package.items.name",
-                                amount: "$package.items.amount",
-                                status: "$package.items.status"
-                            }
-                        }
-                    ],
-                    as: "package"
-                }
-            },
-            {
-                $lookup: {
-                    from: "users",
-                    localField: "_id",
-                    foreignField: "created_by",
-                    pipeline: [{
-                        $project: {
-                            first_name: 1,
-                            last_name: 1,
-                            email: 1,
-                            photo: 1,
-                            phone: 1,
-                        }
-                    }],
-                    as: "company_user"
-                }
-            },
-            {
-                $unwind: {
-                    path: "$package",
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-            {
-                $unwind: {
-                    path: "$country",
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-
-            {
-                $project: {
-                    email: 1,
-                    phone: 1,
-                    status: 1,
-                    first_name: 1,
-                    last_name: 1,
-                    package_id: 1,
-                    photo: 1,
-                    country: "$country.country_name",
-                    company_user: 1,
-                    package: "$package.name",
-                    package_amount: "$package.amount"
-                }
+            $match: {
+                _id: new mongoose.Types.ObjectId(companyId),
+                created_by: new mongoose.Types.ObjectId(userId)
             }
+        },
+        {
+            $lookup: {
+                from: "countries",
+                let: {
+                    cid: "$country_id"
+                },
+                pipeline: [{
+                    $match: {
+                        $expr: {
+                            $eq: [
+                                "$country_id",
+                                {
+                                    $toInt: "$$cid"
+                                }
+                            ]
+                        }
+                    }
+                }],
+                as: "country"
+            }
+        },
+        {
+            $lookup: {
+                from: "package_types",
+                let: {
+                    pid: "$package_id"
+                },
+                pipeline: [{
+                    $unwind: "$package.items"
+                },
+                {
+                    $match: {
+                        $expr: {
+                            $eq: ["$package.items._id", "$$pid"]
+                        }
+                    }
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        name: "$package.items.name",
+                        amount: "$package.items.amount",
+                        status: "$package.items.status"
+                    }
+                }
+                ],
+                as: "package"
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "_id",
+                foreignField: "created_by",
+                pipeline: [{
+                    $project: {
+                        first_name: 1,
+                        last_name: 1,
+                        email: 1,
+                        photo: 1,
+                        phone: 1,
+                    }
+                }],
+                as: "company_user"
+            }
+        },
+        {
+            $unwind: {
+                path: "$package",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $unwind: {
+                path: "$country",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+
+        {
+            $project: {
+                email: 1,
+                phone: 1,
+                status: 1,
+                first_name: 1,
+                last_name: 1,
+                package_id: 1,
+                photo: 1,
+                country_id: 1,
+                state_id: 1,
+                city_id: 1,
+                pincode: 1,
+                address: 1,
+                company_name: 1,
+                pan_no: {
+                    $cond: [{ $eq: ["$pan_no", "undefined"] }, null, "$pan_no"]
+                },
+                gst_no: {
+                    $cond: [{ $eq: ["$gst_no", "undefined"] }, null, "$gst_no"]
+                },
+                website: {
+                    $cond: [{ $eq: ["$website", "undefined"] }, null, "$website"]
+                },
+                country: "$country.country_name",
+                company_user: 1,
+                package: "$package.name",
+                package_amount: "$package.amount"
+            }
+        }
         ]);
 
-        const company = users?. [0] || null;
+        const company = users?.[0] || null;
 
         if (!company) {
 
