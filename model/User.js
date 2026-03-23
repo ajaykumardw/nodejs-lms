@@ -131,11 +131,6 @@ const userSchema = new Schema({
     is_verified: {
         type: Boolean
     },
-    is_send_notification: {
-        type: Boolean,
-        required: true,
-        default: false
-    },
     created_at: {
         type: Date,
         default: Date.now

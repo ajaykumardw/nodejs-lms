@@ -187,9 +187,9 @@ exports.getCategoryBreadcumb = async (req, res, next) => {
         if (stage === 'Module') {
 
             const module = await Module.findOne({
-                    created_by: userId,
-                    _id: id
-                })
+                created_by: userId,
+                _id: id
+            })
                 .populate({
                     path: 'content_folder_id',
                     populate: {
@@ -210,9 +210,9 @@ exports.getCategoryBreadcumb = async (req, res, next) => {
 
         } else if (stage === 'Content Folder') {
             const contentFolder = await ContentFolder.findOne({
-                    created_by: userId,
-                    _id: id
-                })
+                created_by: userId,
+                _id: id
+            })
                 .populate('program_id');
 
             if (!contentFolder) return res.status(404).json({
@@ -330,6 +330,7 @@ exports.postProgramScheduleAPI = async (req, res, next) => {
                 module_id: moduleId,
                 content_folder_id: contentFolderId,
                 program_id: contentFolder.program_id,
+                published_date: Date.now(),
                 dueDays,
                 dueType,
                 lockModule,

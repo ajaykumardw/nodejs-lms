@@ -240,6 +240,7 @@ exports.postProgramScheduleAPI = async (req, res, next) => {
         for (const item of scheduleTypes) {
 
             const { type, type_id } = item;
+            
             let targetUsers = [];
 
             switch (type) {

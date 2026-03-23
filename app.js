@@ -66,7 +66,6 @@ app.get('/ping', (req, res) => {
     res.send("pong");
 });
 
-
 // Error handler
 app.use((error, req, res, next) => {
     res.status(error.statusCode || 500).json({
@@ -75,30 +74,6 @@ app.use((error, req, res, next) => {
         message: error.message || 'Internal Server Error'
     });
 });
-
-console.log(
-    "Encrypt",
-    DWEncrypt(
-        "encrypt",
-        "98326B4F8F2E124A6E93771C11CEA562",
-        "153399DC5D12115B", `{
-"authToken": "Tataaia-AhPUoqYTBUfrn5uf98MCi9dcBj1M8XjgQeiKgeoQ8z2iRshNOf",
-"candidateId": "CAND20015254",
-"candidateName": "Mandeep Sharma",
-"mobile": "9878784304",
-"email": "mandeep.shamra@gmail.com",
-"applicationNo": "A6854671",
-"dob": "19891204",
-"location_code": "ND13",
-"location": "Noida",
-"state": "DL",
-"zone": "North 1",
-"aadhaarNo": "487118665237",
-"panNo": "GQSPS9470J",
-"urnNo": "CAND20015254"
-}`
-    )
-);
 
 // Start server
 mongoose.connect(MongoURL)
@@ -114,12 +89,12 @@ mongoose.connect(MongoURL)
         console.error("MongoDB connection error:", err);
     });
 
-// cron.schedule('* * * * *', async () => {
-//     console.log('Running notification cron:', new Date().toISOString());
+cron.schedule('0 11,17 * * *', async () => {
+    console.log('Running notification cron:', new Date().toISOString());
 
-//     try {
-//         // await scheduleNotificationCommand();
-//     } catch (err) {
-//         console.error('Cron error:', err);
-//     }
-// });
+    try {
+        // await scheduleNotificationCommand();
+    } catch (err) {
+        console.error('Cron error:', err);
+    }
+});

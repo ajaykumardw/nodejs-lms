@@ -153,6 +153,10 @@ const UserActivityLog = new mongoose.Schema({
             default: null
         }
     },
+    is_notification_send: {
+        type: Boolean,
+        default: false
+    },
     created_by: {
         type: mongoose.Schema.Types.ObjectId
     },
