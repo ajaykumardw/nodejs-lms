@@ -1,7 +1,7 @@
 const mongoose = require("mongoose")
 const Module = require("../../model/Module");
 const AppConfig = require("../../model/AppConfig")
-const Activity = require("../../model/Activity")
+const NotificationLog = require("../../model/NotificationLog")
 const ActivityLog = require("../../model/ActivityFolderReport");
 const { successResponse } = require("../../util/response");
 
@@ -182,7 +182,7 @@ exports.getDashboardAPI = async (req, res, next) => {
 
         const moduleIds = module.map(m => (m._id));
 
-        const [activityLog] = await ActivityLog.aggregate([
+        const [progressStatus] = await ActivityLog.aggregate([
             {
                 $match: {
                     module_id: { $in: moduleIds },
@@ -304,19 +304,211 @@ exports.getDashboardAPI = async (req, res, next) => {
             }
         ]);
 
-        const liveSession = await Activity.aggregate([
+        const liveSession = await Module.aggregate([
             {
                 $match: {
+                    _id: { $in: moduleIds },
                     module_type_id: liveSessionId
                 }
+            },
+            {
+                $project: {
+                    title: 1,
+                    description: 1,
+
+                    start_live_time: {
+                        $let: {
+                            vars: {
+                                date: { $toDate: "$start_live_time" }
+                            },
+                            in: {
+                                $concat: [
+                                    { $dateToString: { format: "%d %b | ", date: "$$date", timezone: "Asia/Kolkata" } },
+
+                                    // hour conversion
+                                    {
+                                        $toString: {
+                                            $let: {
+                                                vars: { hour: { $hour: { date: "$$date", timezone: "Asia/Kolkata" } } },
+                                                in: {
+                                                    $cond: [
+                                                        { $eq: ["$$hour", 0] }, 12,
+                                                        {
+                                                            $cond: [
+                                                                { $gt: ["$$hour", 12] },
+                                                                { $subtract: ["$$hour", 12] },
+                                                                "$$hour"
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        }
+                                    },
+
+                                    ":",
+                                    {
+                                        $dateToString: {
+                                            format: "%M",
+                                            date: "$$date",
+                                            timezone: "Asia/Kolkata"
+                                        }
+                                    },
+                                    " ",
+                                    {
+                                        $cond: [
+                                            { $gte: [{ $hour: { date: "$$date", timezone: "Asia/Kolkata" } }, 12] },
+                                            "PM",
+                                            "AM"
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    },
+
+                    end_live_time: {
+                        $let: {
+                            vars: {
+                                date: { $toDate: "$end_live_time" }
+                            },
+                            in: {
+                                $concat: [
+                                    { $dateToString: { format: "%d %b | ", date: "$$date", timezone: "Asia/Kolkata" } },
+                                    {
+                                        $toString: {
+                                            $let: {
+                                                vars: { hour: { $hour: { date: "$$date", timezone: "Asia/Kolkata" } } },
+                                                in: {
+                                                    $cond: [
+                                                        { $eq: ["$$hour", 0] }, 12,
+                                                        {
+                                                            $cond: [
+                                                                { $gt: ["$$hour", 12] },
+                                                                { $subtract: ["$$hour", 12] },
+                                                                "$$hour"
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        }
+                                    },
+                                    ":",
+                                    {
+                                        $dateToString: {
+                                            format: "%M",
+                                            date: "$$date",
+                                            timezone: "Asia/Kolkata"
+                                        }
+                                    },
+                                    " ",
+                                    {
+                                        $cond: [
+                                            { $gte: [{ $hour: { date: "$$date", timezone: "Asia/Kolkata" } }, 12] },
+                                            "PM",
+                                            "AM"
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
             }
-        ])
+        ]);
+
+        const notificationLog = await NotificationLog.aggregate([
+            {
+                $match: {
+                    user_id: userObjectId
+                }
+            },
+            {
+                $project: {
+                    reason: 1,
+                    schedule_date: 1,
+                }
+            }
+        ]
+        )
+
+        const activityLog = await ActivityLog.aggregate([
+            {
+                $match: {
+                    module_id: { $in: moduleIds }
+                }
+            },
+            {
+                $lookup: {
+                    from: "app_config",
+                    let: {
+                        moduleTypeId: {
+                            $cond: [
+                                { $eq: [{ $type: "$module_type_id" }, "objectId"] },
+                                "$module_type_id",
+                                {
+                                    $cond: [
+                                        { $eq: [{ $type: "$module_type_id" }, "string"] },
+                                        { $toObjectId: "$module_type_id" },
+                                        null
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    pipeline: [
+                        { $match: { type: "Activity_data" } },
+                        { $unwind: "$activity_data" },
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $ne: ["$$moduleTypeId", null] },
+                                        {
+                                            $eq: [
+                                                "$activity_data._id",
+                                                "$$moduleTypeId"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: "moduleType"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$moduleType",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $project: {
+                    title: "$moduleType.activity_data.title",
+                    description: "$moduleType.activity_data.description",
+                    current_attempt: 1
+                }
+            },
+            {
+                $sort: {
+                    current_attempt: -1
+                }
+            },
+            {
+                $limit: 5
+            }
+        ]);
 
         const finalData = {
             enrolledData: module,
             activityLog,
+            progressStatus,
             activitySummary: activity,
-            liveSession
+            liveSession,
+            notificationLog
         }
 
         return successResponse(res, "Module fetched successfully", finalData)

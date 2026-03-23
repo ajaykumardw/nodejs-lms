@@ -214,6 +214,7 @@ const scheduleNotificationCommand = async () => {
                         await NotificationLog.create({
                             user_id: userId,
                             company_id: companyId,
+                            template_name: template?.name || "",
                             attemptNo: attempt.attemptNo,
                             reason: scheduleType,
                             schedule_date: today

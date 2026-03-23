@@ -95,4 +95,6 @@ cron.schedule('0 11,17 * * *', async () => {
     } catch (err) {
         console.error('Cron error:', err);
     }
+}, {
+    timezone: 'Asia/Kolkata'
 });
