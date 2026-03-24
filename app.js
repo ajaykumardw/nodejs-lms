@@ -5,12 +5,12 @@ const mongoose = require('mongoose');
 const flash = require('connect-flash');
 const authRoute = require('./route/auth');
 const adminRoute = require('./route/admin');
-const AppConfig = require("./model/AppConfig")
+const AppConfig = require("./model/AppConfig")  
 const companyRouter = require('./route/company');
 const userRouter = require('./route/user');
 const scheduleNotificationCommand = require("./command/ScheduleNotification")
 
-require('./worker/reportWorker')
+// require('./worker/reportWorker')
 
 const path = require('path');
 const fs = require('fs');
