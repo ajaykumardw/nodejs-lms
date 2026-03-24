@@ -210,49 +210,52 @@ exports.getDashboardAPIController = async (req, res, next) => {
             }
         ]);
 
-        const pendingTask = await Activity.aggregate([
+        const pendingTask = await AppConfig.aggregate([
             {
-                $match: {
-                    module_id: {
-                        $in: moduleIds
-                    }
-                }
+                $unwind: "$activity_data"
             },
             {
                 $lookup: {
-                    from: "activity_logs",
-                    localField: "_id",
-                    foreignField: "activity_id",
-                    as: "activityLog"
-                }
-            },
-            {
-                $lookup: {
-                    from: 'app_config',
-                    let: { moduleTypeId: '$module_type_id' },
+                    from: "activity",
+                    let: { moduleTypeId: "$activity_data._id" },
                     pipeline: [
-                        { $unwind: '$activity_data' },
-                        { $match: { $expr: { $eq: ['$activity_data._id', '$$moduleTypeId'] } } },
-                        { $project: { _id: 0, activity_data: 1 } }
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ["$module_type_id", "$$moduleTypeId"] },
+                                        { $in: ["$module_id", moduleIds] }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            $lookup: {
+                                from: "activity_logs",
+                                localField: "_id",
+                                foreignField: "activity_id",
+                                as: "activityLog"
+                            }
+                        },
+                        {
+                            $match: {
+                                $expr: { $eq: [{ $size: "$activityLog" }, 0] } // no logs
+                            }
+                        }
                     ],
-                    as: 'activity_type',
-                }
-            },
-            {
-                $unwind: {
-                    path: '$activity_type',
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-            {
-                $match: {
-                    activityLog: { $eq: [] } // no matching logs
+                    as: "activities"
                 }
             },
             {
                 $project: {
-                    title
-                        : "$activity_type.activity_data.title"
+                    module_type_id: "$activity_data._id",
+                    title: "$activity_data.title",
+                    count: { $size: "$activities" }
+                }
+            },
+            {
+                $match: {
+                    count: { $gt: 0 } // optional: remove empty ones
                 }
             }
         ]);
