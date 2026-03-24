@@ -87,8 +87,7 @@ mongoose.connect(MongoURL)
         console.error("MongoDB connection error:", err);
     });
 
-cron.schedule('* * * * *', async () => {
-    console.log('Running notification cron:', new Date().toISOString());
+cron.schedule('0 11,17 * * *', async () => {
 
     try {
         await scheduleNotificationCommand();
