@@ -1,12 +1,14 @@
 const Module = require("../../model/Module");
 const mongoose = require("mongoose");
 const User = require("../../model/User");
+const AppConfig = require("../../model/AppConfig")
 const Activity = require("../../model/Activity");
 const ActivityLog = require("../../model/ActivityFolderReport");
 const { successResponse } = require("../../util/response");
 
 exports.getDashboardAPIController = async (req, res, next) => {
     try {
+
         const userId = req?.userId;
 
         const totalLearner = await User.find({ created_by: userId })
@@ -24,7 +26,7 @@ exports.getDashboardAPIController = async (req, res, next) => {
             .select("_id title description")
             .lean();
 
-        const moduleIds = modules.map(m => m._id);
+        const moduleIds = modules.map(m => (m._id));
 
         const activities = await Activity.find({
             module_id: { $in: moduleIds }
@@ -250,7 +252,7 @@ exports.getDashboardAPIController = async (req, res, next) => {
             {
                 $project: {
                     title
-                    : "$activity_type.activity_data.title"
+                        : "$activity_type.activity_data.title"
                 }
             }
         ]);
@@ -441,6 +443,179 @@ exports.getDashboardAPIController = async (req, res, next) => {
             }
         ]);
 
+        const currentYear = new Date().getFullYear();
+        const currentMonth = new Date().getMonth() + 1;
+
+        // FY logic (India Apr–Mar)
+        const currentFY = currentMonth >= 4 ? currentYear : currentYear - 1;
+        const previousFY = currentFY - 1;
+
+        const modesLearning = await AppConfig.aggregate([
+            { $unwind: "$module_data" },
+            {
+                $lookup: {
+                    from: "modules",
+                    localField: "module_data._id",
+                    foreignField: "module_type_id",
+                    as: "modules"
+                }
+            },
+            { $unwind: { path: "$modules", preserveNullAndEmptyArrays: true } },
+            {
+                $lookup: {
+                    from: "program_schedules",
+                    localField: "modules._id",
+                    foreignField: "module_id",
+                    as: "schedule"
+                }
+            },
+            { $unwind: { path: "$schedule", preserveNullAndEmptyArrays: true } },
+            {
+                $lookup: {
+                    from: "schedule_users",
+                    localField: "schedule._id",
+                    foreignField: "schedule_id",
+                    as: "scheduleUsers"
+                }
+            },
+            {
+                $lookup: {
+                    from: "schedule_type",
+                    localField: "schedule._id",
+                    foreignField: "schedule_id",
+                    as: "scheduleTypes"
+                }
+            },
+            {
+                $lookup: {
+                    from: "user_module_enroll",
+                    localField: "modules._id",
+                    foreignField: "module_id",
+                    as: "enrollUsers"
+                }
+            },
+            {
+                $addFields: {
+                    allUsers: {
+                        $setUnion: [
+                            {
+                                $map: {
+                                    input: {
+                                        $filter: {
+                                            input: "$scheduleTypes",
+                                            as: "st",
+                                            cond: { $eq: ["$$st.type", "5"] }
+                                        }
+                                    },
+                                    as: "s",
+                                    in: "$$s.type_id"
+                                }
+                            },
+                            {
+                                $map: {
+                                    input: "$scheduleUsers",
+                                    as: "su",
+                                    in: "$$su.user_id"
+                                }
+                            },
+                            {
+                                $map: {
+                                    input: "$enrollUsers",
+                                    as: "eu",
+                                    in: "$$eu.user_id"
+                                }
+                            }
+                        ]
+                    }
+                }
+            },
+            { $unwind: { path: "$allUsers", preserveNullAndEmptyArrays: true } },
+            {
+                $addFields: {
+                    year: { $year: "$schedule.published_date" },
+                    month: { $month: "$schedule.published_date" }
+                }
+            },
+            {
+                $addFields: {
+                    financialYear: {
+                        $cond: [
+                            { $gte: ["$month", 4] },
+                            "$year",
+                            { $subtract: ["$year", 1] }
+                        ]
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        module_type_id: "$module_data._id",
+                        title: "$module_data.title",
+                        fy: "$financialYear"
+                    },
+                    users: { $addToSet: "$allUsers" }
+                }
+            },
+            {
+                $project: {
+                    module_type_id: "$_id.module_type_id",
+                    title: "$_id.title",
+                    fy: "$_id.fy",
+                    userCount: {
+                        $size: {
+                            $filter: {
+                                input: "$users",
+                                as: "u",
+                                cond: { $ne: ["$$u", null] }
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        module_type_id: "$module_type_id",
+                        title: "$title"
+                    },
+                    currentFYUsers: {
+                        $sum: {
+                            $cond: [{ $eq: ["$fy", currentFY] }, "$userCount", 0]
+                        }
+                    },
+                    previousFYUsers: {
+                        $sum: {
+                            $cond: [{ $eq: ["$fy", previousFY] }, "$userCount", 0]
+                        }
+                    }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    module_type_id: "$_id.module_type_id",
+                    title: "$_id.title",
+                    currentFYUsers: { $ifNull: ["$currentFYUsers", 0] },
+                    previousFYUsers: { $ifNull: ["$previousFYUsers", 0] },
+                    previousFinancialYear: {
+                        $concat: [
+                            { $toString: currentFY },
+                            "-",
+                            { $toString: { $subtract: [currentFY, 1] } }
+                        ]
+                    },
+                    currentFinancialYear: {
+                        $concat: [
+                            { $toString: previousFY },
+                            "-",
+                            { $toString: { $subtract: [previousFY, 1] } }
+                        ]
+                    }
+                }
+            }
+        ]);
+
         const finalData = {
             totalModule: modules,
             totalLearner,
@@ -451,6 +626,7 @@ exports.getDashboardAPIController = async (req, res, next) => {
             pendingTask,
             CourseProgressStatus: progressStatus,
             QuizProgressStatus,
+            modesLearning,
             recentActivity
         };
 

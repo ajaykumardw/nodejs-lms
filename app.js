@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 const flash = require('connect-flash');
 const authRoute = require('./route/auth');
 const adminRoute = require('./route/admin');
-const AppConfig = require("./model/AppConfig")  
+const AppConfig = require("./model/AppConfig")
 const companyRouter = require('./route/company');
 const userRouter = require('./route/user');
 const scheduleNotificationCommand = require("./command/ScheduleNotification")
@@ -87,7 +87,7 @@ mongoose.connect(MongoURL)
         console.error("MongoDB connection error:", err);
     });
 
-cron.schedule('0 11,17 * * *', async () => {
+cron.schedule('* * * * *', async () => {
     console.log('Running notification cron:', new Date().toISOString());
 
     try {

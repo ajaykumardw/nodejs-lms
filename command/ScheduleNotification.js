@@ -205,8 +205,8 @@ const scheduleNotificationCommand = async () => {
                             userId: userId.toString(),
                             notificationId: templateId,
                             to: email.trim(),
-                            event: template.name,
-                            means: template.name,
+                            event: template.template_name,
+                            means: template.template_name,
                             explanation: template.description || "",
                             userPassword: ""
                         });
@@ -214,7 +214,7 @@ const scheduleNotificationCommand = async () => {
                         await NotificationLog.create({
                             user_id: userId,
                             company_id: companyId,
-                            template_name: template?.name || "",
+                            template_name: template?.template_name || "",
                             attemptNo: attempt.attemptNo,
                             reason: scheduleType,
                             schedule_date: today
