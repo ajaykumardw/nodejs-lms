@@ -426,6 +426,7 @@ exports.getDashboardAPI = async (req, res, next) => {
             },
             {
                 $project: {
+                    template_name: 1,
                     reason: 1,
                     schedule_date: 1,
                 }
