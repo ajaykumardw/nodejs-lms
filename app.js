@@ -87,7 +87,7 @@ mongoose.connect(MongoURL)
         console.error("MongoDB connection error:", err);
     });
 
-cron.schedule('* * * * *', async () => {
+cron.schedule('0 11,17 * * *', async () => {
 
     try {
 
