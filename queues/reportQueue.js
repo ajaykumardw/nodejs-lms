@@ -11,6 +11,7 @@ const reportQueue = new Queue("reportQueue", {
     connection,
 });
 
+
 module.exports = {
     reportQueue,
     connection,
