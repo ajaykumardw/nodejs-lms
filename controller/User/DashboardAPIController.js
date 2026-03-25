@@ -425,7 +425,16 @@ exports.getDashboardAPI = async (req, res, next) => {
                 }
             },
             {
+                $lookup: {
+                    from: "users",
+                    localField: "user_id",
+                    foreignField: "_id",
+                    as: "user"
+                }
+            },
+            {
                 $project: {
+                    user: 1,
                     template_name: 1,
                     reason: 1,
                     schedule_date: 1,
