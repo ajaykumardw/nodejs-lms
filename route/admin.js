@@ -95,7 +95,7 @@ router.put('/user/update-password/:id', isAuth, uploadVideo('file'), UserAPICont
 router.put('/user/attach/empcode/:id', isAuth, uploadVideo('file'), UserAPIController.attachNewUserCodeAPI);
 router.put('/user/mark/active/empcode/:id', isAuth, uploadVideo('file'), UserAPIController.markActiveUserCodeAPI);
 router.put('/user/status/update/:id', isAuth, uploadVideo('file'), UserAPIController.updateStatusAPI);
-router.post('/users/import', isAuth, uploadVideo('file'), UserAPIController.importAPI);
+router.post('/users/import', isAuth, UserAPIController.importAPI);
 router.get('/users/stats', isAuth, UserAPIController.getUserStatsAPI);
 
 router.get('/countries', isAuth, companyAPIController.getCountryAPI);
