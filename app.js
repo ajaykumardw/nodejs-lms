@@ -1,102 +1,207 @@
-// All imports
-const cron = require('node-cron')
-const express = require('express');
-const mongoose = require('mongoose');
-const flash = require('connect-flash');
-const authRoute = require('./route/auth');
-const adminRoute = require('./route/admin');
-const AppConfig = require("./model/AppConfig")
-const companyRouter = require('./route/company');
-const userRouter = require('./route/user');
-const scheduleNotificationCommand = require("./command/ScheduleNotification")
+const cron = require("node-cron");
+const express = require("express");
+const mongoose = require("mongoose");
+const flash = require("connect-flash");
+const cors = require("cors");
+const path = require("path");
+const fs = require("fs");
+require("dotenv").config();
 
-require('./worker/reportWorker')
+// Routes
+const authRoute = require("./route/auth");
+const adminRoute = require("./route/admin");
+const companyRouter = require("./route/company");
+const userRouter = require("./route/user");
 
-const path = require('path');
-const fs = require('fs');
-const cors = require('cors');
+// Commands
+const scheduleNotificationCommand = require("./command/ScheduleNotification");
 
-require('dotenv').config();
+// Workers
+require("./worker/reportWorker");
 
 const app = express();
 
+const PORT = process.env.PORT || 4000;
 const MongoURL = process.env.MONGODB_URL;
-const port = process.env.PORT || 4000;
 
-// Define public directory
-const publicDir = path.join(__dirname, 'public');
-const imageDir = path.join(publicDir, 'company_logo');
+// ---------------------------------------------------
+// TRUST PROXY (important behind nginx)
+// ---------------------------------------------------
 
-// Ensure /public/company_logo folder exists
+app.set("trust proxy", 1);
+
+// ---------------------------------------------------
+// PUBLIC DIRECTORY
+// ---------------------------------------------------
+
+const publicDir = path.join(__dirname, "public");
+const imageDir = path.join(publicDir, "company_logo");
+
 if (!fs.existsSync(imageDir)) {
-    fs.mkdirSync(imageDir, {
-        recursive: true
-    });
+    fs.mkdirSync(imageDir, { recursive: true });
 }
 
-app.use(cors({
-    origin: "*",
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
-}));
+// ---------------------------------------------------
+// CORS
+// ---------------------------------------------------
 
-app.use(express.json({
-    limit: "1000mb"
-}));
-app.use(express.urlencoded({
-    extended: true,
-    limit: "1000mb"
-}));
+app.use(
+    cors({
+        origin: true,
+        credentials: true,
+        methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+        allowedHeaders: [
+            "Content-Type",
+            "Authorization",
+            "X-Requested-With",
+        ],
+    })
+);
+
+// ---------------------------------------------------
+// BODY PARSER
+// ---------------------------------------------------
+
+// IMPORTANT:
+// Keep lower unless absolutely needed.
+// Huge JSON bodies can crash Node memory.
+
+app.use(
+    express.json({
+        limit: "5gb",
+    })
+);
+
+app.use(
+    express.urlencoded({
+        extended: true,
+        limit: "5gb",
+        parameterLimit: 500000,
+    })
+);
+
+// ---------------------------------------------------
+// FLASH
+// ---------------------------------------------------
 
 app.use(flash());
 
-app.use('/public', express.static(publicDir));
+// ---------------------------------------------------
+// STATIC FILES
+// ---------------------------------------------------
 
-// Routes
-app.use('/api/auth', authRoute);
-app.use('/api/admin', adminRoute);
-app.use('/api/company', companyRouter);
-app.use('/api/user', userRouter);
+app.use("/public", express.static(publicDir));
 
-// Test route
-app.get('/ping', (req, res) => {
-    res.send("pong");
+// ---------------------------------------------------
+// ROUTES
+// ---------------------------------------------------
+
+app.use("/api/auth", authRoute);
+app.use("/api/admin", adminRoute);
+app.use("/api/company", companyRouter);
+app.use("/api/user", userRouter);
+
+// ---------------------------------------------------
+// HEALTH CHECK
+// ---------------------------------------------------
+
+app.get("/ping", (req, res) => {
+    res.status(200).send("pong");
 });
 
-// Error handler
+// ---------------------------------------------------
+// ERROR HANDLER
+// ---------------------------------------------------
+
 app.use((error, req, res, next) => {
+    console.error("API ERROR:", error);
+
     res.status(error.statusCode || 500).json({
-        status: 'Failure',
+        status: "Failure",
         statusCode: error.statusCode || 500,
-        message: error.message || 'Internal Server Error'
+        message: error.message || "Internal Server Error",
     });
 });
 
-// Start server
-mongoose.connect(MongoURL)
-    .then(() => {
-        const server = app.listen(port, () => console.log(`Server started on ${port}`));
+// ---------------------------------------------------
+// DATABASE CONNECTION
+// ---------------------------------------------------
 
-        server.setTimeout(1000 * 60 * 20); // 20 minutes
+mongoose
+    .connect(MongoURL, {
+        maxPoolSize: 20,
+    })
+    .then(() => {
+        console.log("MongoDB Connected");
+
+        const server = app.listen(PORT, () => {
+            console.log(`Server running on port ${PORT}`);
+        });
+
+        // ---------------------------------------------------
+        // SERVER TIMEOUTS
+        // ---------------------------------------------------
+
+        // 20 minutes
+
+        server.timeout = 1000 * 60 * 20;
+
         server.keepAliveTimeout = 1000 * 60 * 20;
-        server.headersTimeout = 1000 * 60 * 20;
+
+        server.headersTimeout = 1000 * 60 * 21;
+
+        console.log("Server timeout configured");
 
     })
-    .catch(err => {
+    .catch((err) => {
         console.error("MongoDB connection error:", err);
+        process.exit(1);
     });
 
-cron.schedule('0 11,17 * * *', async () => {
+// ---------------------------------------------------
+// CRON JOB
+// ---------------------------------------------------
 
-    try {
+cron.schedule(
+    "0 11,17 * * *",
+    async () => {
+        try {
+            console.log("Running scheduled notification command");
 
-        console.log("Running of schedule command");
+            await scheduleNotificationCommand();
 
-        await scheduleNotificationCommand();
-    } catch (err) {
-        console.error('Cron error:', err);
+            console.log("Schedule command completed");
+
+        } catch (err) {
+            console.error("Cron error:", err);
+        }
+    },
+    {
+        timezone: "Asia/Kolkata",
     }
-}, {
-    timezone: 'Asia/Kolkata'
+);
+
+// ---------------------------------------------------
+// GLOBAL ERROR HANDLERS
+// ---------------------------------------------------
+
+process.on("uncaughtException", (err) => {
+    console.error("UNCAUGHT EXCEPTION:", err);
 });
+
+process.on("unhandledRejection", (err) => {
+    console.error("UNHANDLED REJECTION:", err);
+});
+
+// ---------------------------------------------------
+// MEMORY LOGGING (optional)
+// ---------------------------------------------------
+
+setInterval(() => {
+    const used = process.memoryUsage();
+
+    console.log({
+        rss: `${Math.round(used.rss / 1024 / 1024)} MB`,
+        heapUsed: `${Math.round(used.heapUsed / 1024 / 1024)} MB`,
+    });
+}, 300000);
