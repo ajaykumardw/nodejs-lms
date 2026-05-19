@@ -793,11 +793,11 @@ exports.postScormData = async (req, res, next) => {
                 {
                     $set: {
                         scorm_data: parsed,
-                        progress_status: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "incomplete") ? "3" : "1",
-                        is_completed: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "incomplete"),
-                        is_passed: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "incomplete"),
-                        completed_at_time: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "incomplete") ? Date.now() : null,
-                        passed_at_time: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "incomplete") ? Date.now() : null
+                        progress_status: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "completed") ? "3" : "1",
+                        is_completed: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "completed"),
+                        is_passed: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "completed"),
+                        completed_at_time: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "completed") ? Date.now() : null,
+                        passed_at_time: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "completed") ? Date.now() : null
                     }
                 },
                 {
@@ -813,11 +813,11 @@ exports.postScormData = async (req, res, next) => {
                 content_folder_id: contentFolderId,
                 module_type_id: moduleTypeId,
                 program_id: contentFolder.program_id,
-                progress_status: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "incomplete") ? "3" : "1",
-                is_completed: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "incomplete"),
-                is_passed: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "incomplete"),
-                completed_at_time: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "incomplete") ? Date.now() : null,
-                passed_at_time: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "incomplete") ? Date.now() : null,
+                progress_status: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "completed") ? "3" : "1",
+                is_completed: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "completed"),
+                is_passed: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "completed"),
+                completed_at_time: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "completed") ? Date.now() : null,
+                passed_at_time: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "completed") ? Date.now() : null,
                 created_by: userId,
             });
             await activity_report.save();
