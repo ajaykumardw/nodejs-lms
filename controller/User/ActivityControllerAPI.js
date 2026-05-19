@@ -793,6 +793,7 @@ exports.postScormData = async (req, res, next) => {
                 {
                     $set: {
                         scorm_data: parsed,
+                        completion_percentage: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "completed") ? "100" : activityReport?.completion_percentage,
                         progress_status: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "completed") ? "3" : "1",
                         is_completed: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "completed"),
                         is_passed: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "completed"),
@@ -814,6 +815,7 @@ exports.postScormData = async (req, res, next) => {
                 module_type_id: moduleTypeId,
                 program_id: contentFolder.program_id,
                 progress_status: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "completed") ? "3" : "1",
+                completion_percentage: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "completed") ? "100" : "0",
                 is_completed: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "completed"),
                 is_passed: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "completed"),
                 completed_at_time: (parsed?.lessonStatus == "passed" || parsed?.lessonStatus == "completed") ? Date.now() : null,
