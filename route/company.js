@@ -245,6 +245,7 @@ router.get("/quiz/assessment/report", isAuth, reportController.getQuizAssessment
 
 //This route is for scorm report data
 router.get("/scorm/report/data", isAuth, reportController.getScormReportDataController)
+router.get("/scorm/report/detail/data", isAuth, reportController.getScormDetailReportDataController)
 router.get("/login/report/data", isAuth, reportController.getLogInReportController)
 router.get('/user/report/data', isAuth, reportController.getUserReportController);
 

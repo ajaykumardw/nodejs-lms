@@ -1692,6 +1692,310 @@ exports.getScormReportDataController = async (req, res, next) => {
     }
 }
 
+exports.getScormDetailReportDataController = async (req, res, next) => {
+    try {
+
+        const userId = req?.userId;
+
+        // GET ALL USERS CREATED BY LOGIN USER
+        const users = await User.find(
+            { created_by: userId },
+            { _id: 1 }
+        );
+
+        const userIds = users.map((u) => u._id);
+
+        let data = req?.query;
+
+        // PARSE QUERY DATA
+        if (typeof data === "string" && data !== "") {
+            try {
+                data = JSON.parse(data);
+            } catch (e) {
+                console.error("Invalid data format", e);
+                data = {};
+            }
+        } else if (typeof data !== "object" || data === null) {
+            data = {};
+        }
+
+        // MATCH QUERY
+        const matchQuery = {
+            user_id: { $in: userIds },
+            module_type_id: mongoose.Types.ObjectId.createFromHexString(
+                "688723af5dd97f4ccae68837"
+            ),
+        };
+
+        // DATE FILTER
+        if (
+            data.fromTime &&
+            data.toTime &&
+            data.fromTime !== "null" &&
+            data.toTime !== "null"
+        ) {
+            matchQuery.created_at = {
+                $gte: new Date(data.fromTime),
+                $lte: new Date(data.toTime),
+            };
+        }
+
+        const activityReport = await ActivityFolderReport.aggregate([
+            {
+                $match: matchQuery,
+            },
+
+            // USER LOOKUP
+            {
+                $lookup: {
+                    from: "users",
+                    let: { userId: "$user_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: ["$_id", "$$userId"],
+                                },
+                            },
+                        },
+                        {
+                            $project: {
+                                first_name: 1,
+                                last_name: 1,
+                                email: 1,
+                                phone: 1,
+                            },
+                        },
+                    ],
+                    as: "user_info",
+                },
+            },
+
+            // MODULE LOOKUP
+            {
+                $lookup: {
+                    from: "modules",
+                    let: { moduleId: "$module_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: ["$_id", "$$moduleId"],
+                                },
+                            },
+                        },
+                        {
+                            $project: {
+                                title: 1,
+                            },
+                        },
+                    ],
+                    as: "module_info",
+                },
+            },
+
+            // PROGRAM LOOKUP
+            {
+                $lookup: {
+                    from: "programs",
+                    let: { programId: "$program_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: ["$_id", "$$programId"],
+                                },
+                            },
+                        },
+                        {
+                            $project: {
+                                title: 1,
+                            },
+                        },
+                    ],
+                    as: "program_info",
+                },
+            },
+
+            // CONTENT FOLDER LOOKUP
+            {
+                $lookup: {
+                    from: "content_folder",
+                    let: { contentFolderId: "$content_folder_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: ["$_id", "$$contentFolderId"],
+                                },
+                            },
+                        },
+                        {
+                            $project: {
+                                title: 1,
+                            },
+                        },
+                    ],
+                    as: "content_folder_info",
+                },
+            },
+
+            // ACTIVITY LOOKUP
+            {
+                $lookup: {
+                    from: "activity",
+                    let: { activityId: "$activity_id" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: ["$_id", "$$activityId"],
+                                },
+                            },
+                        },
+                        {
+                            $project: {
+                                _id: 1,
+                                title: {
+                                    $ifNull: [
+                                        "$scorm_data.title",
+                                        {
+                                            $ifNull: [
+                                                "$video_data.title",
+                                                {
+                                                    $ifNull: [
+                                                        "$youtube_data.title",
+                                                        {
+                                                            $ifNull: [
+                                                                "$document_data.title",
+                                                                "$quiz_data.title",
+                                                            ],
+                                                        },
+                                                    ],
+                                                },
+                                            ],
+                                        },
+                                    ],
+                                },
+                            },
+                        },
+                    ],
+                    as: "activity_info",
+                },
+            },
+
+            // UNWINDS
+            {
+                $unwind: {
+                    path: "$program_info",
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $unwind: {
+                    path: "$content_folder_info",
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $unwind: {
+                    path: "$module_info",
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $unwind: {
+                    path: "$user_info",
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            {
+                $unwind: {
+                    path: "$activity_info",
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+
+            // SORT ACTIVITIES BY CURRENT ATTEMPT DESC
+            {
+                $sort: {
+                    current_attempt: -1,
+                },
+            },
+
+            // GROUP BY USER
+            {
+                $group: {
+                    _id: "$user_id",
+
+                    user_info: {
+                        $first: "$user_info",
+                    },
+
+                    activities: {
+                        $push: {
+                            _id: "$_id",
+
+                            is_completed: "$is_completed",
+                            is_passed: "$is_passed",
+
+                            module_id: "$module_id",
+                            module_info: "$module_info",
+
+                            program_id: "$program_id",
+                            program_info: "$program_info",
+
+                            content_folder_id: "$content_folder_id",
+                            content_folder_info: "$content_folder_info",
+
+                            activity_id: "$activity_id",
+                            activity_info: "$activity_info",
+
+                            current_attempt: "$current_attempt",
+
+                            created_at: "$created_at",
+                            updated_at: "$updated_at",
+                        },
+                    },
+                },
+            },
+
+            // OPTIONAL USER SORT
+            {
+                $sort: {
+                    "user_info.first_name": 1,
+                },
+            },
+        ]);
+
+        // DECRYPT USER DATA
+        const finalActivity = activityReport.map((item) => ({
+            ...item,
+
+            user_info: {
+                ...item.user_info,
+
+                email: item.user_info?.email
+                    ? decrypt(item.user_info.email)
+                    : null,
+
+                phone: item.user_info?.phone
+                    ? decrypt(item.user_info.phone)
+                    : null,
+            },
+        }));
+
+        return successResponse(
+            res,
+            "Activity data fetched successfully",
+            finalActivity
+        );
+
+    } catch (error) {
+        next(error);
+    }
+};
+
 exports.getLogInReportController = async (req, res, next) => {
     try {
         const userId = req?.userId;
