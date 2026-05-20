@@ -1763,12 +1763,36 @@ exports.getScormDetailReportDataController = async (req, res, next) => {
                                 first_name: 1,
                                 last_name: 1,
                                 email: 1,
+                                codes: 1,
                                 phone: 1,
                             },
                         },
                     ],
                     as: "user_info",
                 },
+            },
+
+            {
+                $addFields: {
+                    "user_info": {
+                        $arrayElemAt: ["$user_info", 0]
+                    }
+                }
+            },
+            {
+                $addFields: {
+                    "user_info.latest_code": {
+                        $arrayElemAt: [
+                            {
+                                $sortArray: {
+                                    input: "$user_info.codes",
+                                    sortBy: { issued_on: -1 }
+                                }
+                            },
+                            0
+                        ]
+                    }
+                }
             },
 
             // MODULE LOOKUP
@@ -1905,12 +1929,6 @@ exports.getScormDetailReportDataController = async (req, res, next) => {
             },
             {
                 $unwind: {
-                    path: "$user_info",
-                    preserveNullAndEmptyArrays: true,
-                },
-            },
-            {
-                $unwind: {
                     path: "$activity_info",
                     preserveNullAndEmptyArrays: true,
                 },
@@ -1952,6 +1970,9 @@ exports.getScormDetailReportDataController = async (req, res, next) => {
                             activity_info: "$activity_info",
 
                             current_attempt: "$current_attempt",
+
+                            start_activity_time: "$start_activity_time",
+                            end_activity_time: "$end_activity_time",
 
                             created_at: "$created_at",
                             updated_at: "$updated_at",
