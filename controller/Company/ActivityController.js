@@ -169,6 +169,7 @@ exports.setNameActivityAPI = async (req, res, next) => {
 exports.postActivityDataAPI = async (req, res, next) => {
   try {
     const { moduleId, moduleTypeId, id } = req.params
+
     const userId = req.userId
 
     const activity = await Activity.findOne({
@@ -183,6 +184,7 @@ exports.postActivityDataAPI = async (req, res, next) => {
     }
 
     const { title, video_url } = req.body
+
     const file = req.file
 
     const updatePayload = {}
@@ -238,22 +240,30 @@ exports.postActivityDataAPI = async (req, res, next) => {
         return errorResponse(res, 'SCORM ZIP required', {}, 400)
       }
 
+      // ---------------------------------------------------
+      // VALIDATE ZIP EXTENSION
+      // ---------------------------------------------------
+
+      if (file && path.extname(file.originalname).toLowerCase() !== '.zip') {
+        if (fs.existsSync(file.path)) {
+          fs.unlinkSync(file.path)
+        }
+
+        return errorResponse(res, 'Only ZIP files are allowed', {}, 400)
+      }
+
       if (file?.filename) {
         const folderName = path.parse(file.filename).name
 
-        const zipFilePath = path.resolve(
+        const PUBLIC_ACTIVITY_PATH = path.resolve(
           process.cwd(),
           'public',
-          'activity',
-          file.filename
+          'activity'
         )
 
-        const extractPath = path.resolve(
-          process.cwd(),
-          'public',
-          'activity',
-          folderName
-        )
+        const zipFilePath = path.join(PUBLIC_ACTIVITY_PATH, file.filename)
+
+        const extractPath = path.join(PUBLIC_ACTIVITY_PATH, folderName)
 
         updatePayload.scorm_data = {
           title,
@@ -264,7 +274,23 @@ exports.postActivityDataAPI = async (req, res, next) => {
         }
 
         // ---------------------------------------------------
-        // BACKGROUND EXTRACTION
+        // SAVE FIRST
+        // ---------------------------------------------------
+
+        await Activity.findByIdAndUpdate(
+          id,
+          { $set: updatePayload },
+          { new: true }
+        )
+
+        // ---------------------------------------------------
+        // SEND RESPONSE
+        // ---------------------------------------------------
+
+        successResponse(res, 'SCORM uploaded successfully. Processing started.')
+
+        // ---------------------------------------------------
+        // BACKGROUND PROCESSING
         // ---------------------------------------------------
 
         setImmediate(async () => {
@@ -273,17 +299,75 @@ exports.postActivityDataAPI = async (req, res, next) => {
               fs.mkdirSync(extractPath, { recursive: true })
             }
 
+            // ---------------------------------------------------
+            // EXTRACT
+            // ---------------------------------------------------
+
             await new Promise((resolve, reject) => {
               fs.createReadStream(zipFilePath)
-                .pipe(unzipper.Extract({ path: extractPath }))
+                .pipe(
+                  unzipper.Extract({
+                    path: extractPath
+                  })
+                )
                 .on('close', resolve)
                 .on('error', reject)
             })
 
-            // delete zip after extraction
-            fs.unlinkSync(zipFilePath)
+            // ---------------------------------------------------
+            // FIND imsmanifest.xml RECURSIVELY
+            // ---------------------------------------------------
 
-            // update status
+            const findManifest = dir => {
+              const files = fs.readdirSync(dir)
+
+              for (const fileName of files) {
+                const fullPath = path.join(dir, fileName)
+
+                const stat = fs.statSync(fullPath)
+
+                if (stat.isDirectory()) {
+                  const nested = findManifest(fullPath)
+
+                  if (nested) {
+                    return nested
+                  }
+                } else if (fileName.toLowerCase() === 'imsmanifest.xml') {
+                  return fullPath
+                }
+              }
+
+              return null
+            }
+
+            const manifestPath = findManifest(extractPath)
+
+            if (!manifestPath) {
+              throw new Error('imsmanifest.xml missing')
+            }
+
+            // ---------------------------------------------------
+            // VALIDATE XML
+            // ---------------------------------------------------
+
+            const manifestContent = fs.readFileSync(manifestPath, 'utf8')
+
+            if (!manifestContent.includes('<manifest')) {
+              throw new Error('Invalid SCORM manifest')
+            }
+
+            // ---------------------------------------------------
+            // DELETE ZIP
+            // ---------------------------------------------------
+
+            if (fs.existsSync(zipFilePath)) {
+              fs.unlinkSync(zipFilePath)
+            }
+
+            // ---------------------------------------------------
+            // SUCCESS
+            // ---------------------------------------------------
+
             await Activity.findByIdAndUpdate(id, {
               $set: {
                 'scorm_data.scorm_status': 'completed'
@@ -294,6 +378,21 @@ exports.postActivityDataAPI = async (req, res, next) => {
           } catch (err) {
             console.error('SCORM extraction failed:', err)
 
+            // cleanup extracted folder
+
+            if (fs.existsSync(extractPath)) {
+              fs.rmSync(extractPath, {
+                recursive: true,
+                force: true
+              })
+            }
+
+            // cleanup zip
+
+            if (fs.existsSync(zipFilePath)) {
+              fs.unlinkSync(zipFilePath)
+            }
+
             await Activity.findByIdAndUpdate(id, {
               $set: {
                 'scorm_data.scorm_status': 'failed'
@@ -301,6 +400,8 @@ exports.postActivityDataAPI = async (req, res, next) => {
             })
           }
         })
+
+        return
       }
     }
 
