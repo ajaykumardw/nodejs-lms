@@ -244,7 +244,7 @@ exports.getActivityData = async (req, res, next) => {
                     $gt: [
                       {
                         $strLenCP: {
-                          $ifNull: ['$youtube_data.video_url', '']
+                          $ifNull: ['$video_data.video_url', '']
                         }
                       },
                       0
