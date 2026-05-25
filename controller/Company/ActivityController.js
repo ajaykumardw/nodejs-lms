@@ -374,6 +374,7 @@ exports.postActivityDataAPI = async (req, res, next) => {
               }
             })
 
+            console.log('SCORM extracted:', folderName)
           } catch (err) {
             console.error('SCORM extraction failed:', err)
 
