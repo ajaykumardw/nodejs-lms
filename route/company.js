@@ -27,6 +27,7 @@ const mailTemplateController = require('../controller/Company/MailTemplateContro
 const exportCenterController = require('../controller/Company/ExportCenterAPIController')
 const scheduleNotificationController = require('../controller/Company/ScheduleNotificationController')
 const dashboardController = require('../controller/Company/DashboardAPIController')
+const userProfileController = require('../controller/Company/UserProfileController')
 
 const createUpload = require('../util/upload')
 
@@ -583,6 +584,18 @@ router.get(
   '/dashboard/company/data',
   isAuth,
   dashboardController.getDashboardAPIController
+)
+
+router.get(
+  '/user/profile/data',
+  isAuth,
+  dashboardController.getUserProfileAPIController
+)
+
+router.post(
+  '/user/profile/change/password',
+  isAuth,
+  userProfileController.postProfileChangePasswordAPIController
 )
 
 module.exports = router
