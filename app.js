@@ -132,7 +132,6 @@ mongoose
         maxPoolSize: 20,
     })
     .then(() => {
-        console.log("MongoDB Connected");
 
         const server = app.listen(PORT, () => {
             console.log(`Server running on port ${PORT}`);
@@ -150,7 +149,6 @@ mongoose
 
         server.headersTimeout = 1000 * 60 * 21;
 
-        console.log("Server timeout configured");
 
     })
     .catch((err) => {
@@ -166,11 +164,8 @@ cron.schedule(
     "0 11,17 * * *",
     async () => {
         try {
-            console.log("Running scheduled notification command");
 
             await scheduleNotificationCommand();
-
-            console.log("Schedule command completed");
 
         } catch (err) {
             console.error("Cron error:", err);
