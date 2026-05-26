@@ -34,10 +34,6 @@ function createUpload (allowedTypes, directory = 'uploads', maxSizeMB = 2000) {
     }
   })
 
-  // ---------------------------------------------------
-  // MULTER
-  // ---------------------------------------------------
-
   const upload = multer({
     storage,
 
@@ -53,10 +49,6 @@ function createUpload (allowedTypes, directory = 'uploads', maxSizeMB = 2000) {
       }
     }
   })
-
-  // ---------------------------------------------------
-  // SCORM VALIDATION
-  // ---------------------------------------------------
 
   const validateScormZip = async filePath => {
     const directory = await unzipper.Open.file(filePath)

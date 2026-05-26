@@ -1,44 +1,46 @@
-const cron = require("node-cron");
-const express = require("express");
-const mongoose = require("mongoose");
-const flash = require("connect-flash");
-const cors = require("cors");
-const path = require("path");
-const fs = require("fs");
-require("dotenv").config();
+const cron = require('node-cron')
+const express = require('express')
+const mongoose = require('mongoose')
+const flash = require('connect-flash')
+const cors = require('cors')
+const path = require('path')
+const fs = require('fs')
+
+const AppConfig = require('./model/AppConfig')
+require('dotenv').config()
 
 // Routes
-const authRoute = require("./route/auth");
-const adminRoute = require("./route/admin");
-const companyRouter = require("./route/company");
-const userRouter = require("./route/user");
+const authRoute = require('./route/auth')
+const adminRoute = require('./route/admin')
+const companyRouter = require('./route/company')
+const userRouter = require('./route/user')
 
 // Commands
-const scheduleNotificationCommand = require("./command/ScheduleNotification");
+const scheduleNotificationCommand = require('./command/ScheduleNotification')
 
 // Workers
-require("./worker/reportWorker");
+require('./worker/reportWorker')
 
-const app = express();
+const app = express()
 
-const PORT = process.env.PORT || 4000;
-const MongoURL = process.env.MONGODB_URL;
+const PORT = process.env.PORT || 4000
+const MongoURL = process.env.MONGODB_URL
 
 // ---------------------------------------------------
 // TRUST PROXY (important behind nginx)
 // ---------------------------------------------------
 
-app.set("trust proxy", 1);
+app.set('trust proxy', 1)
 
 // ---------------------------------------------------
 // PUBLIC DIRECTORY
 // ---------------------------------------------------
 
-const publicDir = path.join(__dirname, "public");
-const imageDir = path.join(publicDir, "company_logo");
+const publicDir = path.join(__dirname, 'public')
+const imageDir = path.join(publicDir, 'company_logo')
 
 if (!fs.existsSync(imageDir)) {
-    fs.mkdirSync(imageDir, { recursive: true });
+  fs.mkdirSync(imageDir, { recursive: true })
 }
 
 // ---------------------------------------------------
@@ -46,17 +48,13 @@ if (!fs.existsSync(imageDir)) {
 // ---------------------------------------------------
 
 app.use(
-    cors({
-        origin: true,
-        credentials: true,
-        methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-        allowedHeaders: [
-            "Content-Type",
-            "Authorization",
-            "X-Requested-With",
-        ],
-    })
-);
+  cors({
+    origin: true,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+  })
+)
 
 // ---------------------------------------------------
 // BODY PARSER
@@ -67,136 +65,127 @@ app.use(
 // Huge JSON bodies can crash Node memory.
 
 app.use(
-    express.json({
-        limit: "50mb",
-    })
-);
+  express.json({
+    limit: '50mb'
+  })
+)
 
 app.use(
-    express.urlencoded({
-        extended: true,
-        limit: "50mb",
-        parameterLimit: 500000,
-    })
-);
+  express.urlencoded({
+    extended: true,
+    limit: '50mb',
+    parameterLimit: 500000
+  })
+)
 
 // ---------------------------------------------------
 // FLASH
 // ---------------------------------------------------
 
-app.use(flash());
+app.use(flash())
 
 // ---------------------------------------------------
 // STATIC FILES
 // ---------------------------------------------------
 
-app.use("/public", express.static(publicDir));
+app.use('/public', express.static(publicDir))
 
 // ---------------------------------------------------
 // ROUTES
 // ---------------------------------------------------
 
-app.use("/api/auth", authRoute);
-app.use("/api/admin", adminRoute);
-app.use("/api/company", companyRouter);
-app.use("/api/user", userRouter);
+app.use('/api/auth', authRoute)
+app.use('/api/admin', adminRoute)
+app.use('/api/company', companyRouter)
+app.use('/api/user', userRouter)
 
 // ---------------------------------------------------
 // HEALTH CHECK
 // ---------------------------------------------------
 
-app.get("/ping", (req, res) => {
-    res.status(200).send("pong");
-});
+app.get('/ping', (req, res) => {
+  res.status(200).send('pong')
+})
 
 // ---------------------------------------------------
 // ERROR HANDLER
 // ---------------------------------------------------
 
 app.use((error, req, res, next) => {
-    console.error("API ERROR:", error);
+  console.error('API ERROR:', error)
 
-    res.status(error.statusCode || 500).json({
-        status: "Failure",
-        statusCode: error.statusCode || 500,
-        message: error.message || "Internal Server Error",
-    });
-});
+  res.status(error.statusCode || 500).json({
+    status: 'Failure',
+    statusCode: error.statusCode || 500,
+    message: error.message || 'Internal Server Error'
+  })
+})
 
 // ---------------------------------------------------
 // DATABASE CONNECTION
 // ---------------------------------------------------
 
 mongoose
-    .connect(MongoURL, {
-        maxPoolSize: 20,
+  .connect(MongoURL, {
+    maxPoolSize: 20
+  })
+  .then(() => {
+    const server = app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`)
     })
-    .then(() => {
 
-        const server = app.listen(PORT, () => {
-            console.log(`Server running on port ${PORT}`);
-        });
+    // ---------------------------------------------------
+    // SERVER TIMEOUTS
+    // ---------------------------------------------------
 
-        // ---------------------------------------------------
-        // SERVER TIMEOUTS
-        // ---------------------------------------------------
+    // 20 minutes
 
-        // 20 minutes
+    server.timeout = 1000 * 60 * 20
 
-        server.timeout = 1000 * 60 * 20;
+    server.keepAliveTimeout = 1000 * 60 * 20
 
-        server.keepAliveTimeout = 1000 * 60 * 20;
-
-        server.headersTimeout = 1000 * 60 * 21;
-
-
-    })
-    .catch((err) => {
-        console.error("MongoDB connection error:", err);
-        process.exit(1);
-    });
+    server.headersTimeout = 1000 * 60 * 21
+  })
+  .catch(err => {
+    console.error('MongoDB connection error:', err)
+    process.exit(1)
+  })
 
 // ---------------------------------------------------
 // CRON JOB
 // ---------------------------------------------------
 
 cron.schedule(
-    "0 11,17 * * *",
-    async () => {
-        try {
-
-            await scheduleNotificationCommand();
-
-        } catch (err) {
-            console.error("Cron error:", err);
-        }
-    },
-    {
-        timezone: "Asia/Kolkata",
+  '0 11,17 * * *',
+  async () => {
+    try {
+      await scheduleNotificationCommand()
+    } catch (err) {
+      console.error('Cron error:', err)
     }
-);
+  },
+  {
+    timezone: 'Asia/Kolkata'
+  }
+)
 
 // ---------------------------------------------------
 // GLOBAL ERROR HANDLERS
 // ---------------------------------------------------
 
-process.on("uncaughtException", (err) => {
-    console.error("UNCAUGHT EXCEPTION:", err);
-});
+process.on('uncaughtException', err => {
+  console.error('UNCAUGHT EXCEPTION:', err)
+})
 
-process.on("unhandledRejection", (err) => {
-    console.error("UNHANDLED REJECTION:", err);
-});
-
-// ---------------------------------------------------
-// MEMORY LOGGING (optional)
-// ---------------------------------------------------
+process.on('unhandledRejection', err => {
+  console.error('UNHANDLED REJECTION:', err)
+})
 
 setInterval(() => {
-    const used = process.memoryUsage();
+  const used = process.memoryUsage()
 
-    console.log({
-        rss: `${Math.round(used.rss / 1024 / 1024)} MB`,
-        heapUsed: `${Math.round(used.heapUsed / 1024 / 1024)} MB`,
-    });
-}, 300000);
+  console.log({
+    rss: `${Math.round(used.rss / 1024 / 1024)} MB`,
+    heapUsed: `${Math.round(used.heapUsed / 1024 / 1024)} MB`
+  })
+}, 300000)

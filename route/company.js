@@ -598,4 +598,16 @@ router.post(
   userProfileController.postProfileChangePasswordAPIController
 )
 
+router.get(
+  '/certificate/setting/data',
+  isAuth,
+  certificateController.getCertificateSettings
+)
+
+router.post(
+  '/certificate/setting/data',
+  isAuth,
+  certificateController.postCertificateSettingAPI
+)
+
 module.exports = router
