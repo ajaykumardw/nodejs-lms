@@ -1,49 +1,60 @@
 const mongoose = require('mongoose')
 
-const contentFolderSchema = new mongoose.Schema({
+const contentFolderSchema = new mongoose.Schema(
+  {
     program_id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Program"
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Program'
     },
     title: {
-        type: String,
-        required: true,
-        maxlength: 255,
+      type: String,
+      required: true,
+      maxlength: 255
     },
     description: {
-        type: String,
-        required: true,
-        maxlength: 255,
+      type: String,
+      required: true,
+      maxlength: 255
     },
     image_url: {
-        type: String,
-        required: true,
-        maxlength: 255,
+      type: String,
+      required: true,
+      maxlength: 255
+    },
+    checkCertificate: {
+      type: Boolean,
+      default: false
+    },
+    certificateId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'certificate'
     },
     created_by: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true,
+      type: mongoose.Schema.Types.ObjectId,
+      required: true
     },
     created_at: {
-        type: Date,
-        default: Date.now()
+      type: Date,
+      default: Date.now()
     }
-}, {
-    collection: "content_folder"
-})
+  },
+  {
+    collection: 'content_folder'
+  }
+)
 
 contentFolderSchema.virtual('modules', {
-    localField: '_id', 
-    foreignField: ''
+  localField: '_id',
+  foreignField: ''
 })
 
 contentFolderSchema.virtual('activity_logs', {
   ref: 'ActivityLog',
   localField: '_id',
   foreignField: 'content_folder_id'
-});
+})
 
 contentFolderSchema.set('toObject', { virtuals: true })
 contentFolderSchema.set('toJSON', { virtuals: true })
 
-module.exports = mongoose.model("ContentFolder", contentFolderSchema)
+module.exports = mongoose.model('ContentFolder', contentFolderSchema)
