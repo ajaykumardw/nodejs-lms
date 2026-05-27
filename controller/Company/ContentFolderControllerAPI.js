@@ -142,7 +142,7 @@ exports.updateContentFolderAPI = async (req, res, next) => {
           title,
           description,
           image_url: image,
-          checkCertificate: checkCertificate,
+          checkCertificate,
           certificateId: checkCertificate ? certificateId : null
         }
       }
