@@ -16,20 +16,20 @@ exports.getModuleAPIController = async (req, res, next) => {
 
     const user = await User.findById(userId)
 
-    const settingConfig = await SettingConfig.findOne({
-      type: 'certificate_setting',
-      created_by: userId
-    })
-
-    const certificateSettingId = settingConfig
-      ? settingConfig.certificate_setting_data_id
-      : '6a153d4a393b1c736064377b'
-
     if (!user) {
       return errorResponse(res, 'User does not exist', {}, 404)
     }
 
     const masterId = user?.created_by
+
+    const settingConfig = await SettingConfig.findOne({
+      type: 'certificate_setting',
+      created_by: masterId
+    })
+
+    const certificateSettingId = settingConfig?.certificate_setting_data_id
+      ? settingConfig.certificate_setting_data_id
+      : '6a153d4a393b1c736064377b'
 
     const id = req?.params?.id
 
@@ -113,6 +113,54 @@ exports.getModuleAPIController = async (req, res, next) => {
             }
           ],
           as: 'moduleEnroll'
+        }
+      },
+
+      {
+        $lookup: {
+          from: 'modulesettings',
+          localField: '_id',
+          foreignField: 'moduleId',
+          as: 'module_setting'
+        }
+      },
+
+      {
+        $unwind: {
+          path: '$module_setting',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+
+      {
+        $addFields: {
+          is_certificate_enable: {
+            $eq: ['$module_setting.certificateEnabled', true]
+          }
+        }
+      },
+
+      {
+        $lookup: {
+          from: 'certificates',
+          let: { certificateId: '$module_setting.selectedCertificateId' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [{ $eq: ['$_id', '$$certificateId'] }]
+                }
+              }
+            }
+          ],
+          as: 'certificate'
+        }
+      },
+
+      {
+        $unwind: {
+          path: '$certificate',
+          preserveNullAndEmptyArrays: true
         }
       },
 
@@ -201,7 +249,6 @@ exports.getModuleAPIController = async (req, res, next) => {
       },
 
       // COMPLETED ACTIVITY COUNT
-      // ACTIVITY COUNTS
       {
         $addFields: {
           total_activity: {
@@ -211,10 +258,30 @@ exports.getModuleAPIController = async (req, res, next) => {
           completed_activity: {
             $size: {
               $filter: {
-                input: '$activity_logs',
-                as: 'log',
+                input: '$activity',
+                as: 'act',
                 cond: {
-                  $eq: ['$$log.is_completed', true]
+                  $gt: [
+                    {
+                      $size: {
+                        $filter: {
+                          input: '$activity_logs',
+                          as: 'log',
+                          cond: {
+                            $and: [
+                              {
+                                $eq: ['$$log.activity_id', '$$act._id']
+                              },
+                              {
+                                $eq: ['$$log.is_completed', true]
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    0
+                  ]
                 }
               }
             }
@@ -254,7 +321,12 @@ exports.getModuleAPIController = async (req, res, next) => {
           has_completed: {
             $cond: [
               {
-                $ne: [certificateSettingId, '6a153d4a393b1c736064377b']
+                $ne: [
+                  certificateSettingId,
+                  mongoose.Types.ObjectId.createFromHexString(
+                    '6a153d4a393b1c736064377b'
+                  )
+                ]
               },
               false,
               {
@@ -278,6 +350,37 @@ exports.getModuleAPIController = async (req, res, next) => {
                   }
                 ]
               }
+            ]
+          }
+        }
+      },
+
+      {
+        $addFields: {
+          module_completed_at: {
+            $cond: [
+              {
+                $eq: ['$completed_activity', '$total_activity']
+              },
+              {
+                $let: {
+                  vars: {
+                    completedLogs: {
+                      $filter: {
+                        input: '$activity_logs',
+                        as: 'log',
+                        cond: {
+                          $eq: ['$$log.is_completed', true]
+                        }
+                      }
+                    }
+                  },
+                  in: {
+                    $max: '$$completedLogs.completed_at_time'
+                  }
+                }
+              },
+              null
             ]
           }
         }

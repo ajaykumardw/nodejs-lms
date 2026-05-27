@@ -106,8 +106,8 @@ exports.getActivityData = async (req, res, next) => {
       // Logs
       {
         $lookup: {
-          from: 'activitylogs',
-          let: { activityId: '$_id' },
+          from: 'activity_logs',
+          let: { activityId: '$_id', userId: userId },
           pipeline: [
             {
               $match: {
@@ -115,22 +115,23 @@ exports.getActivityData = async (req, res, next) => {
                   $and: [
                     { $eq: ['$activity_id', '$$activityId'] },
                     {
-                      $eq: ['$user_id', userId]
+                      $eq: ['$user_id', '$$userId']
                     }
                   ]
                 }
               }
-            },
-            {
-              $sort: {
-                created_at: -1
-              }
-            },
-            {
-              $limit: 1
             }
           ],
           as: 'logs'
+        }
+      },
+
+      // Has completed
+      {
+        $addFields: {
+          has_completed: {
+            $in: [true, '$logs.is_completed']
+          }
         }
       },
 
@@ -344,13 +345,13 @@ exports.getFetchActivity = async (req, res, next) => {
       return errorResponse(res, 'User does not exist', {}, 404)
     }
 
-    const masterId = user?.master_company_id
+    const masterId = user?.created_by
 
     const activities = await Activity.aggregate([
       {
         $match: {
           _id: mongoose.Types.ObjectId.createFromHexString(id),
-          created_by: mongoose.Types.ObjectId.createFromHexString(masterId)
+          created_by: masterId
         }
       },
       { $limit: 1 },
@@ -371,8 +372,7 @@ exports.getFetchActivity = async (req, res, next) => {
                   ]
                 }
               }
-            },
-            { $sort: { created_at: -1 } }
+            }
           ],
           as: 'logs'
         }
@@ -997,23 +997,29 @@ exports.postScormData = async (req, res, next) => {
           $set: {
             scorm_data: parsed,
             completion_percentage:
-              (parsed?.lessonStatus == 'passed' || parsed?.lessonStatus == 'completed')
+              parsed?.lessonStatus == 'passed' ||
+              parsed?.lessonStatus == 'completed'
                 ? '100'
                 : activityReport?.completion_percentage,
             progress_status:
-              (parsed?.lessonStatus == 'passed' || parsed?.lessonStatus == 'completed')
+              parsed?.lessonStatus == 'passed' ||
+              parsed?.lessonStatus == 'completed'
                 ? '3'
                 : '1',
             is_completed:
-              (parsed?.lessonStatus == 'passed' || parsed?.lessonStatus == 'completed'),
+              parsed?.lessonStatus == 'passed' ||
+              parsed?.lessonStatus == 'completed',
             is_passed:
-              (parsed?.lessonStatus == 'passed' || parsed?.lessonStatus == 'completed'),
+              parsed?.lessonStatus == 'passed' ||
+              parsed?.lessonStatus == 'completed',
             completed_at_time:
-              (parsed?.lessonStatus == 'passed' || parsed?.lessonStatus == 'completed')
+              parsed?.lessonStatus == 'passed' ||
+              parsed?.lessonStatus == 'completed'
                 ? Date.now()
                 : null,
             passed_at_time:
-              (parsed?.lessonStatus == 'passed' || parsed?.lessonStatus == 'completed')
+              parsed?.lessonStatus == 'passed' ||
+              parsed?.lessonStatus == 'completed'
                 ? Date.now()
                 : null
           }
