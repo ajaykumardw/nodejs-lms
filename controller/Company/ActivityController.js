@@ -253,7 +253,6 @@ exports.postActivityDataAPI = async (req, res, next) => {
       }
 
       if (file?.filename) {
-        
         const folderName = `${Date.now()}-${Math.random()
           .toString(36)
           .substring(2, 8)}`
@@ -267,6 +266,18 @@ exports.postActivityDataAPI = async (req, res, next) => {
         const zipFilePath = path.join(PUBLIC_ACTIVITY_PATH, file.filename)
 
         const extractPath = path.join(PUBLIC_ACTIVITY_PATH, folderName)
+
+        const verifyFile = filePath => {
+          const stat = fs.statSync(filePath)
+
+          console.log('VERIFY:', filePath, 'SIZE:', stat.size)
+
+          if (stat.size === 0) {
+            throw new Error(`Corrupted extracted file: ${filePath}`)
+          }
+        }
+
+        verifyFile(path.join(extractPath, 'scormdriver.js'))
 
         updatePayload.scorm_data = {
           title,
@@ -307,29 +318,26 @@ exports.postActivityDataAPI = async (req, res, next) => {
 
             const directory = await unzipper.Open.file(zipFilePath)
 
-            await Promise.all(
-              directory.files.map(async file => {
-                const fullPath = path.join(extractPath, file.path)
+            for (const file of directory.files) {
+              const fullPath = path.join(extractPath, file.path)
 
-                // Create directory if needed
-                if (file.type === 'Directory') {
-                  fs.mkdirSync(fullPath, { recursive: true })
-                  return
-                }
+              if (file.type === 'Directory') {
+                fs.mkdirSync(fullPath, { recursive: true })
+                continue
+              }
 
-                fs.mkdirSync(path.dirname(fullPath), {
-                  recursive: true
-                })
-
-                return new Promise((resolve, reject) => {
-                  file
-                    .stream()
-                    .pipe(fs.createWriteStream(fullPath))
-                    .on('finish', resolve)
-                    .on('error', reject)
-                })
+              fs.mkdirSync(path.dirname(fullPath), {
+                recursive: true
               })
-            )
+
+              await new Promise((resolve, reject) => {
+                file
+                  .stream()
+                  .pipe(fs.createWriteStream(fullPath))
+                  .on('finish', resolve)
+                  .on('error', reject)
+              })
+            }
 
             // ---------------------------------------------------
             // FIND imsmanifest.xml RECURSIVELY
