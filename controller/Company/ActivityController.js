@@ -235,193 +235,209 @@ exports.postActivityDataAPI = async (req, res, next) => {
     // ---------------------------------------------------
     // SCORM
     // ---------------------------------------------------
-else if (moduleTypeId === '688723af5dd97f4ccae68837') {
-  if (!file?.filename && !activity?.scorm_data?.folder_url) {
-    return errorResponse(res, 'SCORM ZIP required', {}, 400)
-  }
-
-  // ---------------------------------------------------
-  // VALIDATE ZIP EXTENSION
-  // ---------------------------------------------------
-
-  if (file && path.extname(file.originalname).toLowerCase() !== '.zip') {
-    if (fs.existsSync(file.path)) {
-      fs.unlinkSync(file.path)
-    }
-
-    return errorResponse(res, 'Only ZIP files are allowed', {}, 400)
-  }
-
-  if (file?.filename) {
-    const folderName = path.parse(file.filename).name
-
-    const PUBLIC_ACTIVITY_PATH = path.resolve(
-      process.cwd(),
-      'public',
-      'activity'
-    )
-
-    const zipFilePath = path.join(PUBLIC_ACTIVITY_PATH, file.filename)
-
-    const extractPath = path.join(PUBLIC_ACTIVITY_PATH, folderName)
-
-    updatePayload.scorm_data = {
-      title,
-      folder_url: `activity/${folderName}`,
-      folder_name: folderName,
-      zip_file: file.filename,
-      scorm_status: 'processing'
-    }
-
-    // ---------------------------------------------------
-    // SAVE FIRST
-    // ---------------------------------------------------
-
-    await Activity.findByIdAndUpdate(
-      id,
-      { $set: updatePayload },
-      { new: true }
-    )
-
-    // ---------------------------------------------------
-    // SEND RESPONSE
-    // ---------------------------------------------------
-
-    successResponse(
-      res,
-      'SCORM uploaded successfully. Processing started.'
-    )
-
-    // ---------------------------------------------------
-    // BACKGROUND PROCESSING
-    // ---------------------------------------------------
-
-    ;(async () => {
-      try {
-        if (!fs.existsSync(extractPath)) {
-          fs.mkdirSync(extractPath, { recursive: true })
-        }
-
-        // ---------------------------------------------------
-        // EXTRACT ZIP
-        // ---------------------------------------------------
-
-        await fs
-          .createReadStream(zipFilePath)
-          .pipe(
-            unzipper.Extract({
-              path: extractPath
-            })
-          )
-          .promise()
-
-        // ---------------------------------------------------
-        // FIND imsmanifest.xml RECURSIVELY
-        // ---------------------------------------------------
-
-        const findManifest = dir => {
-          const files = fs.readdirSync(dir)
-
-          for (const fileName of files) {
-            const fullPath = path.join(dir, fileName)
-
-            const stat = fs.statSync(fullPath)
-
-            if (stat.isDirectory()) {
-              const nested = findManifest(fullPath)
-
-              if (nested) {
-                return nested
-              }
-            } else {
-              const normalized = fileName
-                .replace(/\\/g, '/')
-                .trim()
-                .toLowerCase()
-
-              if (normalized === 'imsmanifest.xml') {
-                return fullPath
-              }
-            }
-          }
-
-          return null
-        }
-
-        const manifestPath = findManifest(extractPath)
-
-        console.log('MANIFEST PATH:', manifestPath)
-
-        if (!manifestPath) {
-          throw new Error('imsmanifest.xml missing')
-        }
-
-        // ---------------------------------------------------
-        // VALIDATE XML
-        // ---------------------------------------------------
-
-        const manifestContent = fs.readFileSync(manifestPath, 'utf8')
-
-        if (!manifestContent.includes('<manifest')) {
-          throw new Error('Invalid SCORM manifest')
-        }
-
-        // ---------------------------------------------------
-        // DELETE ZIP
-        // ---------------------------------------------------
-
-        if (fs.existsSync(zipFilePath)) {
-          fs.unlinkSync(zipFilePath)
-        }
-
-        // ---------------------------------------------------
-        // SUCCESS
-        // ---------------------------------------------------
-
-        await Activity.findByIdAndUpdate(id, {
-          $set: {
-            'scorm_data.scorm_status': 'completed'
-          }
-        })
-
-        console.log('SCORM extracted successfully:', folderName)
-      } catch (err) {
-        console.error('SCORM extraction failed:', err)
-
-        // ---------------------------------------------------
-        // CLEANUP EXTRACTED FOLDER
-        // ---------------------------------------------------
-
-        if (fs.existsSync(extractPath)) {
-          fs.rmSync(extractPath, {
-            recursive: true,
-            force: true
-          })
-        }
-
-        // ---------------------------------------------------
-        // CLEANUP ZIP
-        // ---------------------------------------------------
-
-        if (fs.existsSync(zipFilePath)) {
-          fs.unlinkSync(zipFilePath)
-        }
-
-        // ---------------------------------------------------
-        // UPDATE FAILED STATUS
-        // ---------------------------------------------------
-
-        await Activity.findByIdAndUpdate(id, {
-          $set: {
-            'scorm_data.scorm_status': 'failed'
-          }
-        })
+    else if (moduleTypeId === '688723af5dd97f4ccae68837') {
+      if (!file?.filename && !activity?.scorm_data?.folder_url) {
+        return errorResponse(res, 'SCORM ZIP required', {}, 400)
       }
-    })()
 
-    return
-  }
-}
+      // ---------------------------------------------------
+      // VALIDATE ZIP EXTENSION
+      // ---------------------------------------------------
+
+      if (file && path.extname(file.originalname).toLowerCase() !== '.zip') {
+        if (fs.existsSync(file.path)) {
+          fs.unlinkSync(file.path)
+        }
+
+        return errorResponse(res, 'Only ZIP files are allowed', {}, 400)
+      }
+
+      if (file?.filename) {
+        
+        const folderName = `${Date.now()}-${Math.random()
+          .toString(36)
+          .substring(2, 8)}`
+
+        const PUBLIC_ACTIVITY_PATH = path.resolve(
+          process.cwd(),
+          'public',
+          'activity'
+        )
+
+        const zipFilePath = path.join(PUBLIC_ACTIVITY_PATH, file.filename)
+
+        const extractPath = path.join(PUBLIC_ACTIVITY_PATH, folderName)
+
+        updatePayload.scorm_data = {
+          title,
+          folder_url: `activity/${folderName}`,
+          folder_name: folderName,
+          zip_file: file.filename,
+          scorm_status: 'processing'
+        }
+
+        // ---------------------------------------------------
+        // SAVE FIRST
+        // ---------------------------------------------------
+
+        await Activity.findByIdAndUpdate(
+          id,
+          { $set: updatePayload },
+          { new: true }
+        )
+
+        // ---------------------------------------------------
+        // SEND RESPONSE
+        // ---------------------------------------------------
+
+        successResponse(res, 'SCORM uploaded successfully. Processing started.')
+
+        // ---------------------------------------------------
+        // BACKGROUND PROCESSING
+        // ---------------------------------------------------
+        ;(async () => {
+          try {
+            if (!fs.existsSync(extractPath)) {
+              fs.mkdirSync(extractPath, { recursive: true })
+            }
+
+            // ---------------------------------------------------
+            // EXTRACT ZIP
+            // ---------------------------------------------------
+
+            const directory = await unzipper.Open.file(zipFilePath)
+
+            await Promise.all(
+              directory.files.map(async file => {
+                const fullPath = path.join(extractPath, file.path)
+
+                // Create directory if needed
+                if (file.type === 'Directory') {
+                  fs.mkdirSync(fullPath, { recursive: true })
+                  return
+                }
+
+                fs.mkdirSync(path.dirname(fullPath), {
+                  recursive: true
+                })
+
+                return new Promise((resolve, reject) => {
+                  file
+                    .stream()
+                    .pipe(fs.createWriteStream(fullPath))
+                    .on('finish', resolve)
+                    .on('error', reject)
+                })
+              })
+            )
+
+            // ---------------------------------------------------
+            // FIND imsmanifest.xml RECURSIVELY
+            // ---------------------------------------------------
+
+            const findManifest = dir => {
+              const entries = fs.readdirSync(dir, {
+                withFileTypes: true
+              })
+
+              for (const entry of entries) {
+                const fullPath = path.join(dir, entry.name)
+
+                if (entry.isDirectory()) {
+                  const nested = findManifest(fullPath)
+
+                  if (nested) return nested
+                } else {
+                  const normalized = entry.name
+                    .trim()
+                    .replace(/\0/g, '')
+                    .toLowerCase()
+
+                  console.log('CHECK FILE:', normalized)
+
+                  if (normalized === 'imsmanifest.xml') {
+                    return fullPath
+                  }
+                }
+              }
+
+              return null
+            }
+
+            const manifestPath = findManifest(extractPath)
+
+            console.log('MANIFEST PATH:', manifestPath)
+
+            if (!manifestPath) {
+              throw new Error('imsmanifest.xml missing')
+            }
+
+            // ---------------------------------------------------
+            // VALIDATE XML
+            // ---------------------------------------------------
+
+            const manifestContent = fs.readFileSync(manifestPath, 'utf8')
+
+            if (!manifestContent.includes('<manifest')) {
+              throw new Error('Invalid SCORM manifest')
+            }
+
+            // ---------------------------------------------------
+            // DELETE ZIP
+            // ---------------------------------------------------
+
+            if (fs.existsSync(zipFilePath)) {
+              fs.unlinkSync(zipFilePath)
+            }
+
+            // ---------------------------------------------------
+            // SUCCESS
+            // ---------------------------------------------------
+
+            await Activity.findByIdAndUpdate(id, {
+              $set: {
+                'scorm_data.scorm_status': 'completed'
+              }
+            })
+
+            console.log('SCORM extracted successfully:', folderName)
+          } catch (err) {
+            console.error('SCORM extraction failed:', err)
+
+            // ---------------------------------------------------
+            // CLEANUP EXTRACTED FOLDER
+            // ---------------------------------------------------
+
+            if (fs.existsSync(extractPath)) {
+              fs.rmSync(extractPath, {
+                recursive: true,
+                force: true
+              })
+            }
+
+            // ---------------------------------------------------
+            // CLEANUP ZIP
+            // ---------------------------------------------------
+
+            if (fs.existsSync(zipFilePath)) {
+              fs.unlinkSync(zipFilePath)
+            }
+
+            // ---------------------------------------------------
+            // UPDATE FAILED STATUS
+            // ---------------------------------------------------
+
+            await Activity.findByIdAndUpdate(id, {
+              $set: {
+                'scorm_data.scorm_status': 'failed'
+              }
+            })
+          }
+        })()
+
+        return
+      }
+    }
 
     // ---------------------------------------------------
     // INVALID MODULE

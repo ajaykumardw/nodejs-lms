@@ -69,11 +69,13 @@ function createUpload (allowedTypes, directory = 'uploads', maxSizeMB = 2000) {
     )
 
     const manifest = directory.files.find(file => {
-      // normalize windows paths
+      
+      const normalized = file.path.replace(/\\/g, '/').trim().toLowerCase()
 
-      const normalized = file.path.replace(/\\/g, '/')
-
-      return normalized.toLowerCase().endsWith('imsmanifest.xml')
+      return (
+        normalized.endsWith('/imsmanifest.xml') ||
+        normalized === 'imsmanifest.xml'
+      )
     })
 
     if (!manifest) {

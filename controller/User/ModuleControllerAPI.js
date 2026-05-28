@@ -1,5 +1,4 @@
 const mongoose = require('mongoose')
-
 const User = require('../../model/User')
 const Module = require('../../model/Module')
 const ContentFolder = require('../../model/ContentFolder')
@@ -9,35 +8,12 @@ const { errorResponse, successResponse } = require('../../util/response')
 
 exports.getModuleAPIController = async (req, res, next) => {
   try {
-    // VALIDATE USER ID
-    if (!mongoose.Types.ObjectId.isValid(req?.userId)) {
-      return errorResponse(res, 'Invalid user id', {}, 400)
-    }
+    const userId = mongoose.Types.ObjectId.createFromHexString(req?.userId)
 
-    // VALIDATE PARAM ID
-    const id = req?.params?.id
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return errorResponse(res, 'Invalid module id', {}, 400)
-    }
-
-    const userId = new mongoose.Types.ObjectId(req.userId)
-
-    const LIVE_MODULE_TYPE_ID = new mongoose.Types.ObjectId(
+    const LIVE_MODULE_TYPE_ID = mongoose.Types.ObjectId.createFromHexString(
       '688219557b6953e899cb57d3'
     )
 
-    const NORMAL_MODULE_TYPE_ID = new mongoose.Types.ObjectId(
-      '688219557b6953e899cb57d2'
-    )
-
-    const DEFAULT_CERTIFICATE_SETTING_ID = new mongoose.Types.ObjectId(
-      '6a153d4a393b1c736064377b'
-    )
-
-    const contentFolderId = new mongoose.Types.ObjectId(id)
-
-    // GET USER
     const user = await User.findById(userId)
 
     if (!user) {
@@ -46,38 +22,32 @@ exports.getModuleAPIController = async (req, res, next) => {
 
     const masterId = user?.created_by
 
-    // GET SETTING CONFIG
     const settingConfig = await SettingConfig.findOne({
       type: 'certificate_setting',
       created_by: masterId
     })
 
-    const certificateSettingId = mongoose.Types.ObjectId.isValid(
-      settingConfig?.certificate_setting_data_id
+    const certificateSettingId = settingConfig?.certificate_setting_data_id
+      ? settingConfig.certificate_setting_data_id
+      : '6a153d4a393b1c736064377b'
+
+    const id = req?.params?.id
+
+    const contentFolder = await ContentFolder.findById(id).populate(
+      'activity_logs'
     )
-      ? new mongoose.Types.ObjectId(settingConfig.certificate_setting_data_id)
-      : DEFAULT_CERTIFICATE_SETTING_ID
-
-    // GET CONTENT FOLDER
-    const contentFolder = await ContentFolder.findById(
-      contentFolderId
-    ).populate('activity_logs')
-
-    if (!contentFolder) {
-      return errorResponse(res, 'Content folder does not exist', {}, 404)
-    }
 
     const now = new Date()
 
     const module = await Module.aggregate([
       {
         $match: {
-          content_folder_id: contentFolderId,
+          content_folder_id: mongoose.Types.ObjectId.createFromHexString(id),
           created_by: masterId
         }
       },
 
-      // GET ACTIVITIES
+      // GET ALL ACTIVITIES
       {
         $lookup: {
           from: 'activity',
@@ -91,21 +61,14 @@ exports.getModuleAPIController = async (req, res, next) => {
       {
         $lookup: {
           from: 'activity_logs',
-          let: {
-            user_id: userId,
-            module_id: '$_id'
-          },
+          let: { user_id: userId, module_id: '$_id' },
           pipeline: [
             {
               $match: {
                 $expr: {
                   $and: [
-                    {
-                      $eq: ['$user_id', '$$user_id']
-                    },
-                    {
-                      $eq: ['$module_id', '$$module_id']
-                    }
+                    { $eq: ['$user_id', '$$user_id'] },
+                    { $eq: ['$module_id', '$$module_id'] }
                   ]
                 }
               }
@@ -132,25 +95,18 @@ exports.getModuleAPIController = async (req, res, next) => {
         }
       },
 
-      // USER ENROLLMENT
+      // MODULE ENROLL
       {
         $lookup: {
           from: 'user_module_enroll',
-          let: {
-            moduleId: '$_id',
-            userId: userId
-          },
+          let: { moduleId: '$_id', userId: userId },
           pipeline: [
             {
               $match: {
                 $expr: {
                   $and: [
-                    {
-                      $eq: ['$module_id', '$$moduleId']
-                    },
-                    {
-                      $eq: ['$user_id', '$$userId']
-                    }
+                    { $eq: ['$module_id', '$$moduleId'] },
+                    { $eq: ['$user_id', '$$userId'] }
                   ]
                 }
               }
@@ -160,7 +116,6 @@ exports.getModuleAPIController = async (req, res, next) => {
         }
       },
 
-      // MODULE SETTINGS
       {
         $lookup: {
           from: 'modulesettings',
@@ -177,7 +132,6 @@ exports.getModuleAPIController = async (req, res, next) => {
         }
       },
 
-      // CERTIFICATE ENABLE
       {
         $addFields: {
           is_certificate_enable: {
@@ -186,18 +140,15 @@ exports.getModuleAPIController = async (req, res, next) => {
         }
       },
 
-      // CERTIFICATE DETAILS
       {
         $lookup: {
           from: 'certificates',
-          let: {
-            certificateId: '$module_setting.selectedCertificateId'
-          },
+          let: { certificateId: '$module_setting.selectedCertificateId' },
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $eq: ['$_id', '$$certificateId']
+                  $and: [{ $eq: ['$_id', '$$certificateId'] }]
                 }
               }
             }
@@ -213,14 +164,12 @@ exports.getModuleAPIController = async (req, res, next) => {
         }
       },
 
-      // RELATIVE END DATE
+      // RELATIVE DATE
       {
         $addFields: {
           relativeEndDate: {
             $cond: [
-              {
-                $eq: ['$programSchedule.dueType', 'relative']
-              },
+              { $eq: ['$programSchedule.dueType', 'relative'] },
               {
                 $dateAdd: {
                   startDate: '$programSchedule.published_date',
@@ -243,32 +192,20 @@ exports.getModuleAPIController = async (req, res, next) => {
         $addFields: {
           isDateVisible: {
             $cond: [
-              {
-                $eq: ['$programSchedule.dueType', 'relative']
-              },
+              { $eq: ['$programSchedule.dueType', 'relative'] },
               {
                 $and: [
-                  {
-                    $lte: ['$programSchedule.published_date', now]
-                  },
-                  {
-                    $gte: ['$relativeEndDate', now]
-                  }
+                  { $lte: ['$programSchedule.published_date', now] },
+                  { $gte: ['$relativeEndDate', now] }
                 ]
               },
               {
                 $cond: [
-                  {
-                    $eq: ['$programSchedule.dueType', 'fixed']
-                  },
+                  { $eq: ['$programSchedule.dueType', 'fixed'] },
                   {
                     $and: [
-                      {
-                        $lte: ['$programSchedule.dueDate.start_date', now]
-                      },
-                      {
-                        $gte: ['$programSchedule.dueDate.end_date', now]
-                      }
+                      { $lte: ['$programSchedule.dueDate.start_date', now] },
+                      { $gte: ['$programSchedule.dueDate.end_date', now] }
                     ]
                   },
                   true
@@ -284,17 +221,8 @@ exports.getModuleAPIController = async (req, res, next) => {
         $addFields: {
           isVisible: {
             $cond: {
-              if: {
-                $eq: ['$programSchedule.pushEnrollmentSetting', 2]
-              },
-              then: {
-                $gt: [
-                  {
-                    $size: '$moduleEnroll'
-                  },
-                  0
-                ]
-              },
+              if: { $eq: ['$programSchedule.pushEnrollmentSetting', 2] },
+              then: { $gt: [{ $size: '$moduleEnroll' }, 0] },
               else: true
             }
           }
@@ -306,25 +234,12 @@ exports.getModuleAPIController = async (req, res, next) => {
         $addFields: {
           isLiveModuleVisible: {
             $cond: [
-              {
-                $eq: ['$module_type_id', LIVE_MODULE_TYPE_ID]
-              },
+              { $eq: ['$module_type_id', LIVE_MODULE_TYPE_ID] },
               {
                 $and: [
-                  {
-                    $lte: ['$start_live_time', now]
-                  },
-                  {
-                    $gte: ['$end_live_time', now]
-                  },
-                  {
-                    $gt: [
-                      {
-                        $size: '$moduleEnroll'
-                      },
-                      0
-                    ]
-                  }
+                  { $lte: ['$start_live_time', now] },
+                  { $gte: ['$end_live_time', now] },
+                  { $gt: [{ $size: '$moduleEnroll' }, 0] }
                 ]
               },
               true
@@ -333,7 +248,7 @@ exports.getModuleAPIController = async (req, res, next) => {
         }
       },
 
-      // ACTIVITY COUNTS
+      // COMPLETED ACTIVITY COUNT
       {
         $addFields: {
           total_activity: {
@@ -379,9 +294,7 @@ exports.getModuleAPIController = async (req, res, next) => {
         $addFields: {
           completion_percentage: {
             $cond: [
-              {
-                $eq: ['$total_activity', 0]
-              },
+              { $eq: ['$total_activity', 0] },
               0,
               {
                 $round: [
@@ -402,25 +315,34 @@ exports.getModuleAPIController = async (req, res, next) => {
       },
 
       // HAS COMPLETED
+      // HAS COMPLETED
       {
         $addFields: {
           has_completed: {
             $cond: [
               {
-                $ne: [certificateSettingId, DEFAULT_CERTIFICATE_SETTING_ID]
+                $ne: [
+                  certificateSettingId,
+                  mongoose.Types.ObjectId.createFromHexString(
+                    '6a153d4a393b1c736064377b'
+                  )
+                ]
               },
               false,
               {
                 $cond: [
                   {
-                    $ne: ['$module_type_id', NORMAL_MODULE_TYPE_ID]
+                    $ne: [
+                      '$module_type_id',
+                      mongoose.Types.ObjectId.createFromHexString(
+                        '688219557b6953e899cb57d2'
+                      )
+                    ]
                   },
                   false,
                   {
                     $and: [
-                      {
-                        $gt: ['$completed_activity', 0]
-                      },
+                      { $gt: ['$completed_activity', 0] },
                       {
                         $eq: ['$completed_activity', '$total_activity']
                       }
@@ -433,7 +355,6 @@ exports.getModuleAPIController = async (req, res, next) => {
         }
       },
 
-      // MODULE COMPLETED TIME
       {
         $addFields: {
           module_completed_at: {
@@ -470,16 +391,13 @@ exports.getModuleAPIController = async (req, res, next) => {
         $match: {
           isLiveModuleVisible: true,
           isVisible: true,
-          isDateVisible: true,
-          'programSchedule._id': {
-            $exists: true
-          }
+          'programSchedule._id': { $exists: true },
+          isDateVisible: true
         }
       }
     ])
 
-    // CHECK MODULE EXISTS
-    if (!module.length) {
+    if (!module) {
       return errorResponse(res, 'Module does not exist', {}, 404)
     }
 
@@ -488,7 +406,6 @@ exports.getModuleAPIController = async (req, res, next) => {
       courses: module
     })
   } catch (error) {
-    console.log(error)
     next(error)
   }
 }
