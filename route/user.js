@@ -6,6 +6,7 @@ const moduleController = require('../controller/User/ModuleControllerAPI');
 const activityController = require("../controller/User/ActivityControllerAPI")
 const selfEnrollController = require("../controller/User/SelfEnrollmentAPIController")
 const dashboardController = require("../controller/User/DashboardAPIController")
+const certificateController = require("../controller/User/CertificateControllerAPI")
 const userSurveryReportController = require("../controller/User/UserSurveyReportController")
 
 router.get('/program/data', isAuth, programController.getCourseAPIController);
@@ -33,5 +34,8 @@ router.get("/self/enroll/data/:moduleId", isAuth, selfEnrollController.getInsert
 
 //This is the API of dashboard
 router.get("/dashboard/user/data", isAuth, dashboardController.getDashboardAPI)
+
+//This is the API of certificate
+router.get("/certificate/fetch/data", isAuth, certificateController.getCertificateDataAPIController)
 
 module.exports = router;
