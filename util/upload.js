@@ -34,6 +34,10 @@ function createUpload (allowedTypes, directory = 'uploads', maxSizeMB = 2000) {
     }
   })
 
+  // ---------------------------------------------------
+  // MULTER
+  // ---------------------------------------------------
+
   const upload = multer({
     storage,
 
@@ -50,12 +54,27 @@ function createUpload (allowedTypes, directory = 'uploads', maxSizeMB = 2000) {
     }
   })
 
+  // ---------------------------------------------------
+  // VALIDATE SCORM ZIP
+  // ---------------------------------------------------
+
   const validateScormZip = async filePath => {
     const directory = await unzipper.Open.file(filePath)
 
-    const manifest = directory.files.find(
-      file => path.basename(file.path).toLowerCase() === 'imsmanifest.xml'
+    // DEBUG LOG
+
+    console.log(
+      'ZIP FILES:',
+      directory.files.map(f => f.path)
     )
+
+    const manifest = directory.files.find(file => {
+      // normalize windows paths
+
+      const normalized = file.path.replace(/\\/g, '/')
+
+      return normalized.toLowerCase().endsWith('imsmanifest.xml')
+    })
 
     if (!manifest) {
       throw new Error('Invalid SCORM package. imsmanifest.xml missing.')
@@ -134,7 +153,9 @@ function createUpload (allowedTypes, directory = 'uploads', maxSizeMB = 2000) {
                 const ext = path.extname(req.file.originalname).toLowerCase()
 
                 if (ext !== '.zip') {
-                  fs.unlinkSync(req.file.path)
+                  if (fs.existsSync(req.file.path)) {
+                    fs.unlinkSync(req.file.path)
+                  }
 
                   return res.status(400).json({
                     status: 'Failure',
@@ -142,7 +163,7 @@ function createUpload (allowedTypes, directory = 'uploads', maxSizeMB = 2000) {
                   })
                 }
 
-                // VALIDATE SCORM
+                // VALIDATE SCORM ZIP
 
                 await validateScormZip(req.file.path)
               } catch (validationError) {
@@ -163,7 +184,7 @@ function createUpload (allowedTypes, directory = 'uploads', maxSizeMB = 2000) {
           } catch (internalError) {
             console.error(internalError)
 
-            // cleanup
+            // CLEANUP
 
             if (req.file?.path && fs.existsSync(req.file.path)) {
               fs.unlinkSync(req.file.path)
