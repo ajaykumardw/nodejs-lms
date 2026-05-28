@@ -180,12 +180,3 @@ process.on('uncaughtException', err => {
 process.on('unhandledRejection', err => {
   console.error('UNHANDLED REJECTION:', err)
 })
-
-setInterval(() => {
-  const used = process.memoryUsage()
-
-  console.log({
-    rss: `${Math.round(used.rss / 1024 / 1024)} MB`,
-    heapUsed: `${Math.round(used.heapUsed / 1024 / 1024)} MB`
-  })
-}, 300000)
