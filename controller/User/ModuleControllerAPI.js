@@ -10,6 +10,8 @@ exports.getModuleAPIController = async (req, res, next) => {
   try {
     const userId = mongoose.Types.ObjectId.createFromHexString(req?.userId)
 
+    const id = mongoose.Types.ObjectId.createFromHexString(req?.params?.id)
+
     const LIVE_MODULE_TYPE_ID = mongoose.Types.ObjectId.createFromHexString(
       '688219557b6953e899cb57d3'
     )
@@ -30,8 +32,6 @@ exports.getModuleAPIController = async (req, res, next) => {
     const certificateSettingId = settingConfig?.certificate_setting_data_id
       ? settingConfig.certificate_setting_data_id
       : '6a153d4a393b1c736064377b'
-
-    const id = req?.params?.id
 
     const contentFolder = await ContentFolder.findById(id).populate(
       'activity_logs'
