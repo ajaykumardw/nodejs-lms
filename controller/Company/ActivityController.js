@@ -236,6 +236,7 @@ exports.postActivityDataAPI = async (req, res, next) => {
     // SCORM
     // ---------------------------------------------------
     else if (moduleTypeId === '688723af5dd97f4ccae68837') {
+
       if (!file?.filename && !activity?.scorm_data?.folder_url) {
         return errorResponse(res, 'SCORM ZIP required', {}, 400)
       }
@@ -302,7 +303,8 @@ exports.postActivityDataAPI = async (req, res, next) => {
         // ---------------------------------------------------
         // BACKGROUND PROCESSING
         // ---------------------------------------------------
-        ;(async () => {
+
+        setTimeout(async () => {
           try {
             // ---------------------------------------------------
             // CREATE DIRECTORY
@@ -326,7 +328,7 @@ exports.postActivityDataAPI = async (req, res, next) => {
               const fullPath = path.join(extractPath, entry.path)
 
               // ---------------------------------------------------
-              // SECURITY FIX
+              // SECURITY CHECK
               // ---------------------------------------------------
 
               const normalizedPath = path.normalize(fullPath)
@@ -348,7 +350,7 @@ exports.postActivityDataAPI = async (req, res, next) => {
               }
 
               // ---------------------------------------------------
-              // CREATE PARENT
+              // CREATE PARENT DIRECTORY
               // ---------------------------------------------------
 
               await fs.promises.mkdir(path.dirname(fullPath), {
@@ -369,7 +371,7 @@ exports.postActivityDataAPI = async (req, res, next) => {
             }
 
             // ---------------------------------------------------
-            // FIND MANIFEST
+            // FIND imsmanifest.xml
             // ---------------------------------------------------
 
             const findManifest = dir => {
@@ -413,7 +415,10 @@ exports.postActivityDataAPI = async (req, res, next) => {
             // VALIDATE MANIFEST
             // ---------------------------------------------------
 
-            const manifestContent = fs.readFileSync(manifestPath, 'utf8')
+            const manifestContent = await fs.promises.readFile(
+              manifestPath,
+              'utf8'
+            )
 
             if (!manifestContent.includes('<manifest')) {
               throw new Error('Invalid SCORM manifest')
@@ -484,7 +489,7 @@ exports.postActivityDataAPI = async (req, res, next) => {
 
             console.log('SCORM extracted successfully:', folderName)
           } catch (err) {
-            console.error('SCORM extraction failed:', err)
+            console.error('SCORM extraction failed:', err.stack)
 
             // ---------------------------------------------------
             // CLEANUP FOLDER
@@ -515,7 +520,7 @@ exports.postActivityDataAPI = async (req, res, next) => {
               }
             })
           }
-        })()
+        }, 100)
 
         return
       }
