@@ -1,0 +1,131 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<manifest identifier="_6asmVHs36Pj_course_id" version="1.0" xmlns="http://www.imsproject.org/xsd/imscp_rootv1p1p2" xmlns:adlcp="http://www.adlnet.org/xsd/adlcp_rootv1p2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.imsproject.org/xsd/imscp_rootv1p1p2 imscp_rootv1p1p2.xsd http://www.imsglobal.org/xsd/imsmd_rootv1p2p1 imsmd_rootv1p2p1.xsd http://www.adlnet.org/xsd/adlcp_rootv1p2 adlcp_rootv1p2.xsd">
+  <metadata>
+    <schema>ADL SCORM</schema>
+    <schemaversion>1.2</schemaversion>
+    <lom xmlns="http://www.imsglobal.org/xsd/imsmd_rootv1p2p1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.imsglobal.org/xsd/imsmd_rootv1p2p1 imsmd_rootv1p2p1.xsd">
+      <general>
+        <title>
+          <langstring xml:lang="x-none">FABulous Selling Assessment Sample</langstring>
+        </title>
+      </general>
+      <lifecycle>
+        <version>
+          <langstring xml:lang="x-none">1</langstring>
+        </version>
+        <status>
+          <source>
+            <langstring xml:lang="x-none">LOMv1.0</langstring>
+          </source>
+          <value>
+            <langstring xml:lang="x-none">Final</langstring>
+          </value>
+        </status>
+      </lifecycle>
+      <metametadata>
+        <metadatascheme>ADL SCORM 1.2</metadatascheme>
+      </metametadata>
+      <educational>
+        <typicallearningtime>
+          <datetime>PT0H0M0S</datetime>
+        </typicallearningtime>
+      </educational>
+      <rights>
+        <cost>
+          <source>
+            <langstring xml:lang="x-none">LOMv1.0</langstring>
+          </source>
+          <value>
+            <langstring xml:lang="x-none">yes</langstring>
+          </value>
+        </cost>
+        <copyrightandotherrestrictions>
+          <source>
+            <langstring xml:lang="x-none">LOMv1.0</langstring>
+          </source>
+          <value>
+            <langstring xml:lang="x-none">yes</langstring>
+          </value>
+        </copyrightandotherrestrictions>
+      </rights>
+    </lom>
+  </metadata>
+  <organizations default="FABulous_Selling_Assessment_Sample_ORG">
+    <organization identifier="FABulous_Selling_Assessment_Sample_ORG">
+      <title>FABulous Selling Assessment Sample</title>
+      <item identifier="FC_challenge_310_21.01.2021_SCO" isvisible="true" identifierref="__6asmVHs36Pj_course_id_RES">
+        <title>FABulous Selling Assessment Sample</title>
+        <adlcp:masteryscore>70</adlcp:masteryscore>
+      </item>
+    </organization>
+  </organizations>
+  <resources>
+    <resource identifier="__6asmVHs36Pj_course_id_RES" type="webcontent" href="index_lms.html" adlcp:scormtype="sco">
+      <file href="story_content/thumbnail.jpg" />
+      <file href="mobile/5pdTRzsNEcm_P_0_302_2048_955.jpg" />
+      <file href="mobile/6KVxQ89cKYh.png" />
+      <file href="story_content/5wN3hzdOIGf_44100_56_0.mp3" />
+      <file href="mobile/6o5wtHM81ZX.png" />
+      <file href="mobile/5nmq2o5Q6d4.png" />
+      <file href="mobile/6ewDGdbkJMC_P_0_122_500_174.png" />
+      <file href="mobile/5XU6NixTyEA_P_0_59_1280_595.png" />
+      <file href="story_content/6LWXfcqlBW4_44100_56_0.mp3" />
+      <file href="story_content/6cLvGqnBlle_44100_56_0.mp3" />
+      <file href="mobile/6OQwXwBE1mb_P_0_56_1280_612.png" />
+      <file href="story_content/6JEw4r13mV0_44100_56_0.mp3" />
+      <file href="story_content/6qljk2oNxVX_captions.js" />
+      <file href="mobile/65VzWElaaw9.png" />
+      <file href="story_content/6KDYatifDB4_44100_56_0.mp3" />
+      <file href="story_content/62zQXUppY38_captions.js" />
+      <file href="mobile/6EuzqgzSMRd.png" />
+      <file href="mobile/5i43XnU0yBg.png" />
+      <file href="mobile/60MQIzv1Mi9.png" />
+      <file href="story_content/5WKXXaDwrrB_44100_56_0.mp3" />
+      <file href="story_content/5j9CAG3J5lG_44100_56_0.mp3" />
+      <file href="story_content/63Fb7JvzkQc_44100_56_0.mp3" />
+      <file href="story_content/6Pg4mo23ryD_captions.js" />
+      <file href="mobile/5xzEnYLTDIN.png" />
+      <file href="story_content/6gj98vdspVg_44100_56_0.mp3" />
+      <file href="story_content/60hsUz5AqmZ_44100_56_0.mp3" />
+      <file href="story_content/5e8n4d1MWQF_44100_56_0.mp3" />
+      <file href="story_content/6gbGDlvEkwU_captions.js" />
+      <file href="story_content/6nM8dnHJ48h_44100_56_0.mp3" />
+      <file href="story_content/6IA8ZsvIqdI_captions.js" />
+      <file href="story_content/6pPdL4WaRDS_44100_56_0.mp3" />
+      <file href="story_content/6pC2YgHoq6G_captions.js" />
+      <file href="story_content/6OVoA5GpEQK_44100_56_0.mp3" />
+      <file href="story_content/6oplEy4K3hN_captions.js" />
+      <file href="story_content/62Jpptc4SW5_44100_56_0.mp3" />
+      <file href="meta.xml" />
+      <file href="story_content/triggers.js" />
+      <file href="story_content/user.js" />
+      <file href="html5/data/css/output.min.css" />
+      <file href="html5/data/js/5kMX5xj1sFa.js" />
+      <file href="html5/data/js/62ID6LjyMvF.js" />
+      <file href="html5/data/js/6e9rkNEkgj4.js" />
+      <file href="html5/data/js/6Idw2U7BJh7.js" />
+      <file href="html5/data/js/6lzXph34f2k.js" />
+      <file href="html5/data/js/6YgVIrF522Q.js" />
+      <file href="html5/data/js/data.js" />
+      <file href="html5/data/js/frame.js" />
+      <file href="html5/data/js/paths.js" />
+      <file href="html5/lib/scripts/bootstrapper.min.js" />
+      <file href="html5/lib/scripts/frame.desktop.min.js" />
+      <file href="html5/lib/scripts/frame.mobile.min.js" />
+      <file href="html5/lib/scripts/slides.min.js" />
+      <file href="html5/lib/stylesheets/desktop.min.css" />
+      <file href="html5/lib/stylesheets/mobile.min.css" />
+      <file href="html5/lib/stylesheets/mobile-fonts/open-sans-bold.woff" />
+      <file href="html5/lib/stylesheets/mobile-fonts/open-sans-light.woff" />
+      <file href="html5/lib/stylesheets/mobile-fonts/open-sans-regular.woff" />
+      <file href="analytics-frame.html" />
+      <file href="story.html" />
+      <file href="index_lms.html" />
+      <file href="lms/AICCComm.html" />
+      <file href="lms/blank.html" />
+      <file href="lms/browsersniff.js" />
+      <file href="lms/goodbye.html" />
+      <file href="lms/scormdriver.js" />
+    </resource>
+  </resources>
+</manifest>

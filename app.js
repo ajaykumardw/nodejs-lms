@@ -20,7 +20,6 @@ const scheduleNotificationCommand = require('./command/ScheduleNotification')
 
 // Workers
 require('./worker/reportWorker')
-require('./worker/scormWorker')
 
 const app = express()
 
