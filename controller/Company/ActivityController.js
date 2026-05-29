@@ -241,7 +241,7 @@ exports.postActivityDataAPI = async (req, res, next) => {
       }
 
       // ---------------------------------------------------
-      // VALIDATE ZIP EXTENSION
+      // ZIP VALIDATION
       // ---------------------------------------------------
 
       if (file && path.extname(file.originalname).toLowerCase() !== '.zip') {
@@ -251,6 +251,10 @@ exports.postActivityDataAPI = async (req, res, next) => {
 
         return errorResponse(res, 'Only ZIP files are allowed', {}, 400)
       }
+
+      // ---------------------------------------------------
+      // NEW SCORM FILE
+      // ---------------------------------------------------
 
       if (file?.filename) {
         const folderName = `${Date.now()}-${Math.random()
@@ -267,17 +271,9 @@ exports.postActivityDataAPI = async (req, res, next) => {
 
         const extractPath = path.join(PUBLIC_ACTIVITY_PATH, folderName)
 
-        const verifyFile = filePath => {
-          const stat = fs.statSync(filePath)
-
-          console.log('VERIFY:', filePath, 'SIZE:', stat.size)
-
-          if (stat.size === 0) {
-            throw new Error(`Corrupted extracted file: ${filePath}`)
-          }
-        }
-
-        verifyFile(path.join(extractPath, 'scormdriver.js'))
+        // ---------------------------------------------------
+        // SAVE PROCESSING STATUS
+        // ---------------------------------------------------
 
         updatePayload.scorm_data = {
           title,
@@ -287,18 +283,18 @@ exports.postActivityDataAPI = async (req, res, next) => {
           scorm_status: 'processing'
         }
 
-        // ---------------------------------------------------
-        // SAVE FIRST
-        // ---------------------------------------------------
-
         await Activity.findByIdAndUpdate(
           id,
-          { $set: updatePayload },
-          { new: true }
+          {
+            $set: updatePayload
+          },
+          {
+            new: true
+          }
         )
 
         // ---------------------------------------------------
-        // SEND RESPONSE
+        // SEND RESPONSE IMMEDIATELY
         // ---------------------------------------------------
 
         successResponse(res, 'SCORM uploaded successfully. Processing started.')
@@ -308,30 +304,63 @@ exports.postActivityDataAPI = async (req, res, next) => {
         // ---------------------------------------------------
         ;(async () => {
           try {
-            if (!fs.existsSync(extractPath)) {
-              fs.mkdirSync(extractPath, { recursive: true })
-            }
-
             // ---------------------------------------------------
-            // EXTRACT ZIP
+            // CREATE DIRECTORY
             // ---------------------------------------------------
 
-            const directory = await unzipper.Open.file(zipFilePath)
+            await fs.promises.mkdir(extractPath, {
+              recursive: true
+            })
 
-            for (const file of directory.files) {
-              const fullPath = path.join(extractPath, file.path)
+            // ---------------------------------------------------
+            // OPEN ZIP
+            // ---------------------------------------------------
 
-              if (file.type === 'Directory') {
-                fs.mkdirSync(fullPath, { recursive: true })
+            const zip = await unzipper.Open.file(zipFilePath)
+
+            // ---------------------------------------------------
+            // EXTRACT FILES
+            // ---------------------------------------------------
+
+            for (const entry of zip.files) {
+              const fullPath = path.join(extractPath, entry.path)
+
+              // ---------------------------------------------------
+              // SECURITY FIX
+              // ---------------------------------------------------
+
+              const normalizedPath = path.normalize(fullPath)
+
+              if (!normalizedPath.startsWith(extractPath)) {
+                throw new Error('Invalid ZIP structure')
+              }
+
+              // ---------------------------------------------------
+              // DIRECTORY
+              // ---------------------------------------------------
+
+              if (entry.type === 'Directory') {
+                await fs.promises.mkdir(fullPath, {
+                  recursive: true
+                })
+
                 continue
               }
 
-              fs.mkdirSync(path.dirname(fullPath), {
+              // ---------------------------------------------------
+              // CREATE PARENT
+              // ---------------------------------------------------
+
+              await fs.promises.mkdir(path.dirname(fullPath), {
                 recursive: true
               })
 
+              // ---------------------------------------------------
+              // WRITE FILE
+              // ---------------------------------------------------
+
               await new Promise((resolve, reject) => {
-                file
+                entry
                   .stream()
                   .pipe(fs.createWriteStream(fullPath))
                   .on('finish', resolve)
@@ -340,7 +369,7 @@ exports.postActivityDataAPI = async (req, res, next) => {
             }
 
             // ---------------------------------------------------
-            // FIND imsmanifest.xml RECURSIVELY
+            // FIND MANIFEST
             // ---------------------------------------------------
 
             const findManifest = dir => {
@@ -354,14 +383,14 @@ exports.postActivityDataAPI = async (req, res, next) => {
                 if (entry.isDirectory()) {
                   const nested = findManifest(fullPath)
 
-                  if (nested) return nested
+                  if (nested) {
+                    return nested
+                  }
                 } else {
                   const normalized = entry.name
                     .trim()
                     .replace(/\0/g, '')
                     .toLowerCase()
-
-                  console.log('CHECK FILE:', normalized)
 
                   if (normalized === 'imsmanifest.xml') {
                     return fullPath
@@ -381,13 +410,58 @@ exports.postActivityDataAPI = async (req, res, next) => {
             }
 
             // ---------------------------------------------------
-            // VALIDATE XML
+            // VALIDATE MANIFEST
             // ---------------------------------------------------
 
             const manifestContent = fs.readFileSync(manifestPath, 'utf8')
 
             if (!manifestContent.includes('<manifest')) {
               throw new Error('Invalid SCORM manifest')
+            }
+
+            // ---------------------------------------------------
+            // OPTIONAL VERIFY scormdriver.js
+            // ---------------------------------------------------
+
+            const findFileRecursive = (dir, fileName) => {
+              const entries = fs.readdirSync(dir, {
+                withFileTypes: true
+              })
+
+              for (const entry of entries) {
+                const fullPath = path.join(dir, entry.name)
+
+                if (entry.isDirectory()) {
+                  const nested = findFileRecursive(fullPath, fileName)
+
+                  if (nested) {
+                    return nested
+                  }
+                } else {
+                  if (
+                    entry.name.trim().toLowerCase() === fileName.toLowerCase()
+                  ) {
+                    return fullPath
+                  }
+                }
+              }
+
+              return null
+            }
+
+            const scormDriverPath = findFileRecursive(
+              extractPath,
+              'scormdriver.js'
+            )
+
+            if (scormDriverPath) {
+              const stat = fs.statSync(scormDriverPath)
+
+              console.log('SCORM DRIVER:', scormDriverPath)
+
+              if (stat.size === 0) {
+                throw new Error('Corrupted scormdriver.js')
+              }
             }
 
             // ---------------------------------------------------
@@ -399,7 +473,7 @@ exports.postActivityDataAPI = async (req, res, next) => {
             }
 
             // ---------------------------------------------------
-            // SUCCESS
+            // UPDATE SUCCESS
             // ---------------------------------------------------
 
             await Activity.findByIdAndUpdate(id, {
@@ -413,7 +487,7 @@ exports.postActivityDataAPI = async (req, res, next) => {
             console.error('SCORM extraction failed:', err)
 
             // ---------------------------------------------------
-            // CLEANUP EXTRACTED FOLDER
+            // CLEANUP FOLDER
             // ---------------------------------------------------
 
             if (fs.existsSync(extractPath)) {
@@ -432,7 +506,7 @@ exports.postActivityDataAPI = async (req, res, next) => {
             }
 
             // ---------------------------------------------------
-            // UPDATE FAILED STATUS
+            // UPDATE FAILED
             // ---------------------------------------------------
 
             await Activity.findByIdAndUpdate(id, {
@@ -455,10 +529,18 @@ exports.postActivityDataAPI = async (req, res, next) => {
     }
 
     // ---------------------------------------------------
-    // UPDATE DB
+    // UPDATE NORMAL MODULES
     // ---------------------------------------------------
 
-    await Activity.findByIdAndUpdate(id, { $set: updatePayload }, { new: true })
+    await Activity.findByIdAndUpdate(
+      id,
+      {
+        $set: updatePayload
+      },
+      {
+        new: true
+      }
+    )
 
     return successResponse(res, 'Activity data uploaded successfully')
   } catch (error) {
