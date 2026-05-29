@@ -89,7 +89,7 @@ exports.getCreateFormAPI = async (req, res, next) => {
     }
 
     return successResponse(res, 'Create data fetched successfully', {
-      appConfig
+      appConfig: appConfig?.[0]
     })
   } catch (error) {
     console.error('getCreateFormAPI error:', error)
