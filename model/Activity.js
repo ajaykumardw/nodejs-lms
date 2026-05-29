@@ -1,183 +1,168 @@
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
 
-const activitySchema = new mongoose.Schema(
-  {
+const activitySchema = new mongoose.Schema({
     name: {
-      type: String,
-      required: false,
-      maxlength: 255
+        type: String,
+        required: false,
+        maxlength: 255
     },
     module_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      ref: 'Module'
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: 'Module'
     },
     module_type_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: false
+        type: mongoose.Schema.Types.ObjectId,
+        required: false
     },
     document_data: {
-      title: {
-        type: String,
-        maxlength: 255
-      },
-      page_no: {
-        type: String,
-        maxlength: 255
-      },
-      image_url: {
-        type: String,
-        maxlength: 255
-      },
-      downloadable: {
-        type: Boolean,
-        default: false
-      },
-      shareable: {
-        type: Boolean,
-        default: false
-      }
+        title: {
+            type: String,
+            maxlength: 255
+        },
+        page_no: {
+            type: String,
+            maxlength: 255
+        },
+        image_url: {
+            type: String,
+            maxlength: 255
+        },
+        downloadable: {
+            type: Boolean,
+            default: false
+        },
+        shareable: {
+            type: Boolean,
+            default: false
+        }
     },
     video_data: {
-      title: {
-        type: String,
-        maxlength: 255
-      },
-      video_url: {
-        type: String,
-        maxlength: 255
-      }
+        title: {
+            type: String,
+            maxlength: 255
+        },
+        video_url: {
+            type: String,
+            maxlength: 255
+        }
     },
     youtube_data: {
-      title: {
-        type: String,
-        maxlength: 255
-      },
-      video_url: {
-        type: String,
-        maxlength: 255
-      }
+        title: {
+            type: String,
+            maxlength: 255
+        },
+        video_url: {
+            type: String,
+            maxlength: 255
+        }
     },
     scorm_data: {
-      title: {
-        type: String,
-        maxlength: 255
-      },
-      content_url: {
-        type: String,
-        maxlength: 255
-      },
-      folder_url: {
-        type: String,
-        maxlength: 255
-      },
-      zip_file: {
-        type: String,
-        maxlength: 255
-      },
-      folder_name: {
-        type: String,
-        maxlength: 255
-      },
-      launch_file: {
-        type: String,
-        maxlength: 255
-      },
-      scorm_status: {
-        type: String,
-        maxlength: 255
-      }
+        title: {
+            type: String,
+            maxlength: 255
+        },
+        content_url: {
+            type: String,
+            maxlength: 255
+        },
+        folder_url: {
+            type: String,
+            maxlength: 255
+        },
+        folder_name: {
+            type: String,
+            maxlength: 255
+        },
+        launch_file: {
+            type: String,
+            maxlength: 255
+        }
     },
     quiz_data: {
-      title: {
-        type: String,
-        maxlength: 255
-      },
-      question_data: [
-        {
-          title: {
+        title: {
             type: String,
-            required: true,
             maxlength: 255
-          },
-          explanation: {
-            type: String,
-            required: true,
-            maxlength: 500
-          },
-          mark: {
-            type: Number,
-            required: true
-          },
-          question_level: {
-            type: Number,
-            required: true
-          },
-          option: [
-            {
-              title: {
+        },
+        question_data: [{
+            title: {
                 type: String,
                 required: true,
                 maxlength: 255
-              }
-            }
-          ]
-        }
-      ]
+            },
+            explanation: {
+                type: String,
+                required: true,
+                maxlength: 500
+            },
+            mark: {
+                type: Number,
+                required: true
+            },
+            question_level: {
+                type: Number,
+                required: true
+            },
+            option: [{
+                title: {
+                    type: String,
+                    required: true,
+                    maxlength: 255
+                }
+            }]
+        }]
     },
     created_by: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true
+        type: mongoose.Schema.Types.ObjectId,
+        required: true
     },
     created_at: {
-      type: Date,
-      default: Date.now
+        type: Date,
+        default: Date.now
     },
     updated_at: {
-      type: Date,
-      default: Date.now
+        type: Date,
+        default: Date.now
     }
-  },
-  {
+}, {
     collection: 'activity'
-  }
-)
+});
 
 activitySchema.virtual('logs', {
-  ref: 'ActivityLog',
-  localField: '_id',
-  foreignField: 'activity_id'
-})
+    ref: 'ActivityLog',
+    localField: '_id',
+    foreignField: 'activity_id'
+});
 
 activitySchema.virtual('questions', {
-  ref: 'questions',
-  localField: '_id',
-  foreignField: 'activity_id'
-})
+    ref: 'questions',
+    localField: '_id',
+    foreignField: 'activity_id'
+});
 
-activitySchema.virtual('quiz_reports', {
-  ref: 'quiz_result_report',
-  localField: '_id',
-  foreignField: 'activity_id'
-})
+activitySchema.virtual("quiz_reports", {
+    ref: "quiz_result_report",
+    localField: "_id",
+    foreignField: "activity_id"
+});
 activitySchema.virtual('moduleSetting', {
-  ref: 'ModuleSetting',
-  localField: 'module_id', // Activity.module_id
-  foreignField: 'moduleId', // ModuleSetting.moduleId
-  justOne: true
-})
+    ref: 'ModuleSetting',
+    localField: 'module_id',   // Activity.module_id
+    foreignField: 'moduleId',  // ModuleSetting.moduleId
+    justOne: true
+});
 
-activitySchema.virtual('QuizSetting', {
-  ref: 'quiz_setting',
-  localField: '_id',
-  foreignField: 'activity_id'
+activitySchema.virtual("QuizSetting", {
+    ref: "quiz_setting",
+    localField: "_id",
+    foreignField: "activity_id"
 })
 
 activitySchema.set('toObject', {
-  virtuals: true
-})
+    virtuals: true
+});
 activitySchema.set('toJSON', {
-  virtuals: true
-})
+    virtuals: true
+});
 
-module.exports = mongoose.model('Activity', activitySchema)
+module.exports = mongoose.model('Activity', activitySchema);

@@ -169,7 +169,6 @@ exports.setNameActivityAPI = async (req, res, next) => {
 exports.postActivityDataAPI = async (req, res, next) => {
   try {
     const { moduleId, moduleTypeId, id } = req.params
-
     const userId = req.userId
 
     const activity = await Activity.findOne({
@@ -184,20 +183,13 @@ exports.postActivityDataAPI = async (req, res, next) => {
     }
 
     const { title, video_url } = req.body
-
     const file = req.file
-
     const updatePayload = {}
 
     // ---------------------------------------------------
     // DOCUMENT
     // ---------------------------------------------------
-
     if (moduleTypeId === '688723af5dd97f4ccae68834') {
-      if (!activity?.document_data?.image_url && !file?.filename) {
-        return errorResponse(res, 'File does not exist', {}, 400)
-      }
-
       updatePayload.document_data = {
         title,
         image_url: file?.filename || activity.document_data?.image_url || ''
@@ -208,10 +200,6 @@ exports.postActivityDataAPI = async (req, res, next) => {
     // VIDEO FILE
     // ---------------------------------------------------
     else if (moduleTypeId === '688723af5dd97f4ccae68835') {
-      if (!activity?.video_data?.video_url && !file?.filename) {
-        return errorResponse(res, 'File does not exist', {}, 404)
-      }
-
       updatePayload.video_data = {
         title,
         video_url: file?.filename || activity.video_data?.video_url || ''
@@ -222,16 +210,13 @@ exports.postActivityDataAPI = async (req, res, next) => {
     // VIDEO URL
     // ---------------------------------------------------
     else if (moduleTypeId === '688723af5dd97f4ccae68836') {
-      if (!activity?.video_data?.video_url && !video_url) {
-        return errorResponse(res, 'File does not exist', {}, 404)
-      }
-
       updatePayload.video_data = {
         title,
         video_url: video_url || activity.video_data?.video_url || ''
       }
     }
 
+    // ---------------------------------------------------
     // SCORM
     // ---------------------------------------------------
     else if (moduleTypeId === '688723af5dd97f4ccae68837') {
@@ -239,119 +224,60 @@ exports.postActivityDataAPI = async (req, res, next) => {
         return errorResponse(res, 'SCORM ZIP required', {}, 400)
       }
 
-      // ---------------------------------------------------
-      // ZIP VALIDATION
-      // ---------------------------------------------------
-
       if (file && path.extname(file.originalname).toLowerCase() !== '.zip') {
-        if (fs.existsSync(file.path)) {
-          fs.unlinkSync(file.path)
-        }
-
+        if (fs.existsSync(file.path)) fs.unlinkSync(file.path)
         return errorResponse(res, 'Only ZIP files are allowed', {}, 400)
       }
-
-      // ---------------------------------------------------
-      // NEW SCORM FILE
-      // ---------------------------------------------------
 
       if (file?.filename) {
         const folderName = `${Date.now()}-${Math.random()
           .toString(36)
           .substring(2, 8)}`
 
-        const PUBLIC_ACTIVITY_PATH = path.resolve(
-          process.cwd(),
-          'public',
-          'activity'
-        )
+        const BASE_PATH = path.resolve(process.cwd(), 'public', 'activity')
+        const zipFilePath = path.join(BASE_PATH, file.filename)
+        const extractPath = path.join(BASE_PATH, folderName)
 
-        const zipFilePath = path.join(PUBLIC_ACTIVITY_PATH, file.filename)
-
-        const extractPath = path.join(PUBLIC_ACTIVITY_PATH, folderName)
-
-        // ---------------------------------------------------
-        // SAVE PROCESSING STATUS
-        // ---------------------------------------------------
-
-        updatePayload.scorm_data = {
-          title,
-          folder_url: `activity/${folderName}`,
-          folder_name: folderName,
-          zip_file: file.filename,
-          scorm_status: 'processing'
-        }
-
-        await Activity.findByIdAndUpdate(
-          id,
-          {
-            $set: updatePayload
-          },
-          {
-            new: true
+        // save first
+        await Activity.findByIdAndUpdate(id, {
+          $set: {
+            scorm_data: {
+              title,
+              folder_url: `activity/${folderName}`,
+              folder_name: folderName,
+              zip_file: file.filename,
+              scorm_status: 'processing'
+            }
           }
-        )
+        })
+
+        successResponse(res, 'SCORM uploaded successfully. Processing started.')
 
         // ---------------------------------------------------
-        // START BACKGROUND PROCESS
+        // BACKGROUND SAFE PROCESSING
         // ---------------------------------------------------
-
-        setTimeout(async () => {
+        ;(async () => {
           try {
-            // ---------------------------------------------------
-            // CREATE DIRECTORY
-            // ---------------------------------------------------
-
-            await fs.promises.mkdir(extractPath, {
-              recursive: true
-            })
-
-            // ---------------------------------------------------
-            // OPEN ZIP
-            // ---------------------------------------------------
+            await fs.promises.mkdir(extractPath, { recursive: true })
 
             const zip = await unzipper.Open.file(zipFilePath)
-
-            // ---------------------------------------------------
-            // EXTRACT FILES
-            // ---------------------------------------------------
 
             for (const entry of zip.files) {
               const fullPath = path.join(extractPath, entry.path)
 
-              // ---------------------------------------------------
-              // SECURITY CHECK
-              // ---------------------------------------------------
-
-              const normalizedPath = path.normalize(fullPath)
-
-              if (!normalizedPath.startsWith(extractPath)) {
+              const normalized = path.normalize(fullPath)
+              if (!normalized.startsWith(extractPath)) {
                 throw new Error('Invalid ZIP structure')
               }
 
-              // ---------------------------------------------------
-              // DIRECTORY
-              // ---------------------------------------------------
-
               if (entry.type === 'Directory') {
-                await fs.promises.mkdir(fullPath, {
-                  recursive: true
-                })
-
+                await fs.promises.mkdir(fullPath, { recursive: true })
                 continue
               }
-
-              // ---------------------------------------------------
-              // CREATE PARENT DIRECTORY
-              // ---------------------------------------------------
 
               await fs.promises.mkdir(path.dirname(fullPath), {
                 recursive: true
               })
-
-              // ---------------------------------------------------
-              // WRITE FILE
-              // ---------------------------------------------------
 
               await new Promise((resolve, reject) => {
                 entry
@@ -363,188 +289,71 @@ exports.postActivityDataAPI = async (req, res, next) => {
             }
 
             // ---------------------------------------------------
-            // FIND imsmanifest.xml
+            // FIND MANIFEST (SAFE)
             // ---------------------------------------------------
-
             const findManifest = dir => {
-              const entries = fs.readdirSync(dir, {
-                withFileTypes: true
-              })
+              const entries = fs.readdirSync(dir, { withFileTypes: true })
 
-              for (const entry of entries) {
-                const fullPath = path.join(dir, entry.name)
+              for (const e of entries) {
+                const full = path.join(dir, e.name)
 
-                if (entry.isDirectory()) {
-                  const nested = findManifest(fullPath)
-
-                  if (nested) {
-                    return nested
-                  }
-                } else {
-                  const normalized = entry.name
-                    .trim()
-                    .replace(/\0/g, '')
-                    .toLowerCase()
-
-                  if (normalized === 'imsmanifest.xml') {
-                    return fullPath
-                  }
+                if (e.isDirectory()) {
+                  const res = findManifest(full)
+                  if (res) return res
+                } else if (e.name.toLowerCase() === 'imsmanifest.xml') {
+                  return full
                 }
               }
-
               return null
             }
 
             const manifestPath = findManifest(extractPath)
 
-            console.log('MANIFEST PATH:', manifestPath)
+            if (!manifestPath) throw new Error('imsmanifest.xml missing')
 
-            if (!manifestPath) {
-              throw new Error('imsmanifest.xml missing')
-            }
+            const xml = await fs.promises.readFile(manifestPath, 'utf8')
 
-            // ---------------------------------------------------
-            // VALIDATE MANIFEST
-            // ---------------------------------------------------
-
-            const manifestContent = await fs.promises.readFile(
-              manifestPath,
-              'utf8'
-            )
-
-            if (!manifestContent.includes('<manifest')) {
+            if (!xml.includes('<manifest')) {
               throw new Error('Invalid SCORM manifest')
             }
 
-            // ---------------------------------------------------
-            // VERIFY scormdriver.js
-            // ---------------------------------------------------
-
-            const findFileRecursive = (dir, fileName) => {
-              const entries = fs.readdirSync(dir, {
-                withFileTypes: true
-              })
-
-              for (const entry of entries) {
-                const fullPath = path.join(dir, entry.name)
-
-                if (entry.isDirectory()) {
-                  const nested = findFileRecursive(fullPath, fileName)
-
-                  if (nested) {
-                    return nested
-                  }
-                } else {
-                  if (
-                    entry.name.trim().toLowerCase() === fileName.toLowerCase()
-                  ) {
-                    return fullPath
-                  }
-                }
-              }
-
-              return null
-            }
-
-            const scormDriverPath = findFileRecursive(
-              extractPath,
-              'scormdriver.js'
-            )
-
-            if (scormDriverPath) {
-              const stat = fs.statSync(scormDriverPath)
-
-              console.log('SCORM DRIVER:', scormDriverPath)
-
-              if (stat.size === 0) {
-                throw new Error('Corrupted scormdriver.js')
-              }
-            }
-
-            // ---------------------------------------------------
-            // DELETE ZIP
-            // ---------------------------------------------------
-
-            if (fs.existsSync(zipFilePath)) {
-              fs.unlinkSync(zipFilePath)
-            }
-
-            // ---------------------------------------------------
-            // UPDATE SUCCESS
-            // ---------------------------------------------------
+            // delete zip
+            if (fs.existsSync(zipFilePath)) fs.unlinkSync(zipFilePath)
 
             await Activity.findByIdAndUpdate(id, {
-              $set: {
-                'scorm_data.scorm_status': 'completed'
-              }
+              $set: { 'scorm_data.scorm_status': 'completed' }
             })
 
-            console.log('SCORM extracted successfully:', folderName)
+            console.log('SCORM SUCCESS:', folderName)
           } catch (err) {
-            console.error('SCORM extraction failed:', err.stack)
+            console.error('SCORM FAILED:', err)
 
-            // ---------------------------------------------------
-            // CLEANUP FOLDER
-            // ---------------------------------------------------
-
-            if (fs.existsSync(extractPath)) {
-              fs.rmSync(extractPath, {
-                recursive: true,
-                force: true
-              })
-            }
-
-            // ---------------------------------------------------
-            // CLEANUP ZIP
-            // ---------------------------------------------------
-
-            if (fs.existsSync(zipFilePath)) {
-              fs.unlinkSync(zipFilePath)
-            }
-
-            // ---------------------------------------------------
-            // UPDATE FAILED
-            // ---------------------------------------------------
-
-            await Activity.findByIdAndUpdate(id, {
-              $set: {
-                'scorm_data.scorm_status': 'failed'
+            try {
+              if (fs.existsSync(extractPath)) {
+                fs.rmSync(extractPath, { recursive: true, force: true })
               }
-            })
+
+              if (fs.existsSync(zipFilePath)) {
+                fs.unlinkSync(zipFilePath)
+              }
+
+              await Activity.findByIdAndUpdate(id, {
+                $set: { 'scorm_data.scorm_status': 'failed' }
+              })
+            } catch (e) {
+              console.error('Cleanup error:', e)
+            }
           }
-        }, 100)
+        })()
 
-        // ---------------------------------------------------
-        // SEND RESPONSE AFTER BACKGROUND START
-        // ---------------------------------------------------
-
-        return successResponse(
-          res,
-          'SCORM uploaded successfully. Processing started.'
-        )
+        return
       }
     }
 
     // ---------------------------------------------------
-    // INVALID MODULE
+    // UPDATE NORMAL
     // ---------------------------------------------------
-    else {
-      return errorResponse(res, 'Unsupported moduleTypeId', {}, 400)
-    }
-
-    // ---------------------------------------------------
-    // UPDATE NORMAL MODULES
-    // ---------------------------------------------------
-
-    await Activity.findByIdAndUpdate(
-      id,
-      {
-        $set: updatePayload
-      },
-      {
-        new: true
-      }
-    )
+    await Activity.findByIdAndUpdate(id, { $set: updatePayload })
 
     return successResponse(res, 'Activity data uploaded successfully')
   } catch (error) {
