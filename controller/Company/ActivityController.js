@@ -232,11 +232,9 @@ exports.postActivityDataAPI = async (req, res, next) => {
       }
     }
 
-    // ---------------------------------------------------
     // SCORM
     // ---------------------------------------------------
     else if (moduleTypeId === '688723af5dd97f4ccae68837') {
-
       if (!file?.filename && !activity?.scorm_data?.folder_url) {
         return errorResponse(res, 'SCORM ZIP required', {}, 400)
       }
@@ -295,13 +293,7 @@ exports.postActivityDataAPI = async (req, res, next) => {
         )
 
         // ---------------------------------------------------
-        // SEND RESPONSE IMMEDIATELY
-        // ---------------------------------------------------
-
-        successResponse(res, 'SCORM uploaded successfully. Processing started.')
-
-        // ---------------------------------------------------
-        // BACKGROUND PROCESSING
+        // START BACKGROUND PROCESS
         // ---------------------------------------------------
 
         setTimeout(async () => {
@@ -425,7 +417,7 @@ exports.postActivityDataAPI = async (req, res, next) => {
             }
 
             // ---------------------------------------------------
-            // OPTIONAL VERIFY scormdriver.js
+            // VERIFY scormdriver.js
             // ---------------------------------------------------
 
             const findFileRecursive = (dir, fileName) => {
@@ -522,7 +514,14 @@ exports.postActivityDataAPI = async (req, res, next) => {
           }
         }, 100)
 
-        return
+        // ---------------------------------------------------
+        // SEND RESPONSE AFTER BACKGROUND START
+        // ---------------------------------------------------
+
+        return successResponse(
+          res,
+          'SCORM uploaded successfully. Processing started.'
+        )
       }
     }
 
