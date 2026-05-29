@@ -67,7 +67,22 @@ exports.getActivityAPI = async (req, res, next) => {
 
 exports.getCreateFormAPI = async (req, res, next) => {
   try {
-    const appConfig = await AppConfig.findOne({ type: 'Activity_data' })
+    const appConfig = await AppConfig.aggregate([
+      {
+        $match: { type: 'Activity_data' }
+      },
+      {
+        $project: {
+          activity_data: {
+            $filter: {
+              input: '$activity_data',
+              as: 'item',
+              cond: { $eq: ['$$item.status', true] }
+            }
+          }
+        }
+      }
+    ])
 
     if (!appConfig) {
       return errorResponse(res, 'App config does not exist', {}, 404)
