@@ -6,50 +6,635 @@ const ScheduleUser = require('../../model/ScheduleUser')
 const User = require('../../model/User')
 const Program = require('../../model/Program')
 
-const {
-    successResponse
-} = require('../../util/response')
+const SettingConfig = require('../../model/settingConfig')
+
+const { successResponse } = require('../../util/response')
 
 exports.getCourseAPIController = async (req, res, next) => {
-    try {
+  try {
+    const userId = mongoose.Types.ObjectId.createFromHexString(req?.userId)
 
-        const userId = req?.userId;
+    const user = await User.findById(userId)
 
-        const user = await User.findById(userId)
+    const masterId = user?.created_by
 
-        // Find schedules linked by type_id and user_id
-        // const scheduleType = await ScheduleType.find({ type_id: userId });
-        // const scheduleUser = await ScheduleUser.find({ user_id: userId });
+    const settingConfig = await SettingConfig.findOne({
+      type: 'certificate_setting',
+      created_by: masterId
+    })
 
-        // const typeScheduleIds = scheduleType.map(item => item.schedule_id.toString());
-        // const userScheduleIds = scheduleUser.map(item => item.schedule_id.toString());
+    const certificateId = settingConfig
+      ? settingConfig.certificate_setting_data_id
+      : '6a153d4a393b1c736064377b'
 
-        // // Merge & remove duplicates
-        // const mergedScheduleIds = [...new Set([...typeScheduleIds, ...userScheduleIds])];
+    const now = new Date()
 
-        // // Find program schedules
-        // const programSchedule = await ProgramSchedule.find({
-        //     _id: { $in: mergedScheduleIds.map(id => mongoose.Types.ObjectId.createFromHexString(id)) }
-        // });
+    const LIVE_MODULE_TYPE_ID = mongoose.Types.ObjectId.createFromHexString(
+      '688219557b6953e899cb57d3'
+    )
 
-        // const typeProgramIds = programSchedule.map(item => item.program_id.toString());
+    const programs = await Program.aggregate([
+      {
+        $match: {
+          created_by: masterId
+        }
+      },
 
-        // Fetch program with related content_folders
-        // const programs = await Program.find({
-        //         _id: {
-        //             $in: typeProgramIds.map(id => mongoose.Types.ObjectId.createFromHexString(id))
-        //         }
-        //     })
-        //     .populate('content_folders');
+      // CONTENT FOLDERS
+      {
+        $lookup: {
+          from: 'content_folder',
+          let: {
+            programId: '$_id'
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ['$program_id', '$$programId']
+                }
+              }
+            },
 
-        const programs = await Program.find({
-                created_by: user.created_by
-            })
-            .populate('content_folders');
+            {
+              $lookup: {
+                from: 'certificates',
+                let: {
+                  certificate_id: '$certificateId'
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          {
+                            $eq: ['$_id', '$$certificate_id']
+                          },
+                          {
+                            $eq: ['$created_by', masterId]
+                          }
+                        ]
+                      }
+                    }
+                  }
+                ],
+                as: "certificates"
+              }
+            },
 
-        return successResponse(res, "Program fetched successfully", programs);
+            {
+                $unwind: {
+                    path: "$certificates",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
 
-    } catch (error) {
-        next(error);
-    }
+            // MODULES
+            {
+              $lookup: {
+                from: 'modules',
+                let: {
+                  contentFolderId: '$_id'
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          {
+                            $eq: ['$content_folder_id', '$$contentFolderId']
+                          },
+                          {
+                            $eq: ['$created_by', masterId]
+                          }
+                        ]
+                      }
+                    }
+                  },
+
+                  // GET ALL ACTIVITIES
+                  {
+                    $lookup: {
+                      from: 'activity',
+                      localField: '_id',
+                      foreignField: 'module_id',
+                      as: 'activity'
+                    }
+                  },
+
+                  // GET USER ACTIVITY LOGS
+                  {
+                    $lookup: {
+                      from: 'activity_logs',
+                      let: {
+                        user_id: userId,
+                        module_id: '$_id'
+                      },
+                      pipeline: [
+                        {
+                          $match: {
+                            $expr: {
+                              $and: [
+                                {
+                                  $eq: ['$user_id', '$$user_id']
+                                },
+                                {
+                                  $eq: ['$module_id', '$$module_id']
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      ],
+                      as: 'activity_logs'
+                    }
+                  },
+
+                  // PROGRAM SCHEDULE
+                  {
+                    $lookup: {
+                      from: 'program_schedules',
+                      localField: '_id',
+                      foreignField: 'module_id',
+                      as: 'programSchedule'
+                    }
+                  },
+
+                  {
+                    $unwind: {
+                      path: '$programSchedule',
+                      preserveNullAndEmptyArrays: true
+                    }
+                  },
+
+                  // MODULE ENROLL
+                  {
+                    $lookup: {
+                      from: 'user_module_enroll',
+                      let: {
+                        moduleId: '$_id',
+                        userId: userId
+                      },
+                      pipeline: [
+                        {
+                          $match: {
+                            $expr: {
+                              $and: [
+                                {
+                                  $eq: ['$module_id', '$$moduleId']
+                                },
+                                {
+                                  $eq: ['$user_id', '$$userId']
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      ],
+                      as: 'moduleEnroll'
+                    }
+                  },
+
+                  {
+                    $lookup: {
+                      from: 'modulesettings',
+                      localField: '_id',
+                      foreignField: 'moduleId',
+                      as: 'module_setting'
+                    }
+                  },
+
+                  {
+                    $unwind: {
+                      path: '$module_setting',
+                      preserveNullAndEmptyArrays: true
+                    }
+                  },
+
+                  {
+                    $addFields: {
+                      is_certificate_enable: {
+                        $eq: ['$module_setting.certificateEnabled', true]
+                      }
+                    }
+                  },
+
+                  {
+                    $lookup: {
+                      from: 'certificates',
+                      let: {
+                        certificateId: '$module_setting.selectedCertificateId'
+                      },
+                      pipeline: [
+                        {
+                          $match: {
+                            $expr: {
+                              $and: [
+                                {
+                                  $eq: ['$_id', '$$certificateId']
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      ],
+                      as: 'certificate'
+                    }
+                  },
+
+                  {
+                    $unwind: {
+                      path: '$certificate',
+                      preserveNullAndEmptyArrays: true
+                    }
+                  },
+
+                  // RELATIVE DATE
+                  {
+                    $addFields: {
+                      relativeEndDate: {
+                        $cond: [
+                          {
+                            $eq: ['$programSchedule.dueType', 'relative']
+                          },
+                          {
+                            $dateAdd: {
+                              startDate: '$programSchedule.published_date',
+                              unit: 'day',
+                              amount: {
+                                $toInt: {
+                                  $ifNull: ['$programSchedule.dueDays', 0]
+                                }
+                              }
+                            }
+                          },
+                          null
+                        ]
+                      }
+                    }
+                  },
+
+                  // DATE VISIBILITY
+                  {
+                    $addFields: {
+                      isDateVisible: {
+                        $cond: [
+                          {
+                            $eq: ['$programSchedule.dueType', 'relative']
+                          },
+                          {
+                            $and: [
+                              {
+                                $lte: ['$programSchedule.published_date', now]
+                              },
+                              {
+                                $gte: ['$relativeEndDate', now]
+                              }
+                            ]
+                          },
+                          {
+                            $cond: [
+                              {
+                                $eq: ['$programSchedule.dueType', 'fixed']
+                              },
+                              {
+                                $and: [
+                                  {
+                                    $lte: [
+                                      '$programSchedule.dueDate.start_date',
+                                      now
+                                    ]
+                                  },
+                                  {
+                                    $gte: [
+                                      '$programSchedule.dueDate.end_date',
+                                      now
+                                    ]
+                                  }
+                                ]
+                              },
+                              true
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  },
+
+                  // ENROLLMENT VISIBILITY
+                  {
+                    $addFields: {
+                      isVisible: {
+                        $cond: {
+                          if: {
+                            $eq: ['$programSchedule.pushEnrollmentSetting', 2]
+                          },
+                          then: {
+                            $gt: [
+                              {
+                                $size: '$moduleEnroll'
+                              },
+                              0
+                            ]
+                          },
+                          else: true
+                        }
+                      }
+                    }
+                  },
+
+                  // LIVE MODULE VISIBILITY
+                  {
+                    $addFields: {
+                      isLiveModuleVisible: {
+                        $cond: [
+                          {
+                            $eq: ['$module_type_id', LIVE_MODULE_TYPE_ID]
+                          },
+                          {
+                            $and: [
+                              {
+                                $lte: ['$start_live_time', now]
+                              },
+                              {
+                                $gte: ['$end_live_time', now]
+                              },
+                              {
+                                $gt: [
+                                  {
+                                    $size: '$moduleEnroll'
+                                  },
+                                  0
+                                ]
+                              }
+                            ]
+                          },
+                          true
+                        ]
+                      }
+                    }
+                  },
+
+                  // COMPLETED ACTIVITY COUNT
+                  {
+                    $addFields: {
+                      total_activity: {
+                        $size: '$activity'
+                      },
+
+                      completed_activity: {
+                        $size: {
+                          $filter: {
+                            input: '$activity',
+                            as: 'act',
+                            cond: {
+                              $gt: [
+                                {
+                                  $size: {
+                                    $filter: {
+                                      input: '$activity_logs',
+                                      as: 'log',
+                                      cond: {
+                                        $and: [
+                                          {
+                                            $eq: [
+                                              '$$log.activity_id',
+                                              '$$act._id'
+                                            ]
+                                          },
+                                          {
+                                            $eq: ['$$log.is_completed', true]
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  }
+                                },
+                                0
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+
+                  // COMPLETION %
+                  {
+                    $addFields: {
+                      completion_percentage: {
+                        $cond: [
+                          {
+                            $eq: ['$total_activity', 0]
+                          },
+                          0,
+                          {
+                            $round: [
+                              {
+                                $multiply: [
+                                  {
+                                    $divide: [
+                                      '$completed_activity',
+                                      '$total_activity'
+                                    ]
+                                  },
+                                  100
+                                ]
+                              },
+                              0
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  },
+
+                  // MODULE HAS COMPLETED
+                  {
+                    $addFields: {
+                      has_completed: {
+                        $cond: [
+                          {
+                            $ne: [
+                              certificateId,
+                              mongoose.Types.ObjectId.createFromHexString(
+                                '6a153d4a393b1c736064377c'
+                              )
+                            ]
+                          },
+                          false,
+                          {
+                            $cond: [
+                              {
+                                $ne: [
+                                  '$module_type_id',
+                                  mongoose.Types.ObjectId.createFromHexString(
+                                    '688219557b6953e899cb57d2'
+                                  )
+                                ]
+                              },
+                              false,
+                              {
+                                $and: [
+                                  {
+                                    $gt: ['$completed_activity', 0]
+                                  },
+                                  {
+                                    $eq: [
+                                      '$completed_activity',
+                                      '$total_activity'
+                                    ]
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  },
+
+                  // MODULE COMPLETED TIME
+                  {
+                    $addFields: {
+                      module_completed_at: {
+                        $cond: [
+                          {
+                            $eq: ['$completed_activity', '$total_activity']
+                          },
+                          {
+                            $let: {
+                              vars: {
+                                completedLogs: {
+                                  $filter: {
+                                    input: '$activity_logs',
+                                    as: 'log',
+                                    cond: {
+                                      $eq: ['$$log.is_completed', true]
+                                    }
+                                  }
+                                }
+                              },
+                              in: {
+                                $max: '$$completedLogs.completed_at_time'
+                              }
+                            }
+                          },
+                          null
+                        ]
+                      }
+                    }
+                  },
+
+                  // FINAL FILTER
+                  {
+                    $match: {
+                      isLiveModuleVisible: true,
+                      isVisible: true,
+                      'programSchedule._id': {
+                        $exists: true
+                      },
+                      isDateVisible: true
+                    }
+                  }
+                ],
+                as: 'modules'
+              }
+            },
+
+            // CONTENT FOLDER MODULE COUNT
+            {
+              $addFields: {
+                total_modules: {
+                  $size: '$modules'
+                },
+
+                completed_modules: {
+                  $size: {
+                    $filter: {
+                      input: '$modules',
+                      as: 'mod',
+                      cond: {
+                        $eq: ['$$mod.has_completed', true]
+                      }
+                    }
+                  }
+                }
+              }
+            },
+
+            // CONTENT FOLDER COMPLETION %
+            {
+              $addFields: {
+                completion_percentage: {
+                  $cond: [
+                    {
+                      $eq: ['$total_modules', 0]
+                    },
+                    0,
+                    {
+                      $round: [
+                        {
+                          $multiply: [
+                            {
+                              $divide: ['$completed_modules', '$total_modules']
+                            },
+                            100
+                          ]
+                        },
+                        0
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+
+            // CONTENT FOLDER HAS COMPLETED
+            {
+              $addFields: {
+                has_completed: {
+                  $cond: [
+                    {
+                      $ne: [
+                        certificateId,
+                        mongoose.Types.ObjectId.createFromHexString(
+                          '6a153d4a393b1c736064377c'
+                        )
+                      ]
+                    },
+                    false,
+                    {
+                      $and: [
+                        {
+                          $gt: ['$total_modules', 0]
+                        },
+                        {
+                          $eq: ['$completed_modules', '$total_modules']
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+
+            // CONTENT FOLDER COMPLETED TIME
+            {
+              $addFields: {
+                content_folder_completed_at: {
+                  $max: '$modules.module_completed_at'
+                }
+              }
+            }
+          ],
+          as: 'content_folders'
+        }
+      }
+    ])
+
+    return successResponse(res, 'Program fetched successfully', programs)
+  } catch (error) {
+    next(error)
+  }
 }

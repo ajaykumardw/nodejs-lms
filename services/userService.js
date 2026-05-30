@@ -8,6 +8,8 @@ const ParticipationType = require('../model/ParticipationType');
 const bcrypt = require('bcryptjs')
 const { hash, normalizeEmail, normalizePhone } = require('../util/encryption');
 
+const { errorResponse } = require('../util/response');
+
 const importUsers = async (res, userId, chunk, roleIds = []) => {
   try {
     // const emails = chunk.map(u => u.Email?.toLowerCase().trim()).filter(Boolean);
@@ -35,63 +37,63 @@ const importUsers = async (res, userId, chunk, roleIds = []) => {
     const resultWithStatus = [];
 
     for (const u of chunk) {
-        // const email = u.Email?.toLowerCase().trim();
-        // const phone = u.PhoneNo ? String(u.PhoneNo).trim() : null;
-        const emailRaw = u.Email || '';
-        const phoneRaw = u.PhoneNo || '';
-        const email = normalizeEmail(emailRaw);
-        const phone = normalizePhone(String(phoneRaw));
-        const emailHash = hash(email);
-        const phoneHash = hash(phone);
+      // const email = u.Email?.toLowerCase().trim();
+      // const phone = u.PhoneNo ? String(u.PhoneNo).trim() : null;
+      const emailRaw = u.Email || '';
+      const phoneRaw = u.PhoneNo || '';
+      const email = normalizeEmail(emailRaw);
+      const phone = normalizePhone(String(phoneRaw));
+      const emailHash = hash(email);
+      const phoneHash = hash(phone);
 
-        const safeUser = JSON.parse(JSON.stringify(u)); // Make it plain
-        let errors = {}; // collect all errors here
+      const safeUser = JSON.parse(JSON.stringify(u)); // Make it plain
+      let errors = {}; // collect all errors here
 
-        let validate = true;
+      let validate = true;
 
-        if (existingEmailHashes.has(emailHash)) {
-          errors.email = 'This email has already been taken!';
-        }
-      
-        if (existingPhoneHashes.has(phoneHash)) {
-          errors.phone = 'This phone has already been taken!';
-        }
-        
-        // if (existingEmails.has(email)) {
-        //   errors.email = 'This email has already been taken!';
-        // }
+      if (existingEmailHashes.has(emailHash)) {
+        errors.email = 'This email has already been taken!';
+      }
 
-        // if (existingPhones.has(phone)) {
-        //   errors.phone = 'This phone has already been taken!';
-        // }
+      if (existingPhoneHashes.has(phoneHash)) {
+        errors.phone = 'This phone has already been taken!';
+      }
 
-        const result = await processEmployeeCodesForUser({
-          rawCodes: u.EmpID,
-          userId: null,
-          existingUser: null,
-        });
-  
-        if (!result.success) {
-          errors.emp_id = result.message ;
-        }
+      // if (existingEmails.has(email)) {
+      //   errors.email = 'This email has already been taken!';
+      // }
 
-        const location = await getLocationByName(u.Country, u.State, u.City);
+      // if (existingPhones.has(phone)) {
+      //   errors.phone = 'This phone has already been taken!';
+      // }
 
-        if (location.errors) {
-          resultWithStatus.push({ ...safeUser, errors: location.errors });
-          continue;
-        }
+      const result = await processEmployeeCodesForUser({
+        rawCodes: u.EmpID,
+        userId: null,
+        existingUser: null,
+      });
 
-        if (Object.keys(errors).length > 0) {
-          resultWithStatus.push({ ...safeUser, errors });
-          continue;
-        }
+      if (!result.success) {
+        errors.emp_id = result.message;
+      }
 
-      
+      const location = await getLocationByName(u.Country, u.State, u.City);
+
+      if (location.errors) {
+        resultWithStatus.push({ ...safeUser, errors: location.errors });
+        continue;
+      }
+
+      if (Object.keys(errors).length > 0) {
+        resultWithStatus.push({ ...safeUser, errors });
+        continue;
+      }
+
+
 
       if (validate) {
         try {
-          
+
           const passwordRaw = u.password || u.EmpID || Math.floor(1111 + Math.random() * 8888).toString();
           const hashedPassword = await bcrypt.hash(passwordRaw, 12);
           const location = await getLocationByName(u.Country, u.State, u.City);
@@ -166,13 +168,12 @@ const importUsers = async (res, userId, chunk, roleIds = []) => {
       data: resultWithStatus,
     };
   } catch (error) {
+
     console.error("Import Error:", error);
-    return {
-      success: false,
-      message: 'An error occurred during import.',
-      imported: 0,
-      data: [],
-    };
+
+    console.log("Error details:", error.message, error.stack);
+
+    return errorResponse(res, "An error occurred during import.", error, 500);
   }
 };
 
@@ -216,77 +217,77 @@ const getLocationByName = async (countryName, stateName, cityName) => {
 };
 
 const processEmployeeCodesForUser = async ({ rawCodes, userId, existingUser = null }) => {
-    let parsedCodes = [];
-    try {
-      parsedCodes = rawCodes;
-      if (!Array.isArray(parsedCodes)) {
-        parsedCodes = [parsedCodes];
-      }
-    } catch {
-      return { success: true, codes: existingUser?.codes || [] };
+  let parsedCodes = [];
+  try {
+    parsedCodes = rawCodes;
+    if (!Array.isArray(parsedCodes)) {
+      parsedCodes = [parsedCodes];
     }
-  
-    if (parsedCodes.length === 0) {
-      return { success: true, codes: existingUser?.codes || [] };
-    }
-
-  
-    const normalizedCodes = parsedCodes
-      .map(code => (code != null ? String(code).trim() : ''))
-      .filter(Boolean);
-
-    const duplicateUsers = await User.find({
-     // _id: { $ne: userId },
-      'codes.code': { $in: normalizedCodes }
-    }).select('codes');
-  
-    const foundCodes = new Set();
-    for (const user of duplicateUsers) {
-      user.codes.forEach(c => {
-        const codeLower = c.code;
-        if (normalizedCodes.includes(codeLower)) {
-          foundCodes.add(codeLower);
-        }
-      });
-    }
-    if (foundCodes.size > 0) {
-      return {
-        success: false,
-        message: 'Duplicate employee ID(s) found in other users.',
-        duplicates: Array.from(foundCodes)
-      };
-    }
-  
-    // Map existing codes for quick lookup
-    const existingCodesMap = new Map(
-      (existingUser?.codes || []).map(c => [c.code.toLowerCase(), c])
-    );
-  
-    // Mark all existing codes inactive
-    const updatedExistingCodes = (existingUser?.codes || []).map(codeObj => ({
-      ...codeObj.toObject ? codeObj.toObject() : codeObj, // convert mongoose doc to plain object if needed
-      type: 'inactive',
-    }));
-  
-    // Add new codes as active only if they don't already exist
-    for (const code of normalizedCodes) {
-      if (!existingCodesMap.has(code)) {
-        updatedExistingCodes.push({
-          code,
-          issued_on: new Date(),
-          type: 'active',
-        });
-      } else {
-        // If code exists, mark it active (override inactive)
-        const index = updatedExistingCodes.findIndex(c => c.code.toLowerCase() === code);
-        if (index !== -1) {
-          updatedExistingCodes[index].type = 'active';
-        }
-      }
-    }
-  
-    return { success: true, codes: updatedExistingCodes };
+  } catch {
+    return { success: true, codes: existingUser?.codes || [] };
   }
+
+  if (parsedCodes.length === 0) {
+    return { success: true, codes: existingUser?.codes || [] };
+  }
+
+
+  const normalizedCodes = parsedCodes
+    .map(code => (code != null ? String(code).trim() : ''))
+    .filter(Boolean);
+
+  const duplicateUsers = await User.find({
+    // _id: { $ne: userId },
+    'codes.code': { $in: normalizedCodes }
+  }).select('codes');
+
+  const foundCodes = new Set();
+  for (const user of duplicateUsers) {
+    user.codes.forEach(c => {
+      const codeLower = c.code;
+      if (normalizedCodes.includes(codeLower)) {
+        foundCodes.add(codeLower);
+      }
+    });
+  }
+  if (foundCodes.size > 0) {
+    return {
+      success: false,
+      message: 'Duplicate employee ID(s) found in other users.',
+      duplicates: Array.from(foundCodes)
+    };
+  }
+
+  // Map existing codes for quick lookup
+  const existingCodesMap = new Map(
+    (existingUser?.codes || []).map(c => [c.code.toLowerCase(), c])
+  );
+
+  // Mark all existing codes inactive
+  const updatedExistingCodes = (existingUser?.codes || []).map(codeObj => ({
+    ...codeObj.toObject ? codeObj.toObject() : codeObj, // convert mongoose doc to plain object if needed
+    type: 'inactive',
+  }));
+
+  // Add new codes as active only if they don't already exist
+  for (const code of normalizedCodes) {
+    if (!existingCodesMap.has(code)) {
+      updatedExistingCodes.push({
+        code,
+        issued_on: new Date(),
+        type: 'active',
+      });
+    } else {
+      // If code exists, mark it active (override inactive)
+      const index = updatedExistingCodes.findIndex(c => c.code.toLowerCase() === code);
+      if (index !== -1) {
+        updatedExistingCodes[index].type = 'active';
+      }
+    }
+  }
+
+  return { success: true, codes: updatedExistingCodes };
+}
 
 const getUserStats = async (userId) => {
   try {
@@ -371,7 +372,7 @@ const getOrCreateZone = async (name, userId) => {
 };
 
 module.exports = {
-    importUsers,
-    getUserStats,
-    getUserStats
+  importUsers,
+  getUserStats,
+  getUserStats
 }

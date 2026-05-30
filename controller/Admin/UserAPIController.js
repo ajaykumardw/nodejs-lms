@@ -465,14 +465,121 @@ exports.importAPI = async (req, res, next) => {
     try {
         const userId = req.userId;
         const { chunk, roles } = req.body;
+
+        // Validate chunk
         if (!Array.isArray(chunk)) {
-            return errorResponse(res, 'Invalid data format', 400);
+            return errorResponse(res, "Invalid data format", 400);
         }
-        const response = await userService.importUsers(res, userId, chunk, roles);
+
+        // Normalize incoming data
+        const normalizedChunk = chunk.map((row) => {
+            // Handle Email field from Excel hyperlink object
+            let email = "";
+
+            if (typeof row.Email === "string") {
+                email = row.Email.toLowerCase().trim();
+            } else if (
+                typeof row.Email === "object" &&
+                row.Email !== null
+            ) {
+                email = (row.Email.text || "")
+                    .toLowerCase()
+                    .trim();
+            }
+
+            return {
+                ...row,
+
+                // Normalize email
+                Email: email,
+
+                // Normalize phone number
+                PhoneNo: row.PhoneNo
+                    ? String(row.PhoneNo).trim()
+                    : "",
+
+                // Normalize pincode
+                PinCode: row.PinCode
+                    ? String(row.PinCode).trim()
+                    : "",
+
+                // Normalize string fields
+                FirstName: row.FirstName
+                    ? String(row.FirstName).trim()
+                    : "",
+
+                LastName: row.LastName
+                    ? String(row.LastName).trim()
+                    : "",
+
+                Designation: row.Designation
+                    ? String(row.Designation).trim()
+                    : "",
+
+                EmployeeType: row.EmployeeType
+                    ? String(row.EmployeeType).trim()
+                    : "",
+
+                Status: row.Status
+                    ? String(row.Status).trim()
+                    : "",
+
+                Country: row.Country
+                    ? String(row.Country).trim()
+                    : "",
+
+                State: row.State
+                    ? String(row.State).trim()
+                    : "",
+
+                City: row.City
+                    ? String(row.City).trim()
+                    : "",
+
+                Address: row.Address
+                    ? String(row.Address).trim()
+                    : "",
+
+                Branch: row.Branch
+                    ? String(row.Branch).trim()
+                    : "",
+
+                Department: row.Department
+                    ? String(row.Department).trim()
+                    : "",
+
+                Region: row.Region
+                    ? String(row.Region).trim()
+                    : "",
+
+                Zone: row.Zone
+                    ? String(row.Zone).trim()
+                    : "",
+            };
+        });
+
+        // Call service
+        const response = await userService.importUsers(
+            res,
+            userId,
+            normalizedChunk,
+            roles
+        );
+
         return successResponse(res, "Data loaded", response);
+
     } catch (error) {
-        console.error("Error occurred:", error);
-        return errorResponse(res, error, 500);
+
+        console.error("Import API Error:", {
+            message: error.message,
+            stack: error.stack,
+        });
+
+        return errorResponse(
+            res,
+            error.message || "An error occurred during import.",
+            500
+        );
     }
 };
 

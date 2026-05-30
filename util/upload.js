@@ -1,90 +1,69 @@
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
-const pdfParse = require("pdf-parse");
-const unzipper = require("unzipper");
+const multer = require('multer')
+const path = require('path')
+const fs = require('fs')
+const unzipper = require('unzipper')
 
-function createUpload(allowedTypes, directory = "uploads/", maxSizeMB = 2000) {
-
-  const uploadPath = `/public/${directory}`;
-  const absPath = path.join(__dirname, "..", uploadPath);
+function createUpload (allowedTypes, directory = 'uploads', maxSizeMB = 2000) {
+  const absPath = path.join(process.cwd(), 'public', directory)
 
   if (!fs.existsSync(absPath)) {
-    fs.mkdirSync(absPath, { recursive: true });
+    fs.mkdirSync(absPath, { recursive: true })
   }
 
-  // Storage system
   const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, absPath),
     filename: (req, file, cb) => {
-      const ext = path.extname(file.originalname);
-      const name = `${Date.now()}-${Math.round(Math.random() * 9999)}${ext}`;
-      cb(null, name);
-    },
-  });
+      const ext = path.extname(file.originalname)
+      const fileName = `${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2, 8)}${ext}`
+      cb(null, fileName)
+    }
+  })
 
   const upload = multer({
     storage,
-    limits: { fileSize: maxSizeMB * 1024 * 1024 }, // 2GB support
+    limits: { fileSize: maxSizeMB * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
-      if (allowedTypes.includes(file.mimetype)) cb(null, true);
-      else cb(new Error("Invalid file type"), false);
-    },
-  });
-
-  const handleZipOrPdf = async (req, res, next) => {
-    try {
-      if (!req.file) return next();
-
-      const filePath = path.join(absPath, req.file.filename);
-
-      if (req.file.mimetype === "application/pdf") {
-        const buffer = fs.readFileSync(filePath);
-        const data = await pdfParse(buffer);
-        req.pdfPageCount = data.numpages;
-      }
-
-      if (
-        req.file.mimetype === "application/zip" ||
-        req.file.mimetype === "application/x-zip-compressed" ||
-        req.file.mimetype === "multipart/x-zip"
-      ) {
-        const folderName = req.file.filename.replace(".zip", "");
-        const extractPath = path.join(absPath, folderName);
-
-        if (!fs.existsSync(extractPath)) {
-          fs.mkdirSync(extractPath);
-        }
-
-        await new Promise((resolve, reject) => {
-          fs.createReadStream(filePath)
-            .pipe(unzipper.Extract({ path: extractPath }))
-            .on("close", resolve)
-            .on("error", reject);
-        });
-
-        fs.unlinkSync(filePath);
-
-        req.scormExtractedPath = `${directory}/${folderName}`;
-      }
-
-      next();
-    } catch (err) {
-      console.error("SCORM/PDF Processing Error:", err);
-      next(err);
+      if (allowedTypes.includes(file.mimetype)) cb(null, true)
+      else cb(new Error('Invalid file type'))
     }
-  };
+  })
 
   return {
-    middleware: (fieldName = "file") => [
+    middleware: (field = 'file') => [
       (req, res, next) => {
-        req.uploadPath = directory;
-        next();
-      },
-      upload.single(fieldName),
-      handleZipOrPdf,
-    ],
-  };
+        upload.single(field)(req, res, err => {
+          if (err) {
+            return res.status(400).json({
+              status: 'Failure',
+              message: err.message
+            })
+          }
+
+          if (!req.file) return next()
+
+          // SCORM ONLY VALIDATION (NO EXTRACTION)
+          const isScorm =
+            req.params?.moduleTypeId === '688723af5dd97f4ccae68837'
+
+          if (isScorm) {
+            const ext = path.extname(req.file.originalname).toLowerCase()
+
+            if (ext !== '.zip') {
+              fs.unlinkSync(req.file.path)
+              return res.status(400).json({
+                status: 'Failure',
+                message: 'Only ZIP allowed'
+              })
+            }
+          }
+
+          next()
+        })
+      }
+    ]
+  }
 }
 
-module.exports = createUpload;
+module.exports = createUpload

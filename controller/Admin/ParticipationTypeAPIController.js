@@ -12,7 +12,7 @@ const getAPI = async (req, res, next) => {
         if (req.query.status !== undefined) {
             filter.status = req.query.status === 'true';
         }
-        
+
         const data = await ParticipationType.find(filter).select('name status');
         return successResponse(res, "Participation type fetched successfully!", data);
     } catch (error) {
@@ -31,11 +31,11 @@ const postAPI = async (req, res, next) => {
         const existing = await ParticipationType.findOne({
             company_id: user._id,
             name: { $regex: new RegExp(`^${name}$`, 'i') } // case-insensitive match
-          });
-      
-          if (existing) {
+        });
+
+        if (existing) {
             return warningResponse(res, "Participation Type with this name already exists.", {}, 409);
-          }
+        }
 
         const participationtype = new ParticipationType({
             company_id: user._id,
@@ -52,26 +52,29 @@ const postAPI = async (req, res, next) => {
 const putAPI = async (req, res, next) => {
     try {
         const { name, status } = req.body;
-        const user = req.user;
+        
+        const userId = req.userId;
+
         if (!name || typeof status === 'undefined') {
             return warningResponse(res, "Name and status are required fields.", {}, 400);
         }
 
-        const participationtype = await ParticipationType.findOne({ company_id: user._id, _id: req.params.id });
+        const participationtype = await ParticipationType.findOne({ company_id: userId, _id: req.params.id });
+
         if (!participationtype) {
             return warningResponse(res, "Participation type not found.", {}, 404);
         }
 
         const duplicate = await ParticipationType.findOne({
-            company_id: user._id,
+            company_id: userId,
             name: { $regex: new RegExp(`^${name}$`, 'i') },
             _id: { $ne: req.params.id }
         });
-    
+
         if (duplicate) {
-        return warningResponse(res, "Another Participation with this name already exists.", {}, 409);
+            return warningResponse(res, "Another Participation with this name already exists.", {}, 409);
         }
-       
+
         participationtype.name = name;
         participationtype.status = status;
         await participationtype.save();
@@ -83,9 +86,11 @@ const putAPI = async (req, res, next) => {
 
 const deleteAPI = async (req, res, next) => {
     try {
-        const user = req.user;
+        const userId = req.userId;
+
         const participationtypeId = req.params.id;
-        const participationtype = await ParticipationType.findOne({ company_id: user._id, _id: participationtypeId });
+        const participationtype = await ParticipationType.findOne({ company_id: userId, _id: participationtypeId });
+
         if (!participationtype) {
             return warningResponse(res, "ParticipationType not found.", {}, 404);
         }

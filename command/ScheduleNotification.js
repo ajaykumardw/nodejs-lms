@@ -64,6 +64,7 @@ const getPendingAttempts = async ({
         let attempt = 1;
 
         while (triggerDate <= today && triggerDate <= endDate) {
+
             const exists = await NotificationLog.findOne({
                 user_id: userId,
                 attemptNo: attempt,
@@ -116,6 +117,7 @@ const scheduleNotificationCommand = async () => {
         for (const item of scheduleNotifications) {
 
             const moduleIds = (item.module_id || []).map(id => new mongoose.Types.ObjectId(id));
+            
             const templateId = new mongoose.Types.ObjectId(item.template_id);
             const scheduleUserIds = (item.schedule_user_id || []).map(id => new mongoose.Types.ObjectId(id));
 
@@ -130,19 +132,72 @@ const scheduleNotificationCommand = async () => {
                     { $match: { module_id: { $in: moduleIds } } },
                     {
                         $lookup: {
+                            from: "schedule_type",
+                            let: { scheduleId: "$_id" },
+                            pipeline: [
+                                {
+                                    $match: {
+                                        $expr: {
+                                            $eq: ["$schedule_id", "$$scheduleId"]
+                                        }
+                                    }
+                                }
+                            ],
+                            as: "scheduleType"
+                        }
+                    },
+                    {
+                        $lookup: {
                             from: "schedule_users",
-                            localField: "_id",
-                            foreignField: "schedule_id",
+                            let: { scheduleId: "$_id" },
+                            pipeline: [
+                                {
+                                    $match: {
+                                        $expr: {
+                                            $eq: ["$schedule_id", "$$scheduleId"]
+                                        }
+                                    }
+                                }
+                            ],
                             as: "scheduleUser"
                         }
                     },
                     {
                         $addFields: {
-                            allowedUser: "$scheduleUser.user_id"
+                            allowedUser: {
+                                $let: {
+                                    vars: {
+                                        type5Data: {
+                                            $map: {
+                                                input: {
+                                                    $filter: {
+                                                        input: "$scheduleType",
+                                                        as: "st",
+                                                        cond: { $eq: ["$$st.type", "5"] }
+                                                    }
+                                                },
+                                                as: "t1",
+                                                in: "$$t1.type_id"
+                                            }
+                                        },
+                                        typeOtherData: {
+                                            $map: {
+                                                input: "$scheduleUser",
+                                                as: "t2",
+                                                in: "$$t2.user_id"
+                                            }
+                                        }
+                                    },
+                                    in: {
+                                        $setUnion: ["$$type5Data", "$$typeOtherData"]
+                                    }
+                                }
+                            }
                         }
                     },
                     {
                         $project: {
+                            activity_id: 1,
                             published_date: 1,
                             dueType: 1,
                             dueDays: 1,
@@ -152,6 +207,8 @@ const scheduleNotificationCommand = async () => {
                     }
                 ])
             ]);
+
+            
 
             if (!template) continue;
 
@@ -194,8 +251,7 @@ const scheduleNotificationCommand = async () => {
                         const alreadySentToday = await NotificationLog.findOne({
                             user_id: userId,
                             company_id: companyId,
-                            attemptNo: attempt.attemptNo,
-                            reason: scheduleType,
+                            template_id: template._id,
                             schedule_date: { $gte: startOfDay, $lte: endOfDay }
                         });
 
@@ -205,8 +261,8 @@ const scheduleNotificationCommand = async () => {
                             userId: userId.toString(),
                             notificationId: templateId,
                             to: email.trim(),
-                            event: template.name,
-                            means: template.name,
+                            event: template.template_name,
+                            means: template.template_name,
                             explanation: template.description || "",
                             userPassword: ""
                         });
@@ -214,6 +270,8 @@ const scheduleNotificationCommand = async () => {
                         await NotificationLog.create({
                             user_id: userId,
                             company_id: companyId,
+                            template_id: template._id,
+                            template_name: template?.template_name || "",
                             attemptNo: attempt.attemptNo,
                             reason: scheduleType,
                             schedule_date: today
