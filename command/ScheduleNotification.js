@@ -208,7 +208,7 @@ const scheduleNotificationCommand = async () => {
                 ])
             ]);
 
-            
+            //This is comment for template
 
             if (!template) continue;
 
