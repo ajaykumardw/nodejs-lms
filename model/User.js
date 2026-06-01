@@ -89,7 +89,8 @@ const userSchema = new Schema({
   },
   address: {
     type: String,
-    maxlength: 4000
+    maxlength: 4000,
+    required: false
   },
   pincode: {
     type: String,
@@ -171,21 +172,25 @@ const userSchema = new Schema({
   designation_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'designations',
+    required: false,
     set: v => (v === '' ? undefined : v)
   },
   department_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'departments',
+    required: false,
     set: v => (v === '' ? undefined : v)
   },
   region_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'regions',
+    required: false,
     set: v => (v === '' ? undefined : v)
   },
   zone_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'zones',
+    required: false,
     set: v => (v === '' ? undefined : v)
   },
   dob: {
@@ -215,6 +220,7 @@ const userSchema = new Schema({
   participation_type_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'participation_types',
+    required: false,
     set: v => (v === '' ? undefined : v)
   },
   codes: [UserCodeSchema] // Array of codes
