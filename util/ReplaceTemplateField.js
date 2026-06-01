@@ -191,8 +191,6 @@ module.exports = async ({
 
         if (notificationId === "6878cd0351dcbae6759e8912" && scheduleNotification) {
 
-            console.log("Template", notificationId === "6878cd0351dcbae6759e8912");
-
 
             await sendMailFunction({ scheduleNotification, userId, isCompany, to, subject, html })
 

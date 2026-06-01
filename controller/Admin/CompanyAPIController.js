@@ -79,6 +79,7 @@ exports.createCompanyAPI = async (req, res, next) => {
 
 exports.postCompanyAPI = async (req, res, next) => {
     try {
+        
         const userId = req.userId;
 
         // Use the uploaded file if it exists
