@@ -154,6 +154,29 @@ const appConfigSchema = new mongoose.Schema(
           required: true
         }
       }
+    ],
+    leadership_data: [
+      {
+        title: {
+          type: String,
+          required: true,
+          maxlength: 255
+        },
+        label_data: [
+          {
+            label: {
+              type: String,
+              required: true,
+              maxlength: 255
+            },
+            value: {
+              type: String,
+              required: true,
+              maxlength: 255
+            }
+          }
+        ]
+      }
     ]
   },
   {

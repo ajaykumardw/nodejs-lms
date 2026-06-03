@@ -12,6 +12,12 @@ exports.getDashboardAPIController = async (req, res, next) => {
   try {
     const userId = req?.userId
 
+    const compUser = await User.find({
+      created_by: userId
+    })
+
+    const compUserIds = compUser.map(u => u._id)
+
     const totalLearner = await User.find({ created_by: userId })
       .select('_id first_name last_name')
       .lean()
@@ -515,6 +521,19 @@ exports.getDashboardAPIController = async (req, res, next) => {
           }
         }
       },
+      {
+        $addFields: {
+          allUsers: {
+            $filter: {
+              input: '$allUsers',
+              as: 'user',
+              cond: {
+                $in: ['$$user', compUserIds]
+              }
+            }
+          }
+        }
+      },
       { $unwind: { path: '$allUsers', preserveNullAndEmptyArrays: true } },
       {
         $addFields: {
@@ -966,7 +985,7 @@ exports.getUserProfileAPIController = async (req, res, next) => {
 
       roles: user.roles || [],
 
-      created_at: user.created_at,
+      created_at: user.created_at
     }
 
     return successResponse(res, 'User profile data fetched successfully', {

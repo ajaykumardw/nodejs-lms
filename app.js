@@ -130,7 +130,6 @@ mongoose
     maxPoolSize: 20
   })
   .then(() => {
-    
     const server = app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`)
     })
