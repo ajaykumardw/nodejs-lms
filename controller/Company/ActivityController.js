@@ -9,6 +9,11 @@ const { errorResponse, successResponse } = require('../../util/response')
 const Module = require('../../model/Module')
 
 const scormQueue = require('../../queues/scormQueue')
+const ActivityFolderReport = require('../../model/ActivityFolderReport')
+const QuizResultReport = require('../../model/QuizResultReport')
+const QuizSetting = require('../../model/QuizSetting')
+
+const Question = require('../../model/Question')
 
 exports.getActivityAPI = async (req, res, next) => {
   try {
@@ -142,6 +147,22 @@ exports.deleteActivityAPI = async (req, res, next) => {
       created_by: userId,
       module_id: moduleId,
       _id: id
+    })
+
+    await ActivityFolderReport.deleteMany({
+      activity_id: id
+    })
+
+    await QuizResultReport.deleteMany({
+      activity_id: id
+    })
+
+    await QuizSetting.deleteMany({
+      activity_id: id
+    })
+
+    await Question.deleteMany({
+      activity_id: id
     })
 
     return successResponse(res, 'Activity deleted successfully')
