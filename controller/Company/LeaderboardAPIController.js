@@ -333,6 +333,8 @@ exports.putContestBadgeController = async (req, res, next) => {
     const userId = req?.userId
     const { id } = req?.params
 
+    const contestBadgeId = mongoose.Types.ObjectId.createFromHexString(id)
+
     const {
       contest_name,
       start_date,
@@ -387,7 +389,7 @@ exports.putContestBadgeController = async (req, res, next) => {
       for (const optionId of pair.options) {
         contestScheduleType.push({
           created_by: userId,
-          contest_badge_id: id,
+          contest_badge_id: contestBadgeId,
           type: Number(pair.target),
           type_id: mongoose.Types.ObjectId.isValid(optionId)
             ? mongoose.Types.ObjectId.createFromHexString(optionId)
@@ -436,7 +438,7 @@ exports.putContestBadgeController = async (req, res, next) => {
         finalUserSet.add(u._id.toString())
         bulkUsers.push({
           created_by: userId,
-          contest_badge_id: id,
+          contest_badge_id: contestBadgeId,
           type,
           type_id,
           user_id: u._id
@@ -450,14 +452,14 @@ exports.putContestBadgeController = async (req, res, next) => {
 
     const finalUsers = [...finalUserSet].map(id => ({
       user_id: mongoose.Types.ObjectId.createFromHexString(id),
-      contest_badge_id: id,
+      contest_badge_id: contestBadgeId,
       created_by: userId,
       created_at: Date.now()
     }))
 
     await userContestBadgeEnroll.deleteMany({
       created_by: userId,
-      contest_badge_id: id
+      contest_badge_id: contestBadgeId
     })
 
     await userContestBadgeEnroll.insertMany(finalUsers)
