@@ -621,55 +621,75 @@ exports.postReportController = async (req, res, next) => {
       )
     }
 
-    const modules = await Module.findById(moduleId)
-
-    const isSurveyCompleted = modules?.is_survey_completed || false
-
-    if (!isSurveyCompleted) {
-      await Module.findOneAndUpdate(
-        {
-          _id: moduleId
-        },
-        {
-          is_survey_completed: false
+    const modules = await Module.aggregate([
+      {
+        $match: {
+          _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
         }
-      )
-    }
-
-    const isSurvey = modules?.is_survey_done || false
-
-    const userModule = await ActivityFolderReport.find({
-      user_id: userId,
-      module_id: moduleId
-    }).sort({
-      current_attempt: -1
-    })
-
-    const activity = await Activity.find({ module_id: moduleId })
-
-    let finalData = {
-      completed: false
-    }
-
-    if (isSurvey) {
-      finalData = {
-        completed: isSurvey && !isSurveyCompleted
+      },
+      {
+        $lookup: {
+          from: 'modulesettings',
+          localField: '_id',
+          foreignField: 'moduleId',
+          as: 'module_setting'
+        }
+      },
+      {
+        $unwind: {
+          path: '$module_setting',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity',
+          localField: '_id',
+          foreignField: 'module_id',
+          as: 'activities'
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity_logs',
+          let: {
+            activityIds: '$activities._id'
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ['$activity_id', '$$activityIds']
+                }
+              }
+            }
+          ],
+          as: 'logs'
+        }
       }
-    } else if (
-      activity.length <= userModule.length &&
-      ((isSurvey && !isSurveyCompleted) || (!isSurvey && !isSurveyCompleted))
-    ) {
-      const isAllCompleted = userModule.every(
-        item => item.is_completed === true
+    ])
+
+    const module = modules?.[0]
+
+    const moduleSetting = module?.module_setting
+
+    const activities = module?.activities || []
+    const logs = module?.logs || []
+
+    const isCompleted =
+      activities.length > 0 &&
+      activities.every(activity =>
+        logs.some(
+          log =>
+            log.activity_id.toString() === activity._id.toString() &&
+            log.progress_status === '3'
+        )
       )
 
-      finalData = {
-        completed: isAllCompleted
-      }
-
-      await Module.findByIdAndUpdate(moduleId, {
-        is_survey_done: isAllCompleted
-      })
+    const finalData = {
+      completed: isCompleted,
+      is_survey_completed: moduleSetting?.feedbackSurveyEnabled || false,
+      is_survey_mandatory: moduleSetting?.mandatory || false
     }
 
     return successResponse(res, 'Activity report successful', finalData)
@@ -847,56 +867,36 @@ exports.postInsertReportController = async (req, res, next) => {
       )
     }
 
-    const modules = await Module.findById(moduleId)
-
-    const isSurveyCompleted = modules?.is_survey_completed || false
-
-    if (!isSurveyCompleted) {
-      await Module.findOneAndUpdate(
-        {
-          _id: moduleId
-        },
-        {
-          is_survey_completed: false
+    const modules = await Module.aggregate([
+      {
+        $match: {
+          _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
         }
-      )
-    }
-
-    const activity = await Activity.find({ module_id: moduleId })
-
-    const isSurvey = modules?.is_survey_done || false
-
-    const userModule = await ActivityFolderReport.find({
-      user_id: userId,
-      module_id: moduleId
-    }).sort({
-      current_attempt: -1
-    })
-
-    let finalData = {
-      completed: false
-    }
-
-    if (isSurvey) {
-      finalData = {
-        completed: isSurvey && !isSurveyCompleted
+      },
+      {
+        $lookup: {
+          from: 'modulesettings',
+          localField: '_id',
+          foreignField: 'moduleId',
+          as: 'module_setting'
+        }
+      },
+      {
+        $unwind: {
+          path: '$module_setting',
+          preserveNullAndEmptyArrays: true
+        }
       }
-    } else if (
-      activity.length <= userModule.length &&
-      ((isSurvey && !isSurveyCompleted) || (!isSurvey && !isSurveyCompleted))
-    ) {
-      // true if all is_completed === true, otherwise false
-      const isAllCompleted = userModule.every(
-        item => item.is_completed === true
-      )
+    ])
 
-      finalData = {
-        completed: isAllCompleted
-      }
+    const module = modules?.[0]
 
-      await Module.findByIdAndUpdate(moduleId, {
-        is_survey_done: isAllCompleted
-      })
+    const moduleSetting = module?.module_setting
+
+    const finalData = {
+      completed: false,
+      is_survey_completed: moduleSetting?.feedbackSurveyEnabled || false,
+      is_survey_mandatory: moduleSetting?.mandatory || false
     }
 
     return successResponse(res, 'Activity report successful', finalData)
