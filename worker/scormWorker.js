@@ -19,7 +19,7 @@ async function startWorker () {
   try {
     await mongoose.connect(MongoURL)
 
-    console.log('✅ MongoDB connected')
+    console.log('MongoDB connected')
     console.log('Worker')
 
     const worker = new Worker(
@@ -87,7 +87,7 @@ async function startWorker () {
             $set: { 'scorm_data.scorm_status': 'completed' }
           })
 
-          console.log('✅ SCORM extraction completed')
+          console.log('SCORM extraction completed')
         } catch (err) {
           console.error(err)
 
@@ -100,14 +100,14 @@ async function startWorker () {
     )
 
     worker.on('completed', job => {
-      console.log('✅ Completed:', job.id)
+      console.log('Completed:', job.id)
     })
 
     worker.on('failed', (job, err) => {
-      console.log('❌ Failed:', job?.id, err)
+      console.log('Failed:', job?.id, err)
     })
   } catch (err) {
-    console.error('❌ Worker startup failed', err)
+    console.error('Worker startup failed', err)
   }
 }
 

@@ -1,4 +1,5 @@
 const express = require('express')
+
 const router = express.Router()
 const isAuth = require('../middleware/is-auth')
 const languageController = require('../controller/Company/LanguageController')
@@ -28,6 +29,7 @@ const exportCenterController = require('../controller/Company/ExportCenterAPICon
 const scheduleNotificationController = require('../controller/Company/ScheduleNotificationController')
 const dashboardController = require('../controller/Company/DashboardAPIController')
 const userProfileController = require('../controller/Company/UserProfileController')
+const leaderboardAPIController = require('../controller/Company/LeaderboardAPIController')
 
 const createUpload = require('../util/upload')
 
@@ -608,6 +610,50 @@ router.post(
   '/certificate/setting/data',
   isAuth,
   certificateController.postCertificateSettingAPI
+)
+
+//This route is for leaderboard data
+router.get(
+  '/leaderboard/data',
+  isAuth,
+  leaderboardAPIController.getLeaderboardDataAPI
+)
+
+router.post(
+  '/leaderboard/config',
+  isAuth,
+  leaderboardAPIController.postLeaderboardConfigAPI
+)
+
+//This route is for contest & badges
+router.get(
+  '/contest/badge',
+  isAuth,
+  leaderboardAPIController?.getContestBadgeDataControllerAPI
+)
+
+router.get(
+  '/contest/badges/create',
+  isAuth,
+  leaderboardAPIController.getContestBadgeCreateDataAPI
+)
+
+router.post(
+  '/contest/badge/create',
+  isAuth,
+  leaderboardAPIController?.postContestBadgeControllerAPI
+)
+
+router.get(
+  '/contest/badge/edit/:id',
+  isAuth,
+  leaderboardAPIController?.getContestBadgeEditController
+)
+
+router.put(
+  '/contest/badge/update/:id',
+  isAuth,
+  leaderboardAPIController?.putContestBadgeController
 )
 
 module.exports = router

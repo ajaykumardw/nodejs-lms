@@ -12,7 +12,7 @@ const designationAPIController = require('../controller/Admin/DesignationAPICont
 const ParticipationTypeAPIController = require('../controller/Admin/ParticipationTypeAPIController')
 const UserAPIController = require('../controller/Admin/UserAPIController')
 const CategoryController = require('../controller/Admin/CategoryController')
-const leaderboardAPIController = require('../controller/Company/LeaderboardAPIController')
+
 
 const createUpload = require('../util/upload')
 
@@ -244,18 +244,5 @@ router.get('/categories', isAuth, CategoryController.getCategoryAPI)
 router.post('/category', isAuth, CategoryController.postCategoryAPI)
 router.put('/category/:id', isAuth, CategoryController.putCategoryAPI)
 router.delete('/category/:id', isAuth, CategoryController.deleteCategoryAPI)
-
-//This route is for leaderboard data
-router.get(
-  '/leaderboard/data',
-  isAuth,
-  leaderboardAPIController.getLeaderboardDataAPI
-)
-
-router.post(
-  '/leaderboard/config',
-  isAuth,
-  leaderboardAPIController.postLeaderboardConfigAPI
-)
 
 module.exports = router

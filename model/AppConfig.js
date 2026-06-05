@@ -177,6 +177,35 @@ const appConfigSchema = new mongoose.Schema(
           }
         ]
       }
+    ],
+    badge_data: [
+      {
+        title: {
+          type: String,
+          required: true,
+          maxlength: 255
+        },
+        winner: {
+          type: String,
+          required: true,
+          maxlength: 5000
+        },
+        description: {
+          type: String,
+          required: true,
+          maxlength: 5000
+        },
+        logo_url: {
+          type: String,
+          required: true,
+          maxlength: 1000
+        },
+        criteria: {
+          type: String,
+          required: true,
+          maxlength: 5000
+        }
+      }
     ]
   },
   {
