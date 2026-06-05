@@ -656,4 +656,10 @@ router.put(
   leaderboardAPIController?.putContestBadgeController
 )
 
+router.delete(
+  '/contest/badge/delete/:id',
+  isAuth,
+  leaderboardAPIController?.deleteContestBadgeController
+)
+
 module.exports = router

@@ -373,12 +373,12 @@ exports.putContestBadgeController = async (req, res, next) => {
 
     await contestBadgeScheduleType.deleteMany({
       created_by: userId,
-      contest_badge_id: id
+      contest_badge_id: contestBadgeId
     })
 
     await contestBadgeScheduleUser.deleteMany({
       created_by: userId,
-      contest_badge_id: id
+      contest_badge_id: contestBadgeId
     })
 
     const contestScheduleType = []
@@ -465,6 +465,39 @@ exports.putContestBadgeController = async (req, res, next) => {
     await userContestBadgeEnroll.insertMany(finalUsers)
 
     return successResponse(res, 'Content Badge updated successfully')
+  } catch (error) {
+    next(error)
+  }
+}
+
+exports.deleteContestBadgeController = async (req, res, next) => {
+  try {
+    const userId = req?.userId
+    const { id } = req?.params
+
+    const contestBadgeId = mongoose.Types.ObjectId.createFromHexString(id)
+
+    await ContestBadge.findOneAndDelete({
+      created_by: userId,
+      _id: contestBadgeId
+    })
+
+    await contestBadgeScheduleType.deleteMany({
+      created_by: userId,
+      contest_badge_id: contestBadgeId
+    })
+
+    await contestBadgeScheduleUser.deleteMany({
+      created_by: userId,
+      contest_badge_id: contestBadgeId
+    })
+
+    await userContestBadgeEnroll.deleteMany({
+      created_by: userId,
+      contest_badge_id: contestBadgeId
+    })
+
+    return successResponse(res, 'Contest badge deleted successfully')
   } catch (error) {
     next(error)
   }
