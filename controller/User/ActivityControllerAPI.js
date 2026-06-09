@@ -2667,7 +2667,6 @@ exports.getAttemptCheck = async (req, res, next) => {
 
 exports.postScormData = async (req, res, next) => {
   try {
-
     const userId = req?.userId
     const { activityId, moduleId, contentFolderId, moduleTypeId } = req.params
 
@@ -2983,6 +2982,9 @@ exports.postScormData = async (req, res, next) => {
     })
 
     const isFinalCompleted =
+      parsed?.lessonStatus == 'passed' || parsed?.lessonStatus == 'completed'
+
+    const isPassed =
       parsed?.lessonStatus == 'passed' || parsed?.lessonStatus == 'completed'
 
     if (activityReport) {
