@@ -2667,6 +2667,7 @@ exports.getAttemptCheck = async (req, res, next) => {
 
 exports.postScormData = async (req, res, next) => {
   try {
+
     const userId = req?.userId
     const { activityId, moduleId, contentFolderId, moduleTypeId } = req.params
 
@@ -3090,24 +3091,6 @@ exports.postScormData = async (req, res, next) => {
     }).sort({
       current_attempt: -1
     })
-
-    if (isSurvey) {
-      finalData = {
-        completed: isSurvey && !isSurveyCompleted
-      }
-    } else if (
-      activity.length <= userModule.length &&
-      ((isSurvey && !isSurveyCompleted) || (!isSurvey && !isSurveyCompleted))
-    ) {
-      // true if all is_completed === true, otherwise false
-      const isAllCompleted = userModule.every(
-        item => item.is_completed === true
-      )
-
-      await Module.findByIdAndUpdate(moduleId, {
-        is_survey_done: isAllCompleted
-      })
-    }
 
     const final_modules = await Module.aggregate([
       {
