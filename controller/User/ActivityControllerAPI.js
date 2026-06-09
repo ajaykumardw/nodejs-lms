@@ -7,6 +7,9 @@ const ContentFolder = require('../../model/ContentFolder')
 const QuizReport = require('../../model/QuizResultReport')
 const QuizSetting = require('../../model/QuizSetting')
 const ActivityFolderReport = require('../../model/ActivityFolderReport')
+const UserSurvey = require('../../model/UserSurveyReport')
+
+const LearnerPoint = require('../../util/earnPoints')
 
 const jwt = require('jsonwebtoken')
 const BlacklistedToken = require('../../model/BlacklistedToken')
@@ -473,6 +476,303 @@ exports.postReportController = async (req, res, next) => {
       viewedVideoTime
     } = req.body
 
+    const pre_activity_report = await ActivityFolderReport.findOne({
+      activity_id: activityId,
+      user_id: userId,
+      module_type_id: moduleTypeId,
+      is_completed: true,
+      progress_status: '3'
+    })
+
+    const is_pre_passed = await ActivityFolderReport.findOne({
+      activity_id: activityId,
+      user_id: userId,
+      module_type_id: '68886902954c4d9dc7a379bd',
+      is_completed: true,
+      progress_status: '3',
+      is_passed: true
+    })
+
+    const is_pre_failed = await ActivityFolderReport.findOne({
+      activity_id: activityId,
+      user_id: userId,
+      module_type_id: '68886902954c4d9dc7a379bd',
+      is_completed: true,
+      is_passed: false
+    })
+
+    const is_pre_max_score = await ActivityFolderReport.findOne({
+      activity_id: activityId,
+      user_id: userId,
+      module_type_id: '68886902954c4d9dc7a379bd',
+      is_completed: true,
+      progress_status: '3',
+      is_passed: true,
+      mark_percentage: '100'
+    })
+
+    const pre_modules = await Module.aggregate([
+      {
+        $match: {
+          _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
+        }
+      },
+      {
+        $lookup: {
+          from: 'modulesettings',
+          localField: '_id',
+          foreignField: 'moduleId',
+          as: 'module_setting'
+        }
+      },
+      {
+        $unwind: {
+          path: '$module_setting',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity',
+          localField: '_id',
+          foreignField: 'module_id',
+          as: 'activities'
+        }
+      },
+      {
+        $addFields: {
+          activities: {
+            $filter: {
+              input: '$activities',
+              as: 'activity',
+              cond: {
+                $switch: {
+                  branches: [
+                    // Document
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68834'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: [
+                                '$$activity.document_data.image_url',
+                                ''
+                              ]
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Video
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68835'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.video_data.video_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Youtube
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68836'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.video_data.video_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // SCORM
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68837'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.scorm_data.folder_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Hide these module types
+                    {
+                      case: {
+                        $in: [
+                          '$$activity.module_type_id',
+                          [
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae68838'
+                            ),
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae68839'
+                            ),
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae6883a'
+                            )
+                          ]
+                        ]
+                      },
+                      then: false
+                    },
+
+                    // Quiz
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '68886902954c4d9dc7a379bd'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $size: {
+                              $ifNull: ['$$activity.questions', []]
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    }
+                  ],
+                  default: true
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity_logs',
+          let: {
+            activityIds: '$activities._id'
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ['$activity_id', '$$activityIds']
+                }
+              }
+            }
+          ],
+          as: 'logs'
+        }
+      },
+      {
+        $lookup: {
+          from: 'program_schedules',
+          localField: '_id',
+          foreignField: 'module_id',
+          as: 'programSchedule'
+        }
+      },
+
+      {
+        $unwind: {
+          path: '$programSchedule',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $addFields: {
+          relativeEndDate: {
+            $switch: {
+              branches: [
+                {
+                  case: { $eq: ['$programSchedule.dueType', 'relative'] },
+                  then: {
+                    $dateAdd: {
+                      startDate: '$programSchedule.published_date',
+                      unit: 'day',
+                      amount: {
+                        $toInt: {
+                          $ifNull: ['$programSchedule.dueDays', 0]
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  case: { $eq: ['$programSchedule.dueType', 'fixed'] },
+                  then: '$programSchedule.dueDate.end_date'
+                }
+              ],
+              default: null
+            }
+          }
+        }
+      }
+    ])
+
+    const pre_module = pre_modules?.[0]
+
+    const pre_activities = pre_module?.activities || []
+    const pre_logs = pre_module?.logs || []
+
+    const relativeEndDate = pre_module?.relativeEndDate
+
+    const isScheduleBefore =
+      relativeEndDate && new Date(relativeEndDate).getTime() > Date.now()
+
+    const isPreCompleted =
+      pre_activities.length > 0 &&
+      pre_activities.every(activity =>
+        pre_logs.some(
+          log =>
+            log.activity_id.toString() === activity._id.toString() &&
+            log.progress_status === '3'
+        )
+      )
+
     const contentFolder = await ContentFolder.findById(contentFolderId)
 
     let perComplete = 0
@@ -543,6 +843,7 @@ exports.postReportController = async (req, res, next) => {
         (sum, item) => sum + Number(item.mark),
         0
       )
+
       const totalTotalMark = quizData.reduce(
         (sum, item) => sum + Number(item.total_mark),
         0
@@ -577,6 +878,8 @@ exports.postReportController = async (req, res, next) => {
       }
     }
 
+    const isFinalCompleted = Number(perComplete).toFixed(1) >= 100
+
     const reportData = {
       user_id: userId,
       program_id: contentFolder.program_id,
@@ -587,7 +890,7 @@ exports.postReportController = async (req, res, next) => {
       content_folder_id: contentFolderId,
       module_type_id: moduleTypeId,
       progress_status: fetchProgressStatus(perComplete),
-      is_completed: Number(perComplete).toFixed(1) >= 100,
+      is_completed: isFinalCompleted,
       is_passed: isPassed,
       mark_percentage: passPercent,
       completion_percentage: perComplete,
@@ -650,6 +953,156 @@ exports.postReportController = async (req, res, next) => {
         }
       },
       {
+        $addFields: {
+          activities: {
+            $filter: {
+              input: '$activities',
+              as: 'activity',
+              cond: {
+                $switch: {
+                  branches: [
+                    // Document
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68834'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: [
+                                '$$activity.document_data.image_url',
+                                ''
+                              ]
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Video
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68835'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.video_data.video_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Youtube
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68836'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.video_data.video_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // SCORM
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68837'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.scorm_data.folder_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Hide these module types
+                    {
+                      case: {
+                        $in: [
+                          '$$activity.module_type_id',
+                          [
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae68838'
+                            ),
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae68839'
+                            ),
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae6883a'
+                            )
+                          ]
+                        ]
+                      },
+                      then: false
+                    },
+
+                    // Quiz
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '68886902954c4d9dc7a379bd'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $size: {
+                              $ifNull: ['$$activity.questions', []]
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    }
+                  ],
+                  default: true
+                }
+              }
+            }
+          }
+        }
+      },
+      {
         $lookup: {
           from: 'activity_logs',
           let: {
@@ -686,10 +1139,97 @@ exports.postReportController = async (req, res, next) => {
         )
       )
 
+    const finalActivityCompletion = !pre_activity_report && isFinalCompleted
+
+    const finalQuizPassed = !is_pre_passed && isPassed
+    const finalQuizFailed = !is_pre_failed && !isPassed
+
+    if (finalQuizPassed && moduleTypeId == '68886902954c4d9dc7a379bd') {
+      await LearnerPoint(
+        '6a1eba182ff5cb1b286b97bb',
+        userId,
+        moduleId,
+        activityId,
+        moduleTypeId
+      )
+    } else if (finalQuizFailed && moduleTypeId == '68886902954c4d9dc7a379bd') {
+      await LearnerPoint(
+        '6a1eba182ff5cb1b286b97bc',
+        userId,
+        moduleId,
+        activityId,
+        moduleTypeId
+      )
+    }
+
+    if (finalActivityCompletion) {
+      if (moduleTypeId == '688723af5dd97f4ccae68834') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97ba',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      } else if (moduleTypeId == '688723af5dd97f4ccae68835') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97bd',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      } else if (moduleTypeId == '688723af5dd97f4ccae68837') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97be',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      } else if (moduleTypeId == '688723af5dd97f4ccae68836') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97bf',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      }
+    }
+
+    const finalCompletion = !isPreCompleted && isCompleted
+
+    if (finalCompletion) {
+      await LearnerPoint('6a1eba182ff5cb1b286b97b7', userId, moduleId)
+
+      if (isScheduleBefore) {
+        await LearnerPoint('6a1eba182ff5cb1b286b97b8', userId, moduleId)
+      }
+    }
+
+    const userSurvey = await UserSurvey.findOne({
+      module_id: moduleId,
+      user_id: userId
+    })
+
     const finalData = {
       completed: isCompleted,
-      is_survey_completed: moduleSetting?.feedbackSurveyEnabled || false,
+      is_survey_completed:
+        (!userSurvey && moduleSetting?.feedbackSurveyEnabled) || false,
       is_survey_mandatory: moduleSetting?.mandatory || false
+    }
+
+    const final_max_score = !is_pre_max_score && passPercent == '100'
+
+    if (final_max_score && moduleTypeId == '68886902954c4d9dc7a379bd') {
+      await LearnerPoint(
+        '6a1eba182ff5cb1b286b97b9',
+        userId,
+        moduleId,
+        activityId,
+        moduleTypeId
+      )
     }
 
     return successResponse(res, 'Activity report successful', finalData)
@@ -715,6 +1255,303 @@ exports.postInsertReportController = async (req, res, next) => {
       totalVideoTime,
       viewedVideoTime
     } = req.body
+
+    const is_pre_passed = await ActivityFolderReport.findOne({
+      activity_id: activityId,
+      user_id: userId,
+      module_type_id: '68886902954c4d9dc7a379bd',
+      is_completed: true,
+      progress_status: '3',
+      is_passed: true
+    })
+
+    const is_pre_failed = await ActivityFolderReport.findOne({
+      activity_id: activityId,
+      user_id: userId,
+      module_type_id: '68886902954c4d9dc7a379bd',
+      is_completed: true,
+      is_passed: false
+    })
+
+    const pre_activity_report = await ActivityFolderReport.findOne({
+      activity_id: activityId,
+      user_id: userId,
+      module_type_id: moduleTypeId,
+      is_completed: true,
+      progress_status: '3'
+    })
+
+    const is_pre_max_score = await ActivityFolderReport.findOne({
+      activity_id: activityId,
+      user_id: userId,
+      module_type_id: '68886902954c4d9dc7a379bd',
+      is_completed: true,
+      progress_status: '3',
+      is_passed: true,
+      mark_percentage: '100'
+    })
+
+    const pre_modules = await Module.aggregate([
+      {
+        $match: {
+          _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
+        }
+      },
+      {
+        $lookup: {
+          from: 'modulesettings',
+          localField: '_id',
+          foreignField: 'moduleId',
+          as: 'module_setting'
+        }
+      },
+      {
+        $unwind: {
+          path: '$module_setting',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity',
+          localField: '_id',
+          foreignField: 'module_id',
+          as: 'activities'
+        }
+      },
+      {
+        $addFields: {
+          activities: {
+            $filter: {
+              input: '$activities',
+              as: 'activity',
+              cond: {
+                $switch: {
+                  branches: [
+                    // Document
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68834'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: [
+                                '$$activity.document_data.image_url',
+                                ''
+                              ]
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Video
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68835'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.video_data.video_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Youtube
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68836'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.video_data.video_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // SCORM
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68837'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.scorm_data.folder_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Hide these module types
+                    {
+                      case: {
+                        $in: [
+                          '$$activity.module_type_id',
+                          [
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae68838'
+                            ),
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae68839'
+                            ),
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae6883a'
+                            )
+                          ]
+                        ]
+                      },
+                      then: false
+                    },
+
+                    // Quiz
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '68886902954c4d9dc7a379bd'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $size: {
+                              $ifNull: ['$$activity.questions', []]
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    }
+                  ],
+                  default: true
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity_logs',
+          let: {
+            activityIds: '$activities._id'
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ['$activity_id', '$$activityIds']
+                }
+              }
+            }
+          ],
+          as: 'logs'
+        }
+      },
+      {
+        $lookup: {
+          from: 'program_schedules',
+          localField: '_id',
+          foreignField: 'module_id',
+          as: 'programSchedule'
+        }
+      },
+
+      {
+        $unwind: {
+          path: '$programSchedule',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $addFields: {
+          relativeEndDate: {
+            $switch: {
+              branches: [
+                {
+                  case: { $eq: ['$programSchedule.dueType', 'relative'] },
+                  then: {
+                    $dateAdd: {
+                      startDate: '$programSchedule.published_date',
+                      unit: 'day',
+                      amount: {
+                        $toInt: {
+                          $ifNull: ['$programSchedule.dueDays', 0]
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  case: { $eq: ['$programSchedule.dueType', 'fixed'] },
+                  then: '$programSchedule.dueDate.end_date'
+                }
+              ],
+              default: null
+            }
+          }
+        }
+      }
+    ])
+
+    const pre_module = pre_modules?.[0]
+
+    const pre_activities = pre_module?.activities || []
+    const pre_logs = pre_module?.logs || []
+
+    const relativeEndDate = pre_module?.relativeEndDate
+
+    const isScheduleBefore =
+      relativeEndDate && new Date(relativeEndDate).getTime() > Date.now()
+
+    const isPreCompleted =
+      pre_activities.length > 0 &&
+      pre_activities.every(activity =>
+        pre_logs.some(
+          log =>
+            log.activity_id.toString() === activity._id.toString() &&
+            log.progress_status === '3'
+        )
+      )
 
     const contentFolder = await ContentFolder.findById(contentFolderId)
 
@@ -820,6 +1657,10 @@ exports.postInsertReportController = async (req, res, next) => {
       }
     }
 
+    const isFinalCompleted = quizCompleted
+      ? isPassed
+      : Number(perComplete).toFixed(1) >= 100
+
     const reportData = {
       user_id: userId,
       program_id: contentFolder.program_id,
@@ -833,9 +1674,7 @@ exports.postInsertReportController = async (req, res, next) => {
       mark_percentage: passPercent,
       progress_status: fetchProgressStatus(perComplete),
       completion_percentage: perComplete,
-      is_completed: quizCompleted
-        ? isPassed
-        : Number(perComplete).toFixed(1) >= 100,
+      is_completed: isFinalCompleted,
       completed_at_time:
         Number(perComplete).toFixed(1) >= 100 ? Date.now() : null,
       passed_at_time: isPassed ? Date.now() : null,
@@ -886,6 +1725,182 @@ exports.postInsertReportController = async (req, res, next) => {
           path: '$module_setting',
           preserveNullAndEmptyArrays: true
         }
+      },
+      {
+        $lookup: {
+          from: 'activity',
+          localField: '_id',
+          foreignField: 'module_id',
+          as: 'activities'
+        }
+      },
+      {
+        $addFields: {
+          activities: {
+            $filter: {
+              input: '$activities',
+              as: 'activity',
+              cond: {
+                $switch: {
+                  branches: [
+                    // Document
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68834'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: [
+                                '$$activity.document_data.image_url',
+                                ''
+                              ]
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Video
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68835'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.video_data.video_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Youtube
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68836'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.video_data.video_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // SCORM
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68837'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.scorm_data.folder_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Hide these module types
+                    {
+                      case: {
+                        $in: [
+                          '$$activity.module_type_id',
+                          [
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae68838'
+                            ),
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae68839'
+                            ),
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae6883a'
+                            )
+                          ]
+                        ]
+                      },
+                      then: false
+                    },
+
+                    // Quiz
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '68886902954c4d9dc7a379bd'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $size: {
+                              $ifNull: ['$$activity.questions', []]
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    }
+                  ],
+                  default: true
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity_logs',
+          let: {
+            activityIds: '$activities._id'
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ['$activity_id', '$$activityIds']
+                }
+              }
+            }
+          ],
+          as: 'logs'
+        }
       }
     ])
 
@@ -893,10 +1908,110 @@ exports.postInsertReportController = async (req, res, next) => {
 
     const moduleSetting = module?.module_setting
 
+    const activities = module?.activities || []
+    const logs = module?.logs || []
+
+    const isCompleted =
+      activities.length > 0 &&
+      activities.every(activity =>
+        logs.some(
+          log =>
+            log.activity_id.toString() === activity._id.toString() &&
+            log.progress_status === '3'
+        )
+      )
+
+    const finalCompletion = !isPreCompleted && isCompleted
+
+    if (finalCompletion) {
+      await LearnerPoint('6a1eba182ff5cb1b286b97b7', userId, moduleId)
+
+      if (isScheduleBefore) {
+        await LearnerPoint('6a1eba182ff5cb1b286b97b8', userId, moduleId)
+      }
+    }
+
+    const finalActivityCompletion = !pre_activity_report && isFinalCompleted
+
+    if (finalActivityCompletion) {
+      if (moduleTypeId == '688723af5dd97f4ccae68834') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97ba',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      } else if (moduleTypeId == '688723af5dd97f4ccae68835') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97bd',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      } else if (moduleTypeId == '688723af5dd97f4ccae68837') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97be',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      } else if (moduleTypeId == '688723af5dd97f4ccae68836') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97bf',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      }
+    }
+
+    const finalQuizPassed = !is_pre_passed && isPassed
+    const finalQuizFailed = !is_pre_failed && !isPassed
+
+    if (finalQuizPassed && moduleTypeId == '68886902954c4d9dc7a379bd') {
+      await LearnerPoint(
+        '6a1eba182ff5cb1b286b97bb',
+        userId,
+        moduleId,
+        activityId,
+        moduleTypeId
+      )
+    } else if (finalQuizFailed && moduleTypeId == '68886902954c4d9dc7a379bd') {
+      await LearnerPoint(
+        '6a1eba182ff5cb1b286b97bc',
+        userId,
+        moduleId,
+        activityId,
+        moduleTypeId
+      )
+    }
+
+    const userSurvey = await UserSurvey.findOne({
+      module_id: moduleId,
+      user_id: userId
+    })
+
     const finalData = {
-      completed: false,
-      is_survey_completed: moduleSetting?.feedbackSurveyEnabled || false,
+      completed: isCompleted,
+      is_survey_completed:
+        (!userSurvey && moduleSetting?.feedbackSurveyEnabled) || false,
       is_survey_mandatory: moduleSetting?.mandatory || false
+    }
+
+    const final_max_score = !is_pre_max_score && passPercent == '100'
+
+    if (final_max_score && moduleTypeId == '68886902954c4d9dc7a379bd') {
+      await LearnerPoint(
+        '6a1eba182ff5cb1b286b97b9',
+        userId,
+        moduleId,
+        activityId,
+        moduleTypeId
+      )
     }
 
     return successResponse(res, 'Activity report successful', finalData)
@@ -909,6 +2024,76 @@ exports.getAttemptCheck = async (req, res, next) => {
   try {
     const userId = req?.userId
     const { activityId, moduleId, contentFolderId, moduleTypeId } = req?.params
+
+    const pre_activity_report = await ActivityFolderReport.findOne({
+      activity_id: activityId,
+      module_type_id: moduleTypeId,
+      is_completed: true,
+      progress_status: '3'
+    })
+
+    const pre_modules = await Module.aggregate([
+      {
+        $match: {
+          _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
+        }
+      },
+      {
+        $lookup: {
+          from: 'modulesettings',
+          localField: '_id',
+          foreignField: 'moduleId',
+          as: 'module_setting'
+        }
+      },
+      {
+        $unwind: {
+          path: '$module_setting',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity',
+          localField: '_id',
+          foreignField: 'module_id',
+          as: 'activities'
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity_logs',
+          let: {
+            activityIds: '$activities._id'
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ['$activity_id', '$$activityIds']
+                }
+              }
+            }
+          ],
+          as: 'logs'
+        }
+      }
+    ])
+
+    const pre_module = pre_modules?.[0]
+
+    const pre_activities = pre_module?.activities || []
+    const pre_logs = pre_module?.logs || []
+
+    const isPreCompleted =
+      pre_activities.length > 0 &&
+      pre_activities.every(activity =>
+        pre_logs.some(
+          log =>
+            log.activity_id.toString() === activity._id.toString() &&
+            log.progress_status === '3'
+        )
+      )
 
     const [quizSetting, activityReport, contentFolder] = await Promise.all([
       QuizSetting.findOne({ activity_id: activityId, module_id: moduleId }),
@@ -962,6 +2147,123 @@ exports.getAttemptCheck = async (req, res, next) => {
       )
     }
 
+    const modules = await Module.aggregate([
+      {
+        $match: {
+          _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
+        }
+      },
+      {
+        $lookup: {
+          from: 'modulesettings',
+          localField: '_id',
+          foreignField: 'moduleId',
+          as: 'module_setting'
+        }
+      },
+      {
+        $unwind: {
+          path: '$module_setting',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity',
+          localField: '_id',
+          foreignField: 'module_id',
+          as: 'activities'
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity_logs',
+          let: {
+            activityIds: '$activities._id'
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ['$activity_id', '$$activityIds']
+                }
+              }
+            }
+          ],
+          as: 'logs'
+        }
+      }
+    ])
+
+    const module = modules?.[0]
+
+    const moduleSetting = module?.module_setting
+
+    const activities = module?.activities || []
+    const logs = module?.logs || []
+
+    const isCompleted =
+      activities.length > 0 &&
+      activities.every(activity =>
+        logs.some(
+          log =>
+            log.activity_id.toString() === activity._id.toString() &&
+            log.progress_status === '3'
+        )
+      )
+
+    const finalCompletion = !isPreCompleted && isCompleted
+
+    const final_activity_report = await ActivityFolderReport.findOne({
+      activity_id: activityId,
+      module_type_id: moduleTypeId,
+      is_completed: true,
+      progress_status: '3'
+    })
+
+    const finalActivityCompletion =
+      !pre_activity_report && final_activity_report
+
+    if (finalActivityCompletion) {
+      if (moduleTypeId == '688723af5dd97f4ccae68834') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97ba',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      } else if (moduleTypeId == '688723af5dd97f4ccae68835') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97bd',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      } else if (moduleTypeId == '688723af5dd97f4ccae68837') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97be',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      } else if (moduleTypeId == '688723af5dd97f4ccae68836') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97bf',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      }
+    }
+
+    if (finalCompletion) {
+      await LearnerPoint('6a1eba182ff5cb1b286b97b7', userId, moduleId)
+    }
+
     return successResponse(res, 'Attempt updated successfully')
   } catch (error) {
     next(error)
@@ -975,8 +2277,305 @@ exports.postScormData = async (req, res, next) => {
 
     const scormData = req.body || {}
 
+    const is_pre_passed = await ActivityFolderReport.findOne({
+      activity_id: activityId,
+      user_id: userId,
+      module_type_id: '68886902954c4d9dc7a379bd',
+      is_completed: true,
+      progress_status: '3',
+      is_passed: true
+    })
+
+    const is_pre_failed = await ActivityFolderReport.findOne({
+      activity_id: activityId,
+      user_id: userId,
+      module_type_id: '68886902954c4d9dc7a379bd',
+      is_completed: true,
+      is_passed: false
+    })
+
+    const pre_activity_report = await ActivityFolderReport.findOne({
+      activity_id: activityId,
+      user_id: userId,
+      module_type_id: moduleTypeId,
+      is_completed: true,
+      progress_status: '3'
+    })
+
+    const is_pre_max_score = await ActivityFolderReport.findOne({
+      activity_id: activityId,
+      user_id: userId,
+      module_type_id: '68886902954c4d9dc7a379bd',
+      is_completed: true,
+      progress_status: '3',
+      is_passed: true,
+      mark_percentage: '100'
+    })
+
     // Convert raw → clean format
     const parsed = parseScormData(scormData)
+
+    const pre_modules = await Module.aggregate([
+      {
+        $match: {
+          _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
+        }
+      },
+      {
+        $lookup: {
+          from: 'modulesettings',
+          localField: '_id',
+          foreignField: 'moduleId',
+          as: 'module_setting'
+        }
+      },
+      {
+        $unwind: {
+          path: '$module_setting',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity',
+          localField: '_id',
+          foreignField: 'module_id',
+          as: 'activities'
+        }
+      },
+      {
+        $addFields: {
+          activities: {
+            $filter: {
+              input: '$activities',
+              as: 'activity',
+              cond: {
+                $switch: {
+                  branches: [
+                    // Document
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68834'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: [
+                                '$$activity.document_data.image_url',
+                                ''
+                              ]
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Video
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68835'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.video_data.video_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Youtube
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68836'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.video_data.video_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // SCORM
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68837'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.scorm_data.folder_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Hide these module types
+                    {
+                      case: {
+                        $in: [
+                          '$$activity.module_type_id',
+                          [
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae68838'
+                            ),
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae68839'
+                            ),
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae6883a'
+                            )
+                          ]
+                        ]
+                      },
+                      then: false
+                    },
+
+                    // Quiz
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '68886902954c4d9dc7a379bd'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $size: {
+                              $ifNull: ['$$activity.questions', []]
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    }
+                  ],
+                  default: true
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity_logs',
+          let: {
+            activityIds: '$activities._id'
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ['$activity_id', '$$activityIds']
+                }
+              }
+            }
+          ],
+          as: 'logs'
+        }
+      },
+      {
+        $lookup: {
+          from: 'program_schedules',
+          localField: '_id',
+          foreignField: 'module_id',
+          as: 'programSchedule'
+        }
+      },
+
+      {
+        $unwind: {
+          path: '$programSchedule',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $addFields: {
+          relativeEndDate: {
+            $switch: {
+              branches: [
+                {
+                  case: { $eq: ['$programSchedule.dueType', 'relative'] },
+                  then: {
+                    $dateAdd: {
+                      startDate: '$programSchedule.published_date',
+                      unit: 'day',
+                      amount: {
+                        $toInt: {
+                          $ifNull: ['$programSchedule.dueDays', 0]
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  case: { $eq: ['$programSchedule.dueType', 'fixed'] },
+                  then: '$programSchedule.dueDate.end_date'
+                }
+              ],
+              default: null
+            }
+          }
+        }
+      }
+    ])
+
+    const pre_module = pre_modules?.[0]
+
+    const pre_activities = pre_module?.activities || []
+    const pre_logs = pre_module?.logs || []
+
+    const relativeEndDate = pre_module?.relativeEndDate
+
+    const isScheduleBefore =
+      relativeEndDate && new Date(relativeEndDate).getTime() > Date.now()
+
+    const isPreCompleted =
+      pre_activities.length > 0 &&
+      pre_activities.every(activity =>
+        pre_logs.some(
+          log =>
+            log.activity_id.toString() === activity._id.toString() &&
+            log.progress_status === '3'
+        )
+      )
 
     const contentFolder = await ContentFolder.findById(contentFolderId)
 
@@ -986,6 +2585,9 @@ exports.postScormData = async (req, res, next) => {
     }).sort({
       current_attempt: -1
     })
+
+    const isFinalCompleted =
+      parsed?.lessonStatus == 'passed' || parsed?.lessonStatus == 'completed'
 
     if (activityReport) {
       await ActivityFolderReport.findOneAndUpdate(
@@ -1094,10 +2696,6 @@ exports.postScormData = async (req, res, next) => {
       current_attempt: -1
     })
 
-    let finalData = {
-      completed: false
-    }
-
     if (isSurvey) {
       finalData = {
         completed: isSurvey && !isSurveyCompleted
@@ -1111,13 +2709,317 @@ exports.postScormData = async (req, res, next) => {
         item => item.is_completed === true
       )
 
-      finalData = {
-        completed: isAllCompleted
-      }
-
       await Module.findByIdAndUpdate(moduleId, {
         is_survey_done: isAllCompleted
       })
+    }
+
+    const final_modules = await Module.aggregate([
+      {
+        $match: {
+          _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
+        }
+      },
+      {
+        $lookup: {
+          from: 'modulesettings',
+          localField: '_id',
+          foreignField: 'moduleId',
+          as: 'module_setting'
+        }
+      },
+      {
+        $unwind: {
+          path: '$module_setting',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity',
+          localField: '_id',
+          foreignField: 'module_id',
+          as: 'activities'
+        }
+      },
+      {
+        $addFields: {
+          activities: {
+            $filter: {
+              input: '$activities',
+              as: 'activity',
+              cond: {
+                $switch: {
+                  branches: [
+                    // Document
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68834'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: [
+                                '$$activity.document_data.image_url',
+                                ''
+                              ]
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Video
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68835'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.video_data.video_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Youtube
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68836'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.video_data.video_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // SCORM
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68837'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.scorm_data.folder_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Hide these module types
+                    {
+                      case: {
+                        $in: [
+                          '$$activity.module_type_id',
+                          [
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae68838'
+                            ),
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae68839'
+                            ),
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae6883a'
+                            )
+                          ]
+                        ]
+                      },
+                      then: false
+                    },
+
+                    // Quiz
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '68886902954c4d9dc7a379bd'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $size: {
+                              $ifNull: ['$$activity.questions', []]
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    }
+                  ],
+                  default: true
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity_logs',
+          let: {
+            activityIds: '$activities._id'
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ['$activity_id', '$$activityIds']
+                }
+              }
+            }
+          ],
+          as: 'logs'
+        }
+      }
+    ])
+
+    const module = final_modules?.[0]
+
+    const moduleSetting = module?.module_setting
+
+    const activities = module?.activities || []
+    const logs = module?.logs || []
+
+    const isCompleted =
+      activities.length > 0 &&
+      activities.every(activity =>
+        logs.some(
+          log =>
+            log.activity_id.toString() === activity._id.toString() &&
+            log.progress_status === '3'
+        )
+      )
+
+    const finalActivityCompletion = !pre_activity_report && isFinalCompleted
+
+    if (finalActivityCompletion) {
+      if (moduleTypeId == '688723af5dd97f4ccae68834') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97ba',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      } else if (moduleTypeId == '688723af5dd97f4ccae68835') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97bd',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      } else if (moduleTypeId == '688723af5dd97f4ccae68837') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97be',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      } else if (moduleTypeId == '688723af5dd97f4ccae68836') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97bf',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      }
+    }
+
+    const finalCompletion = !isPreCompleted && isCompleted
+
+    const finalQuizPassed = !is_pre_passed && isPassed
+    const finalQuizFailed = !is_pre_failed && !isPassed
+
+    if (finalQuizPassed && moduleTypeId == '68886902954c4d9dc7a379bd') {
+      await LearnerPoint(
+        '6a1eba182ff5cb1b286b97bb',
+        userId,
+        moduleId,
+        activityId,
+        moduleTypeId
+      )
+    } else if (finalQuizFailed && moduleTypeId == '68886902954c4d9dc7a379bd') {
+      await LearnerPoint(
+        '6a1eba182ff5cb1b286b97bc',
+        userId,
+        moduleId,
+        activityId,
+        moduleTypeId
+      )
+    }
+
+    if (finalCompletion) {
+      await LearnerPoint('6a1eba182ff5cb1b286b97b7', userId, moduleId)
+
+      if (isScheduleBefore) {
+        await LearnerPoint('6a1eba182ff5cb1b286b97b8', userId, moduleId)
+      }
+    }
+
+    const final_max_score = !is_pre_max_score && passPercent == '100'
+
+    if (final_max_score && moduleTypeId == '68886902954c4d9dc7a379bd') {
+      await LearnerPoint(
+        '6a1eba182ff5cb1b286b97b9',
+        userId,
+        moduleId,
+        activityId,
+        moduleTypeId
+      )
+    }
+
+    const userSurvey = await UserSurvey.findOne({
+      module_id: moduleId,
+      user_id: userId
+    })
+
+    const finalData = {
+      completed: isCompleted,
+      is_survey_completed:
+        (!userSurvey && moduleSetting?.feedbackSurveyEnabled) || false,
+      is_survey_mandatory: moduleSetting?.mandatory || false
     }
 
     return successResponse(res, 'SCORM data saved successfully', finalData)
@@ -1166,7 +3068,78 @@ exports.getNewAttemptController = async (req, res, next) => {
 
     const { activityId, moduleId, contentFolderId, moduleTypeId } = req?.params
 
+    const pre_activity_report = await ActivityFolderReport.findOne({
+      activity_id: activityId,
+      user_id: userId,
+      module_type_id: moduleTypeId,
+      is_completed: true,
+      progress_status: '3'
+    })
+
     const contentFolder = await ContentFolder.findById(contentFolderId)
+
+    const pre_modules = await Module.aggregate([
+      {
+        $match: {
+          _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
+        }
+      },
+      {
+        $lookup: {
+          from: 'modulesettings',
+          localField: '_id',
+          foreignField: 'moduleId',
+          as: 'module_setting'
+        }
+      },
+      {
+        $unwind: {
+          path: '$module_setting',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity',
+          localField: '_id',
+          foreignField: 'module_id',
+          as: 'activities'
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity_logs',
+          let: {
+            activityIds: '$activities._id'
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ['$activity_id', '$$activityIds']
+                }
+              }
+            }
+          ],
+          as: 'logs'
+        }
+      }
+    ])
+
+    const pre_module = pre_modules?.[0]
+
+    const pre_activities = pre_module?.activities || []
+    const pre_logs = pre_module?.logs || []
+
+    const isPreCompleted =
+      pre_activities.length > 0 &&
+      pre_activities.every(activity =>
+        pre_logs.some(
+          log =>
+            log.activity_id.toString() === activity._id.toString() &&
+            log.progress_status === '3'
+        )
+      )
 
     const activityFolderReport = await ActivityFolderReport.findOne({
       activity_id: activityId,
@@ -1238,6 +3211,124 @@ exports.getNewAttemptController = async (req, res, next) => {
 
     await activity_report.save()
 
+    const modules = await Module.aggregate([
+      {
+        $match: {
+          _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
+        }
+      },
+      {
+        $lookup: {
+          from: 'modulesettings',
+          localField: '_id',
+          foreignField: 'moduleId',
+          as: 'module_setting'
+        }
+      },
+      {
+        $unwind: {
+          path: '$module_setting',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity',
+          localField: '_id',
+          foreignField: 'module_id',
+          as: 'activities'
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity_logs',
+          let: {
+            activityIds: '$activities._id'
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ['$activity_id', '$$activityIds']
+                }
+              }
+            }
+          ],
+          as: 'logs'
+        }
+      }
+    ])
+
+    const module = modules?.[0]
+
+    const moduleSetting = module?.module_setting
+
+    const activities = module?.activities || []
+    const logs = module?.logs || []
+
+    const isModuleCompleted =
+      activities.length > 0 &&
+      activities.every(activity =>
+        logs.some(
+          log =>
+            log.activity_id.toString() === activity._id.toString() &&
+            log.progress_status === '3'
+        )
+      )
+
+    const finalCompletion = !isPreCompleted && isModuleCompleted
+
+    const final_activity_report = await ActivityFolderReport.findOne({
+      activity_id: activityId,
+      user_id: userId,
+      module_type_id: moduleTypeId,
+      is_completed: true,
+      progress_status: '3'
+    })
+
+    const finalActivityCompletion =
+      !pre_activity_report && final_activity_report
+
+    if (finalActivityCompletion) {
+      if (moduleTypeId == '688723af5dd97f4ccae68834') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97ba',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      } else if (moduleTypeId == '688723af5dd97f4ccae68835') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97bd',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      } else if (moduleTypeId == '688723af5dd97f4ccae68837') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97be',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      } else if (moduleTypeId == '688723af5dd97f4ccae68836') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97bf',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      }
+    }
+
+    if (finalCompletion) {
+      await LearnerPoint('6a1eba182ff5cb1b286b97b7', userId, moduleId)
+    }
+
     return successResponse(res, 'Activity report saved successfully')
   } catch (error) {
     next(error)
@@ -1252,6 +3343,76 @@ exports.getEndAttemptController = async (req, res, next) => {
     if (!token) {
       return errorResponse(res, 'Not authenticated: Token missing', {}, 401)
     }
+
+    const pre_activity_report = await ActivityFolderReport.findOne({
+      activity_id: activityId,
+      module_type_id: moduleTypeId,
+      is_completed: true,
+      progress_status: '3'
+    })
+
+    const pre_modules = await Module.aggregate([
+      {
+        $match: {
+          _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
+        }
+      },
+      {
+        $lookup: {
+          from: 'modulesettings',
+          localField: '_id',
+          foreignField: 'moduleId',
+          as: 'module_setting'
+        }
+      },
+      {
+        $unwind: {
+          path: '$module_setting',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity',
+          localField: '_id',
+          foreignField: 'module_id',
+          as: 'activities'
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity_logs',
+          let: {
+            activityIds: '$activities._id'
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ['$activity_id', '$$activityIds']
+                }
+              }
+            }
+          ],
+          as: 'logs'
+        }
+      }
+    ])
+
+    const pre_module = pre_modules?.[0]
+
+    const pre_activities = pre_module?.activities || []
+    const pre_logs = pre_module?.logs || []
+
+    const isPreCompleted =
+      pre_activities.length > 0 &&
+      pre_activities.every(activity =>
+        pre_logs.some(
+          log =>
+            log.activity_id.toString() === activity._id.toString() &&
+            log.progress_status === '3'
+        )
+      )
 
     const isBlacklisted = await BlacklistedToken.exists({ token })
     if (isBlacklisted) {
@@ -1297,6 +3458,127 @@ exports.getEndAttemptController = async (req, res, next) => {
 
     activityFolderReport.end_activity_time = Date.now()
     await activityFolderReport.save()
+
+    const modules = await Module.aggregate([
+      {
+        $match: {
+          _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
+        }
+      },
+      {
+        $lookup: {
+          from: 'modulesettings',
+          localField: '_id',
+          foreignField: 'moduleId',
+          as: 'module_setting'
+        }
+      },
+      {
+        $unwind: {
+          path: '$module_setting',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity',
+          localField: '_id',
+          foreignField: 'module_id',
+          as: 'activities'
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity_logs',
+          let: {
+            activityIds: '$activities._id'
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ['$activity_id', '$$activityIds']
+                }
+              }
+            }
+          ],
+          as: 'logs'
+        }
+      }
+    ])
+
+    const module = modules?.[0]
+
+    const moduleSetting = module?.module_setting
+
+    const activities = module?.activities || []
+    const logs = module?.logs || []
+
+    const isCompleted =
+      activities.length > 0 &&
+      activities.every(activity =>
+        logs.some(
+          log =>
+            log.activity_id.toString() === activity._id.toString() &&
+            log.progress_status === '3'
+        )
+      )
+
+    const finalCompletion = !isPreCompleted && isCompleted
+
+    const final_activity_report = await ActivityFolderReport.findOne({
+      activity_id: activityId,
+      module_type_id: moduleTypeId,
+      is_completed: true,
+      progress_status: '3'
+    })
+
+    const finalActivityCompletion =
+      !pre_activity_report && final_activity_report
+
+    if (finalActivityCompletion) {
+      if (moduleTypeId == '688723af5dd97f4ccae68834') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97ba',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      } else if (moduleTypeId == '688723af5dd97f4ccae68835') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97bd',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      } else if (moduleTypeId == '688723af5dd97f4ccae68837') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97be',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      } else if (moduleTypeId == '688723af5dd97f4ccae68836') {
+        await LearnerPoint(
+          '6a1eba182ff5cb1b286b97bf',
+          userId,
+          moduleId,
+          activityId,
+          moduleTypeId
+        )
+      }
+    }
+
+    if (finalCompletion) {
+      await LearnerPoint('6a1eba182ff5cb1b286b97b7', userId, moduleId)
+
+      if (isScheduleBefore) {
+        await LearnerPoint('6a1eba182ff5cb1b286b97b8', userId, moduleId)
+      }
+    }
 
     return successResponse(res, 'Activity ended successfully')
   } catch (err) {

@@ -14,7 +14,7 @@ router.get('/program/data', isAuth, programController.getCourseAPIController);
 router.get('/module/data/:id', isAuth, moduleController.getModuleAPIController);
 
 //This is the API for activity
-router.get('/activity/data/:id', isAuth, activityController.getActivityData);
+router.get('/activity/data/:id', isAuth, activityController.getActivityData);   
 router.get('/activity/fetch/data/:id', isAuth, activityController.getFetchActivity);
 router.get('/activity/new/attempt/:moduleId/:contentFolderId/:activityId/:moduleTypeId', isAuth, activityController.getNewAttemptController)
 router.post('/activity/end/attempt', activityController.getEndAttemptController);
