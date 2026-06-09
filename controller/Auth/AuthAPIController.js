@@ -51,8 +51,22 @@ exports.postAPILogIn = async (req, res, next) => {
     const userId = user?._id
 
     if (createdBy != '6811ae35704460d978b84eaa') {
-      await LearnerPoints('6a1eba182ff5cb1b286b97b4', userId)
-      await LearnerPoints('6a1eba182ff5cb1b286b97b5', userId)
+      await LearnerPoints(
+        '6a1eba182ff5cb1b286b97b4',
+        userId,
+        null,
+        null,
+        null,
+        true
+      )
+      await LearnerPoints(
+        '6a1eba182ff5cb1b286b97b5',
+        userId,
+        null,
+        null,
+        null,
+        true
+      )
     }
 
     const expiresInSeconds = expireTime * 60 * 60
