@@ -264,9 +264,6 @@ exports.getSurveyDetail = async (req, res, next) => {
       return errorResponse(res, 'Module does not exist', {}, 404)
     }
 
-    const activities = module.activities || []
-    const logs = module.logs || []
-
     const moduleSetting = module?.module_setting
 
     const userSurvey = await UserSurveyReport.findOne({
@@ -274,20 +271,9 @@ exports.getSurveyDetail = async (req, res, next) => {
       user_id: userId
     })
 
-    const isCompleted =
-      activities.length > 0 &&
-      activities.every(activity =>
-        logs.some(
-          log =>
-            log.activity_id.toString() === activity._id.toString() &&
-            log.progress_status === '3'
-        )
-      )
-
     const moduleData = module
     moduleData.completed =
-      (isCompleted && !userSurvey && moduleSetting?.feedbackSurveyEnabled) ||
-      false
+      (!userSurvey && moduleSetting?.feedbackSurveyEnabled) || false
 
     return successResponse(res, 'Module fetched successfully', moduleData)
   } catch (error) {
