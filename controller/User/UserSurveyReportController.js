@@ -18,13 +18,247 @@ exports.getSurveyDetail = async (req, res, next) => {
 
     const masterId = user.created_by
 
-    const module = await Module.findOne({
-      _id: moduleId,
-      created_by: masterId
-    })
-      .populate('activities')
-      .populate('moduleSurvey')
-      .populate('moduleSetting')
+    const module = await Module.aggregate([
+      {
+        $match: {
+          _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
+        }
+      },
+      {
+        $lookup: {
+          from: 'modulesettings',
+          localField: '_id',
+          foreignField: 'moduleId',
+          as: 'module_setting'
+        }
+      },
+      {
+        $unwind: {
+          path: '$module_setting',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity',
+          localField: '_id',
+          foreignField: 'module_id',
+          as: 'activities'
+        }
+      },
+      {
+        $addFields: {
+          activities: {
+            $filter: {
+              input: '$activities',
+              as: 'activity',
+              cond: {
+                $switch: {
+                  branches: [
+                    // Document
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68834'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: [
+                                '$$activity.document_data.image_url',
+                                ''
+                              ]
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Video
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68835'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.video_data.video_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Youtube
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68836'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.video_data.video_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // SCORM
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68837'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.scorm_data.folder_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Hide these module types
+                    {
+                      case: {
+                        $in: [
+                          '$$activity.module_type_id',
+                          [
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae68838'
+                            ),
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae68839'
+                            ),
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae6883a'
+                            )
+                          ]
+                        ]
+                      },
+                      then: false
+                    },
+
+                    // Quiz
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '68886902954c4d9dc7a379bd'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $size: {
+                              $ifNull: ['$$activity.questions', []]
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    }
+                  ],
+                  default: true
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: 'activity_logs',
+          let: {
+            activityIds: '$activities._id'
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $in: ['$activity_id', '$$activityIds']
+                }
+              }
+            }
+          ],
+          as: 'logs'
+        }
+      },
+      {
+        $lookup: {
+          from: 'program_schedules',
+          localField: '_id',
+          foreignField: 'module_id',
+          as: 'programSchedule'
+        }
+      },
+
+      {
+        $unwind: {
+          path: '$programSchedule',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $addFields: {
+          relativeEndDate: {
+            $switch: {
+              branches: [
+                {
+                  case: { $eq: ['$programSchedule.dueType', 'relative'] },
+                  then: {
+                    $dateAdd: {
+                      startDate: '$programSchedule.published_date',
+                      unit: 'day',
+                      amount: {
+                        $toInt: {
+                          $ifNull: ['$programSchedule.dueDays', 0]
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  case: { $eq: ['$programSchedule.dueType', 'fixed'] },
+                  then: '$programSchedule.dueDate.end_date'
+                }
+              ],
+              default: null
+            }
+          }
+        }
+      }
+    ])
 
     if (!module) {
       return errorResponse(res, 'Module does not exist', {}, 404)
