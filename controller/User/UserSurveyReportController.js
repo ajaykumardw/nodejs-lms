@@ -269,7 +269,7 @@ exports.getSurveyDetail = async (req, res, next) => {
 
     const moduleSetting = module?.module_setting
 
-    const userSurvey = await UserSurvey.findOne({
+    const userSurvey = await UserSurveyReport.findOne({
       module_id: moduleId,
       user_id: userId
     })
