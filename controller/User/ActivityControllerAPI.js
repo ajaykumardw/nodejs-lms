@@ -730,6 +730,51 @@ exports.postReportController = async (req, res, next) => {
 
       {
         $lookup: {
+          from: 'program_schedules',
+          localField: '_id',
+          foreignField: 'module_id',
+          as: 'programSchedule'
+        }
+      },
+
+      {
+        $unwind: {
+          path: '$programSchedule',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $addFields: {
+          relativeEndDate: {
+            $switch: {
+              branches: [
+                {
+                  case: { $eq: ['$programSchedule.dueType', 'relative'] },
+                  then: {
+                    $dateAdd: {
+                      startDate: '$programSchedule.published_date',
+                      unit: 'day',
+                      amount: {
+                        $toInt: {
+                          $ifNull: ['$programSchedule.dueDays', 0]
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  case: { $eq: ['$programSchedule.dueType', 'fixed'] },
+                  then: '$programSchedule.dueDate.end_date'
+                }
+              ],
+              default: null
+            }
+          }
+        }
+      },
+
+      {
+        $lookup: {
           from: 'activity_logs',
           let: {
             activityIds: '$activities._id'
@@ -1549,7 +1594,50 @@ exports.postInsertReportController = async (req, res, next) => {
           }
         }
       },
+      {
+        $lookup: {
+          from: 'program_schedules',
+          localField: '_id',
+          foreignField: 'module_id',
+          as: 'programSchedule'
+        }
+      },
 
+      {
+        $unwind: {
+          path: '$programSchedule',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $addFields: {
+          relativeEndDate: {
+            $switch: {
+              branches: [
+                {
+                  case: { $eq: ['$programSchedule.dueType', 'relative'] },
+                  then: {
+                    $dateAdd: {
+                      startDate: '$programSchedule.published_date',
+                      unit: 'day',
+                      amount: {
+                        $toInt: {
+                          $ifNull: ['$programSchedule.dueDays', 0]
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  case: { $eq: ['$programSchedule.dueType', 'fixed'] },
+                  then: '$programSchedule.dueDate.end_date'
+                }
+              ],
+              default: null
+            }
+          }
+        }
+      },
       {
         $lookup: {
           from: 'activity_logs',
@@ -2328,7 +2416,50 @@ exports.getAttemptCheck = async (req, res, next) => {
           }
         }
       },
+      {
+        $lookup: {
+          from: 'program_schedules',
+          localField: '_id',
+          foreignField: 'module_id',
+          as: 'programSchedule'
+        }
+      },
 
+      {
+        $unwind: {
+          path: '$programSchedule',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $addFields: {
+          relativeEndDate: {
+            $switch: {
+              branches: [
+                {
+                  case: { $eq: ['$programSchedule.dueType', 'relative'] },
+                  then: {
+                    $dateAdd: {
+                      startDate: '$programSchedule.published_date',
+                      unit: 'day',
+                      amount: {
+                        $toInt: {
+                          $ifNull: ['$programSchedule.dueDays', 0]
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  case: { $eq: ['$programSchedule.dueType', 'fixed'] },
+                  then: '$programSchedule.dueDate.end_date'
+                }
+              ],
+              default: null
+            }
+          }
+        }
+      },
       {
         $lookup: {
           from: 'activity_logs',
@@ -3002,7 +3133,50 @@ exports.postScormData = async (req, res, next) => {
           }
         }
       },
+      {
+        $lookup: {
+          from: 'program_schedules',
+          localField: '_id',
+          foreignField: 'module_id',
+          as: 'programSchedule'
+        }
+      },
 
+      {
+        $unwind: {
+          path: '$programSchedule',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $addFields: {
+          relativeEndDate: {
+            $switch: {
+              branches: [
+                {
+                  case: { $eq: ['$programSchedule.dueType', 'relative'] },
+                  then: {
+                    $dateAdd: {
+                      startDate: '$programSchedule.published_date',
+                      unit: 'day',
+                      amount: {
+                        $toInt: {
+                          $ifNull: ['$programSchedule.dueDays', 0]
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  case: { $eq: ['$programSchedule.dueType', 'fixed'] },
+                  then: '$programSchedule.dueDate.end_date'
+                }
+              ],
+              default: null
+            }
+          }
+        }
+      },
       {
         $lookup: {
           from: 'activity_logs',
@@ -3788,7 +3962,50 @@ exports.getNewAttemptController = async (req, res, next) => {
           }
         }
       },
+      {
+        $lookup: {
+          from: 'program_schedules',
+          localField: '_id',
+          foreignField: 'module_id',
+          as: 'programSchedule'
+        }
+      },
 
+      {
+        $unwind: {
+          path: '$programSchedule',
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $addFields: {
+          relativeEndDate: {
+            $switch: {
+              branches: [
+                {
+                  case: { $eq: ['$programSchedule.dueType', 'relative'] },
+                  then: {
+                    $dateAdd: {
+                      startDate: '$programSchedule.published_date',
+                      unit: 'day',
+                      amount: {
+                        $toInt: {
+                          $ifNull: ['$programSchedule.dueDays', 0]
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  case: { $eq: ['$programSchedule.dueType', 'fixed'] },
+                  then: '$programSchedule.dueDate.end_date'
+                }
+              ],
+              default: null
+            }
+          }
+        }
+      },
       {
         $lookup: {
           from: 'activity_logs',

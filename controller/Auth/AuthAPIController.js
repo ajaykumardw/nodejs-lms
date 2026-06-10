@@ -50,7 +50,7 @@ exports.postAPILogIn = async (req, res, next) => {
     const createdBy = user?.created_by
     const userId = user?._id
 
-    if (createdBy != '6811ae35704460d978b84eaa') {
+    if (createdBy && createdBy != '6811ae35704460d978b84eaa') {
       await LearnerPoints(
         '6a1eba182ff5cb1b286b97b4',
         userId,
@@ -68,6 +68,7 @@ exports.postAPILogIn = async (req, res, next) => {
         true
       )
     }
+    
 
     const expiresInSeconds = expireTime * 60 * 60
     const expirationTimestamp = Math.floor(Date.now() / 1000) + expiresInSeconds
