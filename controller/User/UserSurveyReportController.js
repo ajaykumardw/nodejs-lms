@@ -238,7 +238,7 @@ exports.getSurveyDetail = async (req, res, next) => {
         }
       },
 
-      g
+      
       {
         $lookup: {
           from: 'modulesurveys',
