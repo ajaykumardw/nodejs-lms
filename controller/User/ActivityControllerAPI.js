@@ -1139,6 +1139,11 @@ exports.postReportController = async (req, res, next) => {
         )
       )
 
+    if (isCompleted) {
+
+      console.log('On wrong completion', activities, logs)
+    }
+
     const finalActivityCompletion = !pre_activity_report && isFinalCompleted
 
     const finalQuizPassed = !is_pre_passed && isPassed
