@@ -952,7 +952,7 @@ exports.postReportController = async (req, res, next) => {
             {
               $match: {
                 _id: {
-                  $in: activityId
+                  $in: activityIds
                 },
                 $expr: {
                   $eq: ['$module_id', '$$moduleId']
@@ -1289,14 +1289,14 @@ exports.postInsertReportController = async (req, res, next) => {
     const contentFolderId = req?.params?.contentFolderId
     const moduleTypeId = req?.params?.moduleTypeId
 
-    let activityId = []
+    let activityIds = []
 
     const programSchedule = await ProgramSchedule.findOne({
       module_id: moduleId
     })
 
     if (programSchedule) {
-      activityId.push(...programSchedule.activity_id)
+      activityIds.push(...programSchedule.activity_id)
     }
 
     const {
@@ -1376,7 +1376,7 @@ exports.postInsertReportController = async (req, res, next) => {
             {
               $match: {
                 _id: {
-                  $in: activityId
+                  $in: activityIds
                 },
                 $expr: {
                   $eq: ['$module_id', '$$moduleId']
@@ -1776,7 +1776,7 @@ exports.postInsertReportController = async (req, res, next) => {
             {
               $match: {
                 _id: {
-                  $in: activityId
+                  $in: activityIds
                 },
                 $expr: {
                   $eq: ['$module_id', '$$moduleId']
@@ -2112,14 +2112,14 @@ exports.getAttemptCheck = async (req, res, next) => {
       progress_status: '3'
     })
 
-    let activityId = []
+    let activityIds = []
 
     const programSchedule = await ProgramSchedule.findOne({
       module_id: moduleId
     })
 
     if (programSchedule) {
-      activityId.push(...programSchedule.activity_id)
+      activityIds.push(...programSchedule.activity_id)
     }
 
     const pre_modules = await Module.aggregate([
@@ -2155,7 +2155,7 @@ exports.getAttemptCheck = async (req, res, next) => {
             {
               $match: {
                 _id: {
-                  $in: activityId
+                  $in: activityIds
                 },
                 $expr: {
                   $eq: ['$module_id', '$$moduleId']
@@ -2454,7 +2454,7 @@ exports.getAttemptCheck = async (req, res, next) => {
             {
               $match: {
                 _id: {
-                  $in: activityId
+                  $in: activityIds
                 },
                 $expr: {
                   $eq: ['$module_id', '$$moduleId']
@@ -2748,14 +2748,14 @@ exports.postScormData = async (req, res, next) => {
 
     const scormData = req.body || {}
 
-    let activityId = []
+    let activityIds = []
 
     const programSchedule = await ProgramSchedule.findOne({
       module_id: moduleId
     })
 
     if (programSchedule) {
-      activityId.push(...programSchedule.activity_id)
+      activityIds.push(...programSchedule.activity_id)
     }
 
     const is_pre_passed = await ActivityFolderReport.findOne({
@@ -2829,7 +2829,7 @@ exports.postScormData = async (req, res, next) => {
             {
               $match: {
                 _id: {
-                  $in: activityId
+                  $in: activityIds
                 },
                 $expr: {
                   $eq: ['$module_id', '$$moduleId']
@@ -3198,7 +3198,7 @@ exports.postScormData = async (req, res, next) => {
             {
               $match: {
                 _id: {
-                  $in: activityId
+                  $in: activityIds
                 },
                 $expr: {
                   $eq: ['$module_id', '$$moduleId']
@@ -3570,6 +3570,16 @@ exports.getNewAttemptController = async (req, res, next) => {
       progress_status: '3'
     })
 
+    let activityIds = []
+
+    const programSchedule = await ProgramSchedule.findOne({
+      module_id: moduleId
+    })
+
+    if (programSchedule) {
+      activityIds.push(...programSchedule.activity_id)
+    }
+
     const contentFolder = await ContentFolder.findById(contentFolderId)
 
     const pre_modules = await Module.aggregate([
@@ -3605,7 +3615,7 @@ exports.getNewAttemptController = async (req, res, next) => {
             {
               $match: {
                 _id: {
-                  $in: activityId
+                  $in: activityIds
                 },
                 $expr: {
                   $eq: ['$module_id', '$$moduleId']
@@ -3922,7 +3932,7 @@ exports.getNewAttemptController = async (req, res, next) => {
             {
               $match: {
                 _id: {
-                  $in: activityId
+                  $in: activityIds
                 },
                 $expr: {
                   $eq: ['$module_id', '$$moduleId']
@@ -4226,6 +4236,16 @@ exports.getEndAttemptController = async (req, res, next) => {
       progress_status: '3'
     })
 
+    let activityIds = []
+
+    const programSchedule = await ProgramSchedule.findOne({
+      module_id: moduleId
+    })
+
+    if (programSchedule) {
+      activityIds.push(...programSchedule.activity_id)
+    }
+
     const pre_modules = await Module.aggregate([
       {
         $match: {
@@ -4259,7 +4279,7 @@ exports.getEndAttemptController = async (req, res, next) => {
             {
               $match: {
                 _id: {
-                  $in: activityId
+                  $in: activityIds
                 },
                 $expr: {
                   $eq: ['$module_id', '$$moduleId']
@@ -4546,7 +4566,7 @@ exports.getEndAttemptController = async (req, res, next) => {
             {
               $match: {
                 _id: {
-                  $in: activityId
+                  $in: activityIds
                 },
                 $expr: {
                   $eq: ['$module_id', '$$moduleId']
