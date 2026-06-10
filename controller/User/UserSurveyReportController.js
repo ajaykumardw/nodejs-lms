@@ -20,7 +20,7 @@ exports.getSurveyDetail = async (req, res, next) => {
 
     const masterId = user.created_by
 
-    const module = await Module.aggregate([
+    const modules = await Module.aggregate([
       {
         $match: {
           _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
@@ -261,6 +261,8 @@ exports.getSurveyDetail = async (req, res, next) => {
         }
       }
     ])
+
+    const module = modules?.[0]
 
     if (!module) {
       return errorResponse(res, 'Module does not exist', {}, 404)
