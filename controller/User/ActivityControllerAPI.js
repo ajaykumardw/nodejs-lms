@@ -476,6 +476,16 @@ exports.postReportController = async (req, res, next) => {
       viewedVideoTime
     } = req.body
 
+    let activityId = []
+
+    const programSchedule = await ProgramSchedule.findOne({
+      module_id: moduleId
+    })
+
+    if (programSchedule) {
+      activityId.push(...programSchedule.activity_id)
+    }
+
     const pre_activity_report = await ActivityFolderReport.findOne({
       activity_id: activityId,
       user_id: userId,
@@ -517,6 +527,7 @@ exports.postReportController = async (req, res, next) => {
           _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
         }
       },
+
       {
         $lookup: {
           from: 'modulesettings',
@@ -525,20 +536,46 @@ exports.postReportController = async (req, res, next) => {
           as: 'module_setting'
         }
       },
+
       {
         $unwind: {
           path: '$module_setting',
           preserveNullAndEmptyArrays: true
         }
       },
+
       {
         $lookup: {
           from: 'activity',
-          localField: '_id',
-          foreignField: 'module_id',
+          let: {
+            moduleId: '$_id'
+          },
+          pipeline: [
+            {
+              $match: {
+                _id: {
+                  $in: activityId
+                },
+                $expr: {
+                  $eq: ['$module_id', '$$moduleId']
+                }
+              }
+            },
+
+            // Questions for each activity
+            {
+              $lookup: {
+                from: 'questions',
+                localField: '_id',
+                foreignField: 'activity_id',
+                as: 'questions'
+              }
+            }
+          ],
           as: 'activities'
         }
       },
+
       {
         $addFields: {
           activities: {
@@ -639,7 +676,7 @@ exports.postReportController = async (req, res, next) => {
                       }
                     },
 
-                    // Hide these module types
+                    // Hidden types
                     {
                       case: {
                         $in: [
@@ -682,6 +719,7 @@ exports.postReportController = async (req, res, next) => {
                       }
                     }
                   ],
+
                   default: true
                 }
               }
@@ -689,6 +727,7 @@ exports.postReportController = async (req, res, next) => {
           }
         }
       },
+
       {
         $lookup: {
           from: 'activity_logs',
@@ -705,50 +744,6 @@ exports.postReportController = async (req, res, next) => {
             }
           ],
           as: 'logs'
-        }
-      },
-      {
-        $lookup: {
-          from: 'program_schedules',
-          localField: '_id',
-          foreignField: 'module_id',
-          as: 'programSchedule'
-        }
-      },
-
-      {
-        $unwind: {
-          path: '$programSchedule',
-          preserveNullAndEmptyArrays: true
-        }
-      },
-      {
-        $addFields: {
-          relativeEndDate: {
-            $switch: {
-              branches: [
-                {
-                  case: { $eq: ['$programSchedule.dueType', 'relative'] },
-                  then: {
-                    $dateAdd: {
-                      startDate: '$programSchedule.published_date',
-                      unit: 'day',
-                      amount: {
-                        $toInt: {
-                          $ifNull: ['$programSchedule.dueDays', 0]
-                        }
-                      }
-                    }
-                  }
-                },
-                {
-                  case: { $eq: ['$programSchedule.dueType', 'fixed'] },
-                  then: '$programSchedule.dueDate.end_date'
-                }
-              ],
-              default: null
-            }
-          }
         }
       }
     ])
@@ -930,6 +925,7 @@ exports.postReportController = async (req, res, next) => {
           _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
         }
       },
+
       {
         $lookup: {
           from: 'modulesettings',
@@ -938,20 +934,46 @@ exports.postReportController = async (req, res, next) => {
           as: 'module_setting'
         }
       },
+
       {
         $unwind: {
           path: '$module_setting',
           preserveNullAndEmptyArrays: true
         }
       },
+
       {
         $lookup: {
           from: 'activity',
-          localField: '_id',
-          foreignField: 'module_id',
+          let: {
+            moduleId: '$_id'
+          },
+          pipeline: [
+            {
+              $match: {
+                _id: {
+                  $in: activityId
+                },
+                $expr: {
+                  $eq: ['$module_id', '$$moduleId']
+                }
+              }
+            },
+
+            // Questions for each activity
+            {
+              $lookup: {
+                from: 'questions',
+                localField: '_id',
+                foreignField: 'activity_id',
+                as: 'questions'
+              }
+            }
+          ],
           as: 'activities'
         }
       },
+
       {
         $addFields: {
           activities: {
@@ -1052,7 +1074,7 @@ exports.postReportController = async (req, res, next) => {
                       }
                     },
 
-                    // Hide these module types
+                    // Hidden types
                     {
                       case: {
                         $in: [
@@ -1095,6 +1117,7 @@ exports.postReportController = async (req, res, next) => {
                       }
                     }
                   ],
+
                   default: true
                 }
               }
@@ -1102,6 +1125,7 @@ exports.postReportController = async (req, res, next) => {
           }
         }
       },
+
       {
         $lookup: {
           from: 'activity_logs',
@@ -1140,7 +1164,6 @@ exports.postReportController = async (req, res, next) => {
       )
 
     if (isCompleted) {
-
       console.log('On wrong completion', activities, logs)
     }
 
@@ -1266,6 +1289,16 @@ exports.postInsertReportController = async (req, res, next) => {
     const contentFolderId = req?.params?.contentFolderId
     const moduleTypeId = req?.params?.moduleTypeId
 
+    let activityId = []
+
+    const programSchedule = await ProgramSchedule.findOne({
+      module_id: moduleId
+    })
+
+    if (programSchedule) {
+      activityId.push(...programSchedule.activity_id)
+    }
+
     const {
       currentPage,
       totalPages,
@@ -1316,6 +1349,7 @@ exports.postInsertReportController = async (req, res, next) => {
           _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
         }
       },
+
       {
         $lookup: {
           from: 'modulesettings',
@@ -1324,20 +1358,46 @@ exports.postInsertReportController = async (req, res, next) => {
           as: 'module_setting'
         }
       },
+
       {
         $unwind: {
           path: '$module_setting',
           preserveNullAndEmptyArrays: true
         }
       },
+
       {
         $lookup: {
           from: 'activity',
-          localField: '_id',
-          foreignField: 'module_id',
+          let: {
+            moduleId: '$_id'
+          },
+          pipeline: [
+            {
+              $match: {
+                _id: {
+                  $in: activityId
+                },
+                $expr: {
+                  $eq: ['$module_id', '$$moduleId']
+                }
+              }
+            },
+
+            // Questions for each activity
+            {
+              $lookup: {
+                from: 'questions',
+                localField: '_id',
+                foreignField: 'activity_id',
+                as: 'questions'
+              }
+            }
+          ],
           as: 'activities'
         }
       },
+
       {
         $addFields: {
           activities: {
@@ -1438,7 +1498,7 @@ exports.postInsertReportController = async (req, res, next) => {
                       }
                     },
 
-                    // Hide these module types
+                    // Hidden types
                     {
                       case: {
                         $in: [
@@ -1481,6 +1541,7 @@ exports.postInsertReportController = async (req, res, next) => {
                       }
                     }
                   ],
+
                   default: true
                 }
               }
@@ -1488,6 +1549,7 @@ exports.postInsertReportController = async (req, res, next) => {
           }
         }
       },
+
       {
         $lookup: {
           from: 'activity_logs',
@@ -1504,50 +1566,6 @@ exports.postInsertReportController = async (req, res, next) => {
             }
           ],
           as: 'logs'
-        }
-      },
-      {
-        $lookup: {
-          from: 'program_schedules',
-          localField: '_id',
-          foreignField: 'module_id',
-          as: 'programSchedule'
-        }
-      },
-
-      {
-        $unwind: {
-          path: '$programSchedule',
-          preserveNullAndEmptyArrays: true
-        }
-      },
-      {
-        $addFields: {
-          relativeEndDate: {
-            $switch: {
-              branches: [
-                {
-                  case: { $eq: ['$programSchedule.dueType', 'relative'] },
-                  then: {
-                    $dateAdd: {
-                      startDate: '$programSchedule.published_date',
-                      unit: 'day',
-                      amount: {
-                        $toInt: {
-                          $ifNull: ['$programSchedule.dueDays', 0]
-                        }
-                      }
-                    }
-                  }
-                },
-                {
-                  case: { $eq: ['$programSchedule.dueType', 'fixed'] },
-                  then: '$programSchedule.dueDate.end_date'
-                }
-              ],
-              default: null
-            }
-          }
         }
       }
     ])
@@ -1731,6 +1749,7 @@ exports.postInsertReportController = async (req, res, next) => {
           _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
         }
       },
+
       {
         $lookup: {
           from: 'modulesettings',
@@ -1739,20 +1758,46 @@ exports.postInsertReportController = async (req, res, next) => {
           as: 'module_setting'
         }
       },
+
       {
         $unwind: {
           path: '$module_setting',
           preserveNullAndEmptyArrays: true
         }
       },
+
       {
         $lookup: {
           from: 'activity',
-          localField: '_id',
-          foreignField: 'module_id',
+          let: {
+            moduleId: '$_id'
+          },
+          pipeline: [
+            {
+              $match: {
+                _id: {
+                  $in: activityId
+                },
+                $expr: {
+                  $eq: ['$module_id', '$$moduleId']
+                }
+              }
+            },
+
+            // Questions for each activity
+            {
+              $lookup: {
+                from: 'questions',
+                localField: '_id',
+                foreignField: 'activity_id',
+                as: 'questions'
+              }
+            }
+          ],
           as: 'activities'
         }
       },
+
       {
         $addFields: {
           activities: {
@@ -1853,7 +1898,7 @@ exports.postInsertReportController = async (req, res, next) => {
                       }
                     },
 
-                    // Hide these module types
+                    // Hidden types
                     {
                       case: {
                         $in: [
@@ -1896,6 +1941,7 @@ exports.postInsertReportController = async (req, res, next) => {
                       }
                     }
                   ],
+
                   default: true
                 }
               }
@@ -1903,6 +1949,7 @@ exports.postInsertReportController = async (req, res, next) => {
           }
         }
       },
+
       {
         $lookup: {
           from: 'activity_logs',
@@ -2065,12 +2112,23 @@ exports.getAttemptCheck = async (req, res, next) => {
       progress_status: '3'
     })
 
+    let activityId = []
+
+    const programSchedule = await ProgramSchedule.findOne({
+      module_id: moduleId
+    })
+
+    if (programSchedule) {
+      activityId.push(...programSchedule.activity_id)
+    }
+
     const pre_modules = await Module.aggregate([
       {
         $match: {
           _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
         }
       },
+
       {
         $lookup: {
           from: 'modulesettings',
@@ -2079,20 +2137,46 @@ exports.getAttemptCheck = async (req, res, next) => {
           as: 'module_setting'
         }
       },
+
       {
         $unwind: {
           path: '$module_setting',
           preserveNullAndEmptyArrays: true
         }
       },
+
       {
         $lookup: {
           from: 'activity',
-          localField: '_id',
-          foreignField: 'module_id',
+          let: {
+            moduleId: '$_id'
+          },
+          pipeline: [
+            {
+              $match: {
+                _id: {
+                  $in: activityId
+                },
+                $expr: {
+                  $eq: ['$module_id', '$$moduleId']
+                }
+              }
+            },
+
+            // Questions for each activity
+            {
+              $lookup: {
+                from: 'questions',
+                localField: '_id',
+                foreignField: 'activity_id',
+                as: 'questions'
+              }
+            }
+          ],
           as: 'activities'
         }
       },
+
       {
         $addFields: {
           activities: {
@@ -2193,7 +2277,7 @@ exports.getAttemptCheck = async (req, res, next) => {
                       }
                     },
 
-                    // Hide these module types
+                    // Hidden types
                     {
                       case: {
                         $in: [
@@ -2236,6 +2320,7 @@ exports.getAttemptCheck = async (req, res, next) => {
                       }
                     }
                   ],
+
                   default: true
                 }
               }
@@ -2243,6 +2328,7 @@ exports.getAttemptCheck = async (req, res, next) => {
           }
         }
       },
+
       {
         $lookup: {
           from: 'activity_logs',
@@ -2259,50 +2345,6 @@ exports.getAttemptCheck = async (req, res, next) => {
             }
           ],
           as: 'logs'
-        }
-      },
-      {
-        $lookup: {
-          from: 'program_schedules',
-          localField: '_id',
-          foreignField: 'module_id',
-          as: 'programSchedule'
-        }
-      },
-
-      {
-        $unwind: {
-          path: '$programSchedule',
-          preserveNullAndEmptyArrays: true
-        }
-      },
-      {
-        $addFields: {
-          relativeEndDate: {
-            $switch: {
-              branches: [
-                {
-                  case: { $eq: ['$programSchedule.dueType', 'relative'] },
-                  then: {
-                    $dateAdd: {
-                      startDate: '$programSchedule.published_date',
-                      unit: 'day',
-                      amount: {
-                        $toInt: {
-                          $ifNull: ['$programSchedule.dueDays', 0]
-                        }
-                      }
-                    }
-                  }
-                },
-                {
-                  case: { $eq: ['$programSchedule.dueType', 'fixed'] },
-                  then: '$programSchedule.dueDate.end_date'
-                }
-              ],
-              default: null
-            }
-          }
         }
       }
     ])
@@ -2385,6 +2427,7 @@ exports.getAttemptCheck = async (req, res, next) => {
           _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
         }
       },
+
       {
         $lookup: {
           from: 'modulesettings',
@@ -2393,20 +2436,46 @@ exports.getAttemptCheck = async (req, res, next) => {
           as: 'module_setting'
         }
       },
+
       {
         $unwind: {
           path: '$module_setting',
           preserveNullAndEmptyArrays: true
         }
       },
+
       {
         $lookup: {
           from: 'activity',
-          localField: '_id',
-          foreignField: 'module_id',
+          let: {
+            moduleId: '$_id'
+          },
+          pipeline: [
+            {
+              $match: {
+                _id: {
+                  $in: activityId
+                },
+                $expr: {
+                  $eq: ['$module_id', '$$moduleId']
+                }
+              }
+            },
+
+            // Questions for each activity
+            {
+              $lookup: {
+                from: 'questions',
+                localField: '_id',
+                foreignField: 'activity_id',
+                as: 'questions'
+              }
+            }
+          ],
           as: 'activities'
         }
       },
+
       {
         $addFields: {
           activities: {
@@ -2507,7 +2576,7 @@ exports.getAttemptCheck = async (req, res, next) => {
                       }
                     },
 
-                    // Hide these module types
+                    // Hidden types
                     {
                       case: {
                         $in: [
@@ -2550,6 +2619,7 @@ exports.getAttemptCheck = async (req, res, next) => {
                       }
                     }
                   ],
+
                   default: true
                 }
               }
@@ -2557,6 +2627,7 @@ exports.getAttemptCheck = async (req, res, next) => {
           }
         }
       },
+
       {
         $lookup: {
           from: 'activity_logs',
@@ -2677,6 +2748,16 @@ exports.postScormData = async (req, res, next) => {
 
     const scormData = req.body || {}
 
+    let activityId = []
+
+    const programSchedule = await ProgramSchedule.findOne({
+      module_id: moduleId
+    })
+
+    if (programSchedule) {
+      activityId.push(...programSchedule.activity_id)
+    }
+
     const is_pre_passed = await ActivityFolderReport.findOne({
       activity_id: activityId,
       user_id: userId,
@@ -2721,6 +2802,7 @@ exports.postScormData = async (req, res, next) => {
           _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
         }
       },
+
       {
         $lookup: {
           from: 'modulesettings',
@@ -2729,20 +2811,46 @@ exports.postScormData = async (req, res, next) => {
           as: 'module_setting'
         }
       },
+
       {
         $unwind: {
           path: '$module_setting',
           preserveNullAndEmptyArrays: true
         }
       },
+
       {
         $lookup: {
           from: 'activity',
-          localField: '_id',
-          foreignField: 'module_id',
+          let: {
+            moduleId: '$_id'
+          },
+          pipeline: [
+            {
+              $match: {
+                _id: {
+                  $in: activityId
+                },
+                $expr: {
+                  $eq: ['$module_id', '$$moduleId']
+                }
+              }
+            },
+
+            // Questions for each activity
+            {
+              $lookup: {
+                from: 'questions',
+                localField: '_id',
+                foreignField: 'activity_id',
+                as: 'questions'
+              }
+            }
+          ],
           as: 'activities'
         }
       },
+
       {
         $addFields: {
           activities: {
@@ -2843,7 +2951,7 @@ exports.postScormData = async (req, res, next) => {
                       }
                     },
 
-                    // Hide these module types
+                    // Hidden types
                     {
                       case: {
                         $in: [
@@ -2886,6 +2994,7 @@ exports.postScormData = async (req, res, next) => {
                       }
                     }
                   ],
+
                   default: true
                 }
               }
@@ -2893,6 +3002,7 @@ exports.postScormData = async (req, res, next) => {
           }
         }
       },
+
       {
         $lookup: {
           from: 'activity_logs',
@@ -2909,50 +3019,6 @@ exports.postScormData = async (req, res, next) => {
             }
           ],
           as: 'logs'
-        }
-      },
-      {
-        $lookup: {
-          from: 'program_schedules',
-          localField: '_id',
-          foreignField: 'module_id',
-          as: 'programSchedule'
-        }
-      },
-
-      {
-        $unwind: {
-          path: '$programSchedule',
-          preserveNullAndEmptyArrays: true
-        }
-      },
-      {
-        $addFields: {
-          relativeEndDate: {
-            $switch: {
-              branches: [
-                {
-                  case: { $eq: ['$programSchedule.dueType', 'relative'] },
-                  then: {
-                    $dateAdd: {
-                      startDate: '$programSchedule.published_date',
-                      unit: 'day',
-                      amount: {
-                        $toInt: {
-                          $ifNull: ['$programSchedule.dueDays', 0]
-                        }
-                      }
-                    }
-                  }
-                },
-                {
-                  case: { $eq: ['$programSchedule.dueType', 'fixed'] },
-                  then: '$programSchedule.dueDate.end_date'
-                }
-              ],
-              default: null
-            }
-          }
         }
       }
     ])
@@ -3105,6 +3171,7 @@ exports.postScormData = async (req, res, next) => {
           _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
         }
       },
+
       {
         $lookup: {
           from: 'modulesettings',
@@ -3113,20 +3180,46 @@ exports.postScormData = async (req, res, next) => {
           as: 'module_setting'
         }
       },
+
       {
         $unwind: {
           path: '$module_setting',
           preserveNullAndEmptyArrays: true
         }
       },
+
       {
         $lookup: {
           from: 'activity',
-          localField: '_id',
-          foreignField: 'module_id',
+          let: {
+            moduleId: '$_id'
+          },
+          pipeline: [
+            {
+              $match: {
+                _id: {
+                  $in: activityId
+                },
+                $expr: {
+                  $eq: ['$module_id', '$$moduleId']
+                }
+              }
+            },
+
+            // Questions for each activity
+            {
+              $lookup: {
+                from: 'questions',
+                localField: '_id',
+                foreignField: 'activity_id',
+                as: 'questions'
+              }
+            }
+          ],
           as: 'activities'
         }
       },
+
       {
         $addFields: {
           activities: {
@@ -3227,7 +3320,7 @@ exports.postScormData = async (req, res, next) => {
                       }
                     },
 
-                    // Hide these module types
+                    // Hidden types
                     {
                       case: {
                         $in: [
@@ -3270,6 +3363,7 @@ exports.postScormData = async (req, res, next) => {
                       }
                     }
                   ],
+
                   default: true
                 }
               }
@@ -3277,6 +3371,7 @@ exports.postScormData = async (req, res, next) => {
           }
         }
       },
+
       {
         $lookup: {
           from: 'activity_logs',
@@ -3483,6 +3578,7 @@ exports.getNewAttemptController = async (req, res, next) => {
           _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
         }
       },
+
       {
         $lookup: {
           from: 'modulesettings',
@@ -3491,20 +3587,46 @@ exports.getNewAttemptController = async (req, res, next) => {
           as: 'module_setting'
         }
       },
+
       {
         $unwind: {
           path: '$module_setting',
           preserveNullAndEmptyArrays: true
         }
       },
+
       {
         $lookup: {
           from: 'activity',
-          localField: '_id',
-          foreignField: 'module_id',
+          let: {
+            moduleId: '$_id'
+          },
+          pipeline: [
+            {
+              $match: {
+                _id: {
+                  $in: activityId
+                },
+                $expr: {
+                  $eq: ['$module_id', '$$moduleId']
+                }
+              }
+            },
+
+            // Questions for each activity
+            {
+              $lookup: {
+                from: 'questions',
+                localField: '_id',
+                foreignField: 'activity_id',
+                as: 'questions'
+              }
+            }
+          ],
           as: 'activities'
         }
       },
+
       {
         $addFields: {
           activities: {
@@ -3605,7 +3727,7 @@ exports.getNewAttemptController = async (req, res, next) => {
                       }
                     },
 
-                    // Hide these module types
+                    // Hidden types
                     {
                       case: {
                         $in: [
@@ -3648,6 +3770,7 @@ exports.getNewAttemptController = async (req, res, next) => {
                       }
                     }
                   ],
+
                   default: true
                 }
               }
@@ -3655,6 +3778,7 @@ exports.getNewAttemptController = async (req, res, next) => {
           }
         }
       },
+
       {
         $lookup: {
           from: 'activity_logs',
@@ -3671,50 +3795,6 @@ exports.getNewAttemptController = async (req, res, next) => {
             }
           ],
           as: 'logs'
-        }
-      },
-      {
-        $lookup: {
-          from: 'program_schedules',
-          localField: '_id',
-          foreignField: 'module_id',
-          as: 'programSchedule'
-        }
-      },
-
-      {
-        $unwind: {
-          path: '$programSchedule',
-          preserveNullAndEmptyArrays: true
-        }
-      },
-      {
-        $addFields: {
-          relativeEndDate: {
-            $switch: {
-              branches: [
-                {
-                  case: { $eq: ['$programSchedule.dueType', 'relative'] },
-                  then: {
-                    $dateAdd: {
-                      startDate: '$programSchedule.published_date',
-                      unit: 'day',
-                      amount: {
-                        $toInt: {
-                          $ifNull: ['$programSchedule.dueDays', 0]
-                        }
-                      }
-                    }
-                  }
-                },
-                {
-                  case: { $eq: ['$programSchedule.dueType', 'fixed'] },
-                  then: '$programSchedule.dueDate.end_date'
-                }
-              ],
-              default: null
-            }
-          }
         }
       }
     ])
@@ -3815,6 +3895,7 @@ exports.getNewAttemptController = async (req, res, next) => {
           _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
         }
       },
+
       {
         $lookup: {
           from: 'modulesettings',
@@ -3823,20 +3904,46 @@ exports.getNewAttemptController = async (req, res, next) => {
           as: 'module_setting'
         }
       },
+
       {
         $unwind: {
           path: '$module_setting',
           preserveNullAndEmptyArrays: true
         }
       },
+
       {
         $lookup: {
           from: 'activity',
-          localField: '_id',
-          foreignField: 'module_id',
+          let: {
+            moduleId: '$_id'
+          },
+          pipeline: [
+            {
+              $match: {
+                _id: {
+                  $in: activityId
+                },
+                $expr: {
+                  $eq: ['$module_id', '$$moduleId']
+                }
+              }
+            },
+
+            // Questions for each activity
+            {
+              $lookup: {
+                from: 'questions',
+                localField: '_id',
+                foreignField: 'activity_id',
+                as: 'questions'
+              }
+            }
+          ],
           as: 'activities'
         }
       },
+
       {
         $addFields: {
           activities: {
@@ -3937,7 +4044,7 @@ exports.getNewAttemptController = async (req, res, next) => {
                       }
                     },
 
-                    // Hide these module types
+                    // Hidden types
                     {
                       case: {
                         $in: [
@@ -3980,6 +4087,7 @@ exports.getNewAttemptController = async (req, res, next) => {
                       }
                     }
                   ],
+
                   default: true
                 }
               }
@@ -3987,6 +4095,7 @@ exports.getNewAttemptController = async (req, res, next) => {
           }
         }
       },
+
       {
         $lookup: {
           from: 'activity_logs',
@@ -4123,6 +4232,7 @@ exports.getEndAttemptController = async (req, res, next) => {
           _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
         }
       },
+
       {
         $lookup: {
           from: 'modulesettings',
@@ -4131,20 +4241,198 @@ exports.getEndAttemptController = async (req, res, next) => {
           as: 'module_setting'
         }
       },
+
       {
         $unwind: {
           path: '$module_setting',
           preserveNullAndEmptyArrays: true
         }
       },
+
       {
         $lookup: {
           from: 'activity',
-          localField: '_id',
-          foreignField: 'module_id',
+          let: {
+            moduleId: '$_id'
+          },
+          pipeline: [
+            {
+              $match: {
+                _id: {
+                  $in: activityId
+                },
+                $expr: {
+                  $eq: ['$module_id', '$$moduleId']
+                }
+              }
+            },
+
+            // Questions for each activity
+            {
+              $lookup: {
+                from: 'questions',
+                localField: '_id',
+                foreignField: 'activity_id',
+                as: 'questions'
+              }
+            }
+          ],
           as: 'activities'
         }
       },
+
+      {
+        $addFields: {
+          activities: {
+            $filter: {
+              input: '$activities',
+              as: 'activity',
+              cond: {
+                $switch: {
+                  branches: [
+                    // Document
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68834'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: [
+                                '$$activity.document_data.image_url',
+                                ''
+                              ]
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Video
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68835'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.video_data.video_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Youtube
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68836'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.video_data.video_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // SCORM
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68837'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.scorm_data.folder_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Hidden types
+                    {
+                      case: {
+                        $in: [
+                          '$$activity.module_type_id',
+                          [
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae68838'
+                            ),
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae68839'
+                            ),
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae6883a'
+                            )
+                          ]
+                        ]
+                      },
+                      then: false
+                    },
+
+                    // Quiz
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '68886902954c4d9dc7a379bd'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $size: {
+                              $ifNull: ['$$activity.questions', []]
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    }
+                  ],
+
+                  default: true
+                }
+              }
+            }
+          }
+        }
+      },
+
       {
         $lookup: {
           from: 'activity_logs',
@@ -4231,6 +4519,7 @@ exports.getEndAttemptController = async (req, res, next) => {
           _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
         }
       },
+
       {
         $lookup: {
           from: 'modulesettings',
@@ -4239,20 +4528,198 @@ exports.getEndAttemptController = async (req, res, next) => {
           as: 'module_setting'
         }
       },
+
       {
         $unwind: {
           path: '$module_setting',
           preserveNullAndEmptyArrays: true
         }
       },
+
       {
         $lookup: {
           from: 'activity',
-          localField: '_id',
-          foreignField: 'module_id',
+          let: {
+            moduleId: '$_id'
+          },
+          pipeline: [
+            {
+              $match: {
+                _id: {
+                  $in: activityId
+                },
+                $expr: {
+                  $eq: ['$module_id', '$$moduleId']
+                }
+              }
+            },
+
+            // Questions for each activity
+            {
+              $lookup: {
+                from: 'questions',
+                localField: '_id',
+                foreignField: 'activity_id',
+                as: 'questions'
+              }
+            }
+          ],
           as: 'activities'
         }
       },
+
+      {
+        $addFields: {
+          activities: {
+            $filter: {
+              input: '$activities',
+              as: 'activity',
+              cond: {
+                $switch: {
+                  branches: [
+                    // Document
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68834'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: [
+                                '$$activity.document_data.image_url',
+                                ''
+                              ]
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Video
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68835'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.video_data.video_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Youtube
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68836'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.video_data.video_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // SCORM
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '688723af5dd97f4ccae68837'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $strLenCP: {
+                              $ifNull: ['$$activity.scorm_data.folder_url', '']
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    },
+
+                    // Hidden types
+                    {
+                      case: {
+                        $in: [
+                          '$$activity.module_type_id',
+                          [
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae68838'
+                            ),
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae68839'
+                            ),
+                            mongoose.Types.ObjectId.createFromHexString(
+                              '688723af5dd97f4ccae6883a'
+                            )
+                          ]
+                        ]
+                      },
+                      then: false
+                    },
+
+                    // Quiz
+                    {
+                      case: {
+                        $eq: [
+                          '$$activity.module_type_id',
+                          mongoose.Types.ObjectId.createFromHexString(
+                            '68886902954c4d9dc7a379bd'
+                          )
+                        ]
+                      },
+                      then: {
+                        $gt: [
+                          {
+                            $size: {
+                              $ifNull: ['$$activity.questions', []]
+                            }
+                          },
+                          0
+                        ]
+                      }
+                    }
+                  ],
+
+                  default: true
+                }
+              }
+            }
+          }
+        }
+      },
+
       {
         $lookup: {
           from: 'activity_logs',
