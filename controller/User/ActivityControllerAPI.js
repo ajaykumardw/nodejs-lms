@@ -476,14 +476,14 @@ exports.postReportController = async (req, res, next) => {
       viewedVideoTime
     } = req.body
 
-    let activityId = []
+    let activityIds = []
 
     const programSchedule = await ProgramSchedule.findOne({
       module_id: moduleId
     })
 
     if (programSchedule) {
-      activityId.push(...programSchedule.activity_id)
+      activityIds.push(...programSchedule.activity_id)
     }
 
     const pre_activity_report = await ActivityFolderReport.findOne({
@@ -554,7 +554,7 @@ exports.postReportController = async (req, res, next) => {
             {
               $match: {
                 _id: {
-                  $in: activityId
+                  $in: activityIds
                 },
                 $expr: {
                   $eq: ['$module_id', '$$moduleId']
