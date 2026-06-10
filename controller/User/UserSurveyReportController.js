@@ -3,6 +3,7 @@ const mongoose = require('mongoose')
 const User = require('../../model/User')
 const Module = require('../../model/Module')
 const UserSurveyReport = require('../../model/UserSurveyReport')
+const ProgramSchedule = require('../../model/ProgramSchedule')
 const { errorResponse, successResponse } = require('../../util/response')
 
 const LearnerPoint = require('../../util/earnPoints')
