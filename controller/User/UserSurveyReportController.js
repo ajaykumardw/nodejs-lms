@@ -1,4 +1,4 @@
-const mongoose = require("mongoose")
+const mongoose = require('mongoose')
 
 const User = require('../../model/User')
 const Module = require('../../model/Module')
@@ -281,7 +281,7 @@ exports.getSurveyDetail = async (req, res, next) => {
         )
       )
 
-    const moduleData = module.toObject()
+    const moduleData = module
     moduleData.completed = isCompleted
 
     return successResponse(res, 'Module fetched successfully', moduleData)
