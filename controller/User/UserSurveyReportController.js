@@ -22,6 +22,7 @@ exports.getSurveyDetail = async (req, res, next) => {
       _id: moduleId,
       created_by: masterId
     })
+      .populate('activities')
       .populate('moduleSurvey')
       .populate('moduleSetting')
 
@@ -29,7 +30,23 @@ exports.getSurveyDetail = async (req, res, next) => {
       return errorResponse(res, 'Module does not exist', {}, 404)
     }
 
-    return successResponse(res, 'Module fetched successfully', module)
+    const activities = module.activities || []
+    const logs = module.logs || []
+
+    const isCompleted =
+      activities.length > 0 &&
+      activities.every(activity =>
+        logs.some(
+          log =>
+            log.activity_id.toString() === activity._id.toString() &&
+            log.progress_status === '3'
+        )
+      )
+
+    const moduleData = module.toObject()
+    moduleData.completed = isCompleted
+
+    return successResponse(res, 'Module fetched successfully', moduleData)
   } catch (error) {
     next(error)
   }
