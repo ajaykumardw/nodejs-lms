@@ -20,12 +20,23 @@ exports.getSurveyDetail = async (req, res, next) => {
 
     const masterId = user.created_by
 
+    let activityIds = []
+
+    const programSchedule = await ProgramSchedule.findOne({
+      module_id: moduleId
+    })
+
+    if (programSchedule) {
+      activityIds.push(...programSchedule.activity_id)
+    }
+
     const modules = await Module.aggregate([
       {
         $match: {
           _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
         }
       },
+
       {
         $lookup: {
           from: 'modulesettings',
@@ -34,20 +45,46 @@ exports.getSurveyDetail = async (req, res, next) => {
           as: 'module_setting'
         }
       },
+
       {
         $unwind: {
           path: '$module_setting',
           preserveNullAndEmptyArrays: true
         }
       },
+
       {
         $lookup: {
           from: 'activity',
-          localField: '_id',
-          foreignField: 'module_id',
+          let: {
+            moduleId: '$_id'
+          },
+          pipeline: [
+            {
+              $match: {
+                _id: {
+                  $in: activityIds
+                },
+                $expr: {
+                  $eq: ['$module_id', '$$moduleId']
+                }
+              }
+            },
+
+            // Questions for each activity
+            {
+              $lookup: {
+                from: 'questions',
+                localField: '_id',
+                foreignField: 'activity_id',
+                as: 'questions'
+              }
+            }
+          ],
           as: 'activities'
         }
       },
+
       {
         $addFields: {
           activities: {
@@ -148,7 +185,7 @@ exports.getSurveyDetail = async (req, res, next) => {
                       }
                     },
 
-                    // Hide these module types
+                    // Hidden types
                     {
                       case: {
                         $in: [
@@ -191,6 +228,7 @@ exports.getSurveyDetail = async (req, res, next) => {
                       }
                     }
                   ],
+
                   default: true
                 }
               }
@@ -198,6 +236,7 @@ exports.getSurveyDetail = async (req, res, next) => {
           }
         }
       },
+
       {
         $lookup: {
           from: 'activity_logs',
@@ -214,50 +253,6 @@ exports.getSurveyDetail = async (req, res, next) => {
             }
           ],
           as: 'logs'
-        }
-      },
-      {
-        $lookup: {
-          from: 'program_schedules',
-          localField: '_id',
-          foreignField: 'module_id',
-          as: 'programSchedule'
-        }
-      },
-
-      {
-        $unwind: {
-          path: '$programSchedule',
-          preserveNullAndEmptyArrays: true
-        }
-      },
-      {
-        $addFields: {
-          relativeEndDate: {
-            $switch: {
-              branches: [
-                {
-                  case: { $eq: ['$programSchedule.dueType', 'relative'] },
-                  then: {
-                    $dateAdd: {
-                      startDate: '$programSchedule.published_date',
-                      unit: 'day',
-                      amount: {
-                        $toInt: {
-                          $ifNull: ['$programSchedule.dueDays', 0]
-                        }
-                      }
-                    }
-                  }
-                },
-                {
-                  case: { $eq: ['$programSchedule.dueType', 'fixed'] },
-                  then: '$programSchedule.dueDate.end_date'
-                }
-              ],
-              default: null
-            }
-          }
         }
       }
     ])
