@@ -240,6 +240,15 @@ exports.getSurveyDetail = async (req, res, next) => {
 
       {
         $lookup: {
+          from: 'modulesurveys',
+          localField: '_id',
+          foreignField: 'moduleId',
+          as: 'moduleSurvey'
+        }
+      },
+
+      {
+        $lookup: {
           from: 'activity_logs',
           let: {
             activityIds: '$activities._id'
