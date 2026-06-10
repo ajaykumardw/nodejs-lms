@@ -266,6 +266,13 @@ exports.getSurveyDetail = async (req, res, next) => {
     const activities = module.activities || []
     const logs = module.logs || []
 
+    const moduleSetting = module?.module_setting
+
+    const userSurvey = await UserSurvey.findOne({
+      module_id: moduleId,
+      user_id: userId
+    })
+
     const isCompleted =
       activities.length > 0 &&
       activities.every(activity =>
@@ -277,7 +284,9 @@ exports.getSurveyDetail = async (req, res, next) => {
       )
 
     const moduleData = module
-    moduleData.completed = isCompleted
+    moduleData.completed =
+      (isCompleted && !userSurvey && moduleSetting?.feedbackSurveyEnabled) ||
+      false
 
     return successResponse(res, 'Module fetched successfully', moduleData)
   } catch (error) {
