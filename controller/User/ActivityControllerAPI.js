@@ -110,16 +110,17 @@ exports.getActivityData = async (req, res, next) => {
       {
         $lookup: {
           from: 'activity_logs',
-          let: { activityId: '$_id', userId: userId },
+          let: {
+            activityIds: '$activities._id',
+            userId: userId
+          },
           pipeline: [
             {
               $match: {
                 $expr: {
                   $and: [
-                    { $eq: ['$activity_id', '$$activityId'] },
-                    {
-                      $eq: ['$user_id', '$$userId']
-                    }
+                    { $eq: ['$user_id', '$$userId'] },
+                    { $in: ['$activity_id', '$$activityIds'] }
                   ]
                 }
               }
@@ -777,13 +778,17 @@ exports.postReportController = async (req, res, next) => {
         $lookup: {
           from: 'activity_logs',
           let: {
-            activityIds: '$activities._id'
+            activityIds: '$activities._id',
+            userId: mongoose.Types.ObjectId.createFromHexString(userId)
           },
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $in: ['$activity_id', '$$activityIds']
+                  $and: [
+                    { $eq: ['$user_id', '$$userId'] },
+                    { $in: ['$activity_id', '$$activityIds'] }
+                  ]
                 }
               }
             }
@@ -1170,18 +1175,21 @@ exports.postReportController = async (req, res, next) => {
           }
         }
       },
-
       {
         $lookup: {
           from: 'activity_logs',
           let: {
-            activityIds: '$activities._id'
+            activityIds: '$activities._id',
+            userId: mongoose.Types.ObjectId.createFromHexString(userId)
           },
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $in: ['$activity_id', '$$activityIds']
+                  $and: [
+                    { $eq: ['$user_id', '$$userId'] },
+                    { $in: ['$activity_id', '$$activityIds'] }
+                  ]
                 }
               }
             }
@@ -1207,10 +1215,6 @@ exports.postReportController = async (req, res, next) => {
             log.progress_status === '3'
         )
       )
-
-    if (isCompleted) {
-      console.log('On wrong completion', activities, logs)
-    }
 
     const finalActivityCompletion = !pre_activity_report && isFinalCompleted
 
@@ -1642,13 +1646,17 @@ exports.postInsertReportController = async (req, res, next) => {
         $lookup: {
           from: 'activity_logs',
           let: {
-            activityIds: '$activities._id'
+            activityIds: '$activities._id',
+            userId: mongoose.Types.ObjectId.createFromHexString(userId)
           },
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $in: ['$activity_id', '$$activityIds']
+                  $and: [
+                    { $eq: ['$user_id', '$$userId'] },
+                    { $in: ['$activity_id', '$$activityIds'] }
+                  ]
                 }
               }
             }
@@ -2042,13 +2050,17 @@ exports.postInsertReportController = async (req, res, next) => {
         $lookup: {
           from: 'activity_logs',
           let: {
-            activityIds: '$activities._id'
+            activityIds: '$activities._id',
+            userId: mongoose.Types.ObjectId.createFromHexString(userId)
           },
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $in: ['$activity_id', '$$activityIds']
+                  $and: [
+                    { $eq: ['$user_id', '$$userId'] },
+                    { $in: ['$activity_id', '$$activityIds'] }
+                  ]
                 }
               }
             }
@@ -2216,7 +2228,6 @@ exports.getAttemptCheck = async (req, res, next) => {
           _id: mongoose.Types.ObjectId.createFromHexString(moduleId)
         }
       },
-
       {
         $lookup: {
           from: 'modulesettings',
@@ -2225,14 +2236,12 @@ exports.getAttemptCheck = async (req, res, next) => {
           as: 'module_setting'
         }
       },
-
       {
         $unwind: {
           path: '$module_setting',
           preserveNullAndEmptyArrays: true
         }
       },
-
       {
         $lookup: {
           from: 'activity',
@@ -2264,7 +2273,6 @@ exports.getAttemptCheck = async (req, res, next) => {
           as: 'activities'
         }
       },
-
       {
         $addFields: {
           activities: {
@@ -2424,7 +2432,6 @@ exports.getAttemptCheck = async (req, res, next) => {
           as: 'programSchedule'
         }
       },
-
       {
         $unwind: {
           path: '$programSchedule',
@@ -2464,13 +2471,17 @@ exports.getAttemptCheck = async (req, res, next) => {
         $lookup: {
           from: 'activity_logs',
           let: {
-            activityIds: '$activities._id'
+            activityIds: '$activities._id',
+            userId: mongoose.Types.ObjectId.createFromHexString(userId)
           },
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $in: ['$activity_id', '$$activityIds']
+                  $and: [
+                    { $eq: ['$user_id', '$$userId'] },
+                    { $in: ['$activity_id', '$$activityIds'] }
+                  ]
                 }
               }
             }
@@ -2763,13 +2774,17 @@ exports.getAttemptCheck = async (req, res, next) => {
         $lookup: {
           from: 'activity_logs',
           let: {
-            activityIds: '$activities._id'
+            activityIds: '$activities._id',
+            userId: mongoose.Types.ObjectId.createFromHexString(userId)
           },
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $in: ['$activity_id', '$$activityIds']
+                  $and: [
+                    { $eq: ['$user_id', '$$userId'] },
+                    { $in: ['$activity_id', '$$activityIds'] }
+                  ]
                 }
               }
             }
@@ -3181,13 +3196,17 @@ exports.postScormData = async (req, res, next) => {
         $lookup: {
           from: 'activity_logs',
           let: {
-            activityIds: '$activities._id'
+            activityIds: '$activities._id',
+            userId: mongoose.Types.ObjectId.createFromHexString(userId)
           },
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $in: ['$activity_id', '$$activityIds']
+                  $and: [
+                    { $eq: ['$user_id', '$$userId'] },
+                    { $in: ['$activity_id', '$$activityIds'] }
+                  ]
                 }
               }
             }
@@ -3550,13 +3569,17 @@ exports.postScormData = async (req, res, next) => {
         $lookup: {
           from: 'activity_logs',
           let: {
-            activityIds: '$activities._id'
+            activityIds: '$activities._id',
+            userId: userId
           },
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $in: ['$activity_id', '$$activityIds']
+                  $and: [
+                    { $eq: ['$user_id', '$$userId'] },
+                    { $in: ['$activity_id', '$$activityIds'] }
+                  ]
                 }
               }
             }
@@ -4010,13 +4033,17 @@ exports.getNewAttemptController = async (req, res, next) => {
         $lookup: {
           from: 'activity_logs',
           let: {
-            activityIds: '$activities._id'
+            activityIds: '$activities._id',
+            userId: userId
           },
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $in: ['$activity_id', '$$activityIds']
+                  $and: [
+                    { $eq: ['$user_id', '$$userId'] },
+                    { $in: ['$activity_id', '$$activityIds'] }
+                  ]
                 }
               }
             }
@@ -4327,13 +4354,17 @@ exports.getNewAttemptController = async (req, res, next) => {
         $lookup: {
           from: 'activity_logs',
           let: {
-            activityIds: '$activities._id'
+            activityIds: '$activities._id',
+            userId: userId
           },
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $in: ['$activity_id', '$$activityIds']
+                  $and: [
+                    { $eq: ['$user_id', '$$userId'] },
+                    { $in: ['$activity_id', '$$activityIds'] }
+                  ]
                 }
               }
             }
@@ -4674,13 +4705,17 @@ exports.getEndAttemptController = async (req, res, next) => {
         $lookup: {
           from: 'activity_logs',
           let: {
-            activityIds: '$activities._id'
+            activityIds: '$activities._id',
+            userId: userId
           },
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $in: ['$activity_id', '$$activityIds']
+                  $and: [
+                    { $eq: ['$user_id', '$$userId'] },
+                    { $in: ['$activity_id', '$$activityIds'] }
+                  ]
                 }
               }
             }
@@ -4961,13 +4996,17 @@ exports.getEndAttemptController = async (req, res, next) => {
         $lookup: {
           from: 'activity_logs',
           let: {
-            activityIds: '$activities._id'
+            activityIds: '$activities._id',
+            userId: userId
           },
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $in: ['$activity_id', '$$activityIds']
+                  $and: [
+                    { $eq: ['$user_id', '$$userId'] },
+                    { $in: ['$activity_id', '$$activityIds'] }
+                  ]
                 }
               }
             }

@@ -165,7 +165,9 @@ const LearnerPoints = async (
     const endOfDay = new Date()
     endOfDay.setHours(23, 59, 59, 999)
 
-    const today = new Date()
+    const now = new Date()
+
+    const today = new Date(now.getTime() + 5.5 * 60 * 60 * 1000)
 
     const user = await User.findById(userId).lean()
     const masterId = user?.created_by

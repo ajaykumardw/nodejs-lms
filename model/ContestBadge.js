@@ -43,6 +43,16 @@ const contestBadgeSchema = new mongoose.Schema(
       default: '1',
       required: true
     },
+    is_result_announced: {
+      type: Boolean,
+      default: false,
+      required: false
+    },
+    completion_status: {
+      type: String,
+      default: 'Upcoming',
+      required: false
+    },
 
     created_by: {
       type: mongoose.Schema.Types.ObjectId,

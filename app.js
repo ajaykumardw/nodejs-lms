@@ -14,6 +14,9 @@ const authRoute = require('./route/auth')
 const adminRoute = require('./route/admin')
 const companyRouter = require('./route/company')
 const userRouter = require('./route/user')
+const AssignPoint = require('./command/AssignContestBadge')
+
+AssignPoint()
 
 // Commands
 const scheduleNotificationCommand = require('./command/ScheduleNotification')
