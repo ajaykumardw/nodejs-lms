@@ -87,7 +87,8 @@ exports.getContestBoardData = async (req, res, next) => {
                 }
               }
             },
-            // Get user details
+
+            // User Details
             {
               $lookup: {
                 from: 'users',
@@ -99,7 +100,8 @@ exports.getContestBoardData = async (req, res, next) => {
             {
               $unwind: '$user'
             },
-            // Get user points
+
+            // User Points
             {
               $lookup: {
                 from: 'contest_learner_points',
@@ -130,23 +132,21 @@ exports.getContestBoardData = async (req, res, next) => {
                 as: 'points'
               }
             },
-            // Assign 0 if no points found
+
             {
               $addFields: {
                 totalPoints: {
-                  $ifNull: [{ $arrayElemAt: ['$points.totalPoints', 0] }, 0]
+                  $ifNull: [
+                    {
+                      $arrayElemAt: ['$points.totalPoints', 0]
+                    },
+                    0
+                  ]
                 }
               }
             },
-            // Sort by points desc, then name asc
-            {
-              $sort: {
-                totalPoints: -1,
-                badgeEarnedCount: -1,
-                'user.first_name': 1,
-                'user.last_name': 1
-              }
-            },
+
+            // Badge Earned
             {
               $lookup: {
                 from: 'contest_badge_earned',
@@ -159,29 +159,17 @@ exports.getContestBoardData = async (req, res, next) => {
                     $match: {
                       $expr: {
                         $and: [
-                          {
-                            $eq: ['$user_id', '$$userId']
-                          },
-                          {
-                            $eq: ['$contest_id', '$$contestId']
-                          }
+                          { $eq: ['$user_id', '$$userId'] },
+                          { $eq: ['$contest_id', '$$contestId'] }
                         ]
                       }
-                    }
-                  },
-                  {
-                    $project: {
-                      _id: 1,
-                      badge_id: 1,
-                      contest_id: 1,
-                      user_id: 1,
-                      created_at: 1
                     }
                   }
                 ],
                 as: 'badge_earned'
               }
             },
+
             {
               $addFields: {
                 badgeEarnedCount: {
@@ -191,6 +179,17 @@ exports.getContestBoardData = async (req, res, next) => {
                 }
               }
             },
+
+            // SORT AFTER badgeEarnedCount EXISTS
+            {
+              $sort: {
+                totalPoints: -1,
+                badgeEarnedCount: -1,
+                'user.first_name': 1,
+                'user.last_name': 1
+              }
+            },
+
             {
               $project: {
                 _id: 0,
@@ -412,14 +411,6 @@ exports.getContestBoardData = async (req, res, next) => {
         }
       }
     ])
-
-    // Generate rank in Node.js
-    contest_badge.forEach(contest => {
-      contest.leaderboard = contest.leaderboard.map((user, index) => ({
-        ...user,
-        rank: index + 1
-      }))
-    })
 
     const currentUserId = userId.toString()
 
