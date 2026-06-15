@@ -111,7 +111,7 @@ exports.getActivityData = async (req, res, next) => {
         $lookup: {
           from: 'activity_logs',
           let: {
-            activityIds: '$activities._id',
+            activityId: '$_id',
             userId: userId
           },
           pipeline: [
@@ -120,7 +120,7 @@ exports.getActivityData = async (req, res, next) => {
                 $expr: {
                   $and: [
                     { $eq: ['$user_id', '$$userId'] },
-                    { $in: ['$activity_id', '$$activityIds'] }
+                    { $eq: ['$activity_id', '$$activityId'] }
                   ]
                 }
               }
