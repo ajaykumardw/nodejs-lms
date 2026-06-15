@@ -61,8 +61,6 @@ exports.getContestBoardData = async (req, res, next) => {
       {
         $match: {
           _id: { $in: userContestIds },
-          start_date: { $lte: today },
-          end_date: { $gte: today }
         }
       },
       // Get all enrolled users
