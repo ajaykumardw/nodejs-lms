@@ -16,8 +16,6 @@ const companyRouter = require('./route/company')
 const userRouter = require('./route/user')
 const AssignPoint = require('./command/AssignContestBadge')
 
-AssignPoint()
-
 // Commands
 const scheduleNotificationCommand = require('./command/ScheduleNotification')
 
@@ -163,6 +161,21 @@ cron.schedule(
   async () => {
     try {
       await scheduleNotificationCommand()
+    } catch (err) {
+      console.error('Cron error:', err)
+    }
+  },
+  {
+    timezone: 'Asia/Kolkata'
+  }
+)
+
+cron.schedule(
+  '*/20 * * * *',
+  async () => {
+    try {
+      await AssignPoint()
+      console.log('AssignPoint executed successfully')
     } catch (err) {
       console.error('Cron error:', err)
     }

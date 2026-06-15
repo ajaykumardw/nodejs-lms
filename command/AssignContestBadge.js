@@ -1,10 +1,13 @@
 const mongoose = require('mongoose')
 
+const User = require('../model/User')
 const Module = require('../model/Module')
 const ContestBadge = require('../model/ContestBadge')
 const LearnerPoint = require('../model/LearnerPoints')
+const SettingConfig = require('../model/settingConfig')
 const ProgramSchedule = require('../model/ProgramSchedule')
 const ActivityLog = require('../model/ActivityFolderReport')
+const ContestLearnerPoint = require('../model/ContestBadgeEarned')
 
 const calculateStreak = dates => {
   if (!dates.length) return 0
@@ -243,18 +246,36 @@ const getMostImprovedLearner = async learnerIds => {
 const getDifficultCertificate = async (learnerIds, masterId) => {
   let activityIds = []
 
+  const MODULE_CERTIFICATE_ID = '6a153d4a393b1c736064377b'
+  const QUIZ_TYPE_ID = '68886902954c4d9dc7a379bd'
+
+  const settingConfig = await SettingConfig.findOne({
+    created_by: masterId
+  })
+
+  const certificateSettingId =
+    settingConfig?.certificate_setting_data_id?.toString() ||
+    MODULE_CERTIFICATE_ID
+
+  const isModuleCertificate = certificateSettingId === MODULE_CERTIFICATE_ID
+
+  const isFolderCertificate = !isModuleCertificate
+
   const programSchedule = await ProgramSchedule.findOne({
     company_id: masterId
   })
 
-  if (programSchedule) {
+  if (programSchedule?.activity_id?.length) {
     activityIds.push(...programSchedule.activity_id)
   }
 
   const modules = await Module.aggregate([
     {
       $match: {
-        created_by: masterId
+        created_by: masterId,
+        activity_id: {
+          $in: activityIds
+        }
       }
     },
 
@@ -292,7 +313,6 @@ const getDifficultCertificate = async (learnerIds, masterId) => {
             }
           },
 
-          // Questions for each activity
           {
             $lookup: {
               from: 'questions',
@@ -305,212 +325,31 @@ const getDifficultCertificate = async (learnerIds, masterId) => {
         as: 'activities'
       }
     },
-
-    {
-      $addFields: {
-        activities: {
-          $filter: {
-            input: '$activities',
-            as: 'activity',
-            cond: {
-              $switch: {
-                branches: [
-                  // Document
-                  {
-                    case: {
-                      $eq: [
-                        '$$activity.module_type_id',
-                        mongoose.Types.ObjectId.createFromHexString(
-                          '688723af5dd97f4ccae68834'
-                        )
-                      ]
-                    },
-                    then: {
-                      $gt: [
-                        {
-                          $strLenCP: {
-                            $ifNull: ['$$activity.document_data.image_url', '']
-                          }
-                        },
-                        0
-                      ]
-                    }
-                  },
-
-                  // Video
-                  {
-                    case: {
-                      $eq: [
-                        '$$activity.module_type_id',
-                        mongoose.Types.ObjectId.createFromHexString(
-                          '688723af5dd97f4ccae68835'
-                        )
-                      ]
-                    },
-                    then: {
-                      $gt: [
-                        {
-                          $strLenCP: {
-                            $ifNull: ['$$activity.video_data.video_url', '']
-                          }
-                        },
-                        0
-                      ]
-                    }
-                  },
-
-                  // Youtube
-                  {
-                    case: {
-                      $eq: [
-                        '$$activity.module_type_id',
-                        mongoose.Types.ObjectId.createFromHexString(
-                          '688723af5dd97f4ccae68836'
-                        )
-                      ]
-                    },
-                    then: {
-                      $gt: [
-                        {
-                          $strLenCP: {
-                            $ifNull: ['$$activity.video_data.video_url', '']
-                          }
-                        },
-                        0
-                      ]
-                    }
-                  },
-
-                  // SCORM
-                  {
-                    case: {
-                      $eq: [
-                        '$$activity.module_type_id',
-                        mongoose.Types.ObjectId.createFromHexString(
-                          '688723af5dd97f4ccae68837'
-                        )
-                      ]
-                    },
-                    then: {
-                      $gt: [
-                        {
-                          $strLenCP: {
-                            $ifNull: ['$$activity.scorm_data.folder_url', '']
-                          }
-                        },
-                        0
-                      ]
-                    }
-                  },
-
-                  // Hidden types
-                  {
-                    case: {
-                      $in: [
-                        '$$activity.module_type_id',
-                        [
-                          mongoose.Types.ObjectId.createFromHexString(
-                            '688723af5dd97f4ccae68838'
-                          ),
-                          mongoose.Types.ObjectId.createFromHexString(
-                            '688723af5dd97f4ccae68839'
-                          ),
-                          mongoose.Types.ObjectId.createFromHexString(
-                            '688723af5dd97f4ccae6883a'
-                          )
-                        ]
-                      ]
-                    },
-                    then: false
-                  },
-
-                  // Quiz
-                  {
-                    case: {
-                      $eq: [
-                        '$$activity.module_type_id',
-                        mongoose.Types.ObjectId.createFromHexString(
-                          '68886902954c4d9dc7a379bd'
-                        )
-                      ]
-                    },
-                    then: {
-                      $gt: [
-                        {
-                          $size: {
-                            $ifNull: ['$$activity.questions', []]
-                          }
-                        },
-                        0
-                      ]
-                    }
-                  }
-                ],
-
-                default: true
-              }
-            }
-          }
-        }
-      }
-    },
-
-    {
-      $lookup: {
-        from: 'program_schedules',
-        localField: '_id',
-        foreignField: 'module_id',
-        as: 'programSchedule'
-      }
-    },
-
-    {
-      $unwind: {
-        path: '$programSchedule',
-        preserveNullAndEmptyArrays: true
-      }
-    },
-    {
-      $addFields: {
-        relativeEndDate: {
-          $switch: {
-            branches: [
-              {
-                case: { $eq: ['$programSchedule.dueType', 'relative'] },
-                then: {
-                  $dateAdd: {
-                    startDate: '$programSchedule.published_date',
-                    unit: 'day',
-                    amount: {
-                      $toInt: {
-                        $ifNull: ['$programSchedule.dueDays', 0]
-                      }
-                    }
-                  }
-                }
-              },
-              {
-                case: { $eq: ['$programSchedule.dueType', 'fixed'] },
-                then: '$programSchedule.dueDate.end_date'
-              }
-            ],
-            default: null
-          }
-        }
-      }
-    },
-
     {
       $lookup: {
         from: 'activity_logs',
         let: {
-          activityIds: '$activities._id'
+          moduleActivityIds: {
+            $map: {
+              input: '$activities',
+              as: 'activity',
+              in: '$$activity._id'
+            }
+          },
+          userIds: learnerIds.map(id => id)
         },
         pipeline: [
           {
             $match: {
               $expr: {
-                $in: ['$activity_id', '$$activityIds']
+                $and: [
+                  {
+                    $in: ['$user_id', '$$userIds']
+                  },
+                  {
+                    $in: ['$activity_id', '$$moduleActivityIds']
+                  }
+                ]
               }
             }
           }
@@ -520,18 +359,67 @@ const getDifficultCertificate = async (learnerIds, masterId) => {
     }
   ])
 
-  const activities = modules?.activities || []
-  const logs = modules?.logs || []
+  const activities = modules.flatMap(module => module.activities || [])
 
-  const isPreCompleted =
-    activities.length > 0 &&
-    activities.every(activity =>
-      logs.some(
-        log =>
-          log.activity_id.toString() === activity._id.toString() &&
-          log.progress_status === '3'
+  const logs = modules.flatMap(module => module.logs || [])
+
+  const quizActivities = activities.filter(
+    activity => activity.module_type_id?.toString() === QUIZ_TYPE_ID
+  )
+
+  const qualifiedLearnerIds = []
+
+  for (const learnerId of learnerIds) {
+    const learnerLogs = logs.filter(
+      log => log.user_id?.toString() === learnerId.toString()
+    )
+
+    const learnerQuizLogs = learnerLogs.filter(log =>
+      quizActivities.some(
+        quiz => quiz._id.toString() === log.activity_id.toString()
       )
     )
+
+    // All activities completed
+    const allActivitiesCompleted =
+      activities.length > 0 &&
+      activities.every(activity =>
+        learnerLogs.some(
+          log =>
+            log.activity_id?.toString() === activity._id?.toString() &&
+            String(log.progress_status) === '3'
+        )
+      )
+
+    const allQuizzesPassed =
+      quizActivities.length === 0
+        ? true
+        : quizActivities.every(quiz =>
+            learnerQuizLogs.some(
+              log =>
+                log.activity_id.toString() === quiz._id.toString() &&
+                log.is_passed === true
+            )
+          )
+
+    // Average quiz score
+    const averageQuizScore =
+      learnerQuizLogs.length > 0
+        ? learnerQuizLogs.reduce(
+            (sum, log) => sum + Number(log.mark_percentage || 0),
+            0
+          ) / learnerQuizLogs.length
+        : 0
+
+    const qualifiesForDragonHeart =
+      allActivitiesCompleted && allQuizzesPassed && averageQuizScore >= 85
+
+    if (qualifiesForDragonHeart) {
+      qualifiedLearnerIds.push(learnerId)
+    }
+  }
+
+  return qualifiedLearnerIds
 }
 
 const AnnounceBadgeResult = async () => {
@@ -562,8 +450,7 @@ const AnnounceBadgeResult = async () => {
     const contest_badge = await ContestBadge.aggregate([
       {
         $match: {
-          start_date: { $lte: today },
-          end_date: { $gte: today },
+          end_date: { $lte: today },
           is_result_announced: { $in: [false, null] }
         }
       },
@@ -666,6 +553,7 @@ const AnnounceBadgeResult = async () => {
       },
       {
         $project: {
+          _id: 1,
           leaderboard: 1,
           contest_name: 1,
           badge_id: 1,
@@ -694,13 +582,18 @@ const AnnounceBadgeResult = async () => {
 
       const learnerIds = leaderboard.map(lb => lb?.user_id)
 
-      const topLearnerRank = Math.trunc(leaderboard?.length / 100)
+      const topLearnerRank = Math.max(1, Math.ceil(leaderboard.length * 0.01))
 
       const topLearnersList = leaderboard.slice(0, topLearnerRank)
 
       const mostImprovedLearner = await getMostImprovedLearner(learnerIds)
 
       const getStreakLearners = await getLearningStreakLearners(
+        learnerIds,
+        masterId
+      )
+
+      const getDifficultLearner = await getDifficultCertificate(
         learnerIds,
         masterId
       )
@@ -722,10 +615,19 @@ const AnnounceBadgeResult = async () => {
 
       //This is for the dragon heart
       if (
+        getDifficultLearner?.length > 0 &&
         badgeId.some(
           id => id.toString() === difficultAssessmentBadgeId.toString()
         )
       ) {
+        const data = getDifficultLearner.map(lId => ({
+          badge_id: difficultAssessmentBadgeId,
+          contest_id: contestId,
+          user_id: lId,
+          created_by: lId
+        }))
+
+        finalData.push(...data)
       }
 
       //This code is for ghost walker
@@ -771,7 +673,18 @@ const AnnounceBadgeResult = async () => {
         })
       }
 
-      console.log('Final data', finalData)
+      await ContestBadge.updateOne(
+        { _id: cb._id },
+        {
+          $set: {
+            is_result_announced: true
+          }
+        }
+      )
+    }
+
+    if (finalData?.length > 0) {
+      await ContestLearnerPoint.insertMany(finalData)
     }
   } catch (error) {
     throw new Error(error.message)

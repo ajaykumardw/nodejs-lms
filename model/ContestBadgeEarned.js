@@ -12,7 +12,7 @@ const contestBadgeEarnedSchema = new mongoose.Schema(
       ref: 'users',
       required: true
     },
-    badges_id: {
+    badge_id: {
       type: mongoose.Schema.Types.ObjectId,
       required: true
     },

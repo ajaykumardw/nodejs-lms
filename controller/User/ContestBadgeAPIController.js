@@ -65,7 +65,6 @@ exports.getContestBoardData = async (req, res, next) => {
           end_date: { $gte: today }
         }
       },
-
       // Get all enrolled users
       {
         $lookup: {
@@ -75,7 +74,6 @@ exports.getContestBoardData = async (req, res, next) => {
           as: 'badge_enroll'
         }
       },
-
       // Build leaderboard
       {
         $lookup: {
@@ -89,7 +87,6 @@ exports.getContestBoardData = async (req, res, next) => {
                 }
               }
             },
-
             // Get user details
             {
               $lookup: {
@@ -102,7 +99,6 @@ exports.getContestBoardData = async (req, res, next) => {
             {
               $unwind: '$user'
             },
-
             // Get user points
             {
               $lookup: {
@@ -134,7 +130,6 @@ exports.getContestBoardData = async (req, res, next) => {
                 as: 'points'
               }
             },
-
             // Assign 0 if no points found
             {
               $addFields: {
@@ -143,30 +138,74 @@ exports.getContestBoardData = async (req, res, next) => {
                 }
               }
             },
-
             // Sort by points desc, then name asc
             {
               $sort: {
                 totalPoints: -1,
+                badgeEarnedCount: -1,
                 'user.first_name': 1,
                 'user.last_name': 1
               }
             },
-
+            {
+              $lookup: {
+                from: 'contest_badge_earned',
+                let: {
+                  userId: '$user_id',
+                  contestId: '$contest_badge_id'
+                },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [
+                          {
+                            $eq: ['$user_id', '$$userId']
+                          },
+                          {
+                            $eq: ['$contest_id', '$$contestId']
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    $project: {
+                      _id: 1,
+                      badge_id: 1,
+                      contest_id: 1,
+                      user_id: 1,
+                      created_at: 1
+                    }
+                  }
+                ],
+                as: 'badge_earned'
+              }
+            },
+            {
+              $addFields: {
+                badgeEarnedCount: {
+                  $size: {
+                    $ifNull: ['$badge_earned', []]
+                  }
+                }
+              }
+            },
             {
               $project: {
                 _id: 0,
                 user_id: 1,
                 totalPoints: 1,
                 first_name: '$user.first_name',
-                last_name: '$user.last_name'
+                last_name: '$user.last_name',
+                badge_earned: 1,
+                badgeEarnedCount: 1
               }
             }
           ],
           as: 'leaderboard'
         }
       },
-
       {
         $addFields: {
           remainingSeconds: {
@@ -214,7 +253,150 @@ exports.getContestBoardData = async (req, res, next) => {
           }
         }
       },
-
+      {
+        $lookup: {
+          from: 'contest_badge_earned',
+          let: {
+            user_id: mongoose.Types.ObjectId.createFromHexString(userId),
+            contest_id: '$_id'
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    {
+                      $eq: ['$user_id', '$$user_id']
+                    },
+                    {
+                      $eq: ['$contest_id', '$$contest_id']
+                    }
+                  ]
+                }
+              }
+            }
+          ],
+          as: 'badge_earned'
+        }
+      },
+      {
+        $lookup: {
+          from: 'app_config',
+          pipeline: [
+            {
+              $match: {
+                type: 'badge_data'
+              }
+            },
+            {
+              $project: {
+                badge_data: 1
+              }
+            }
+          ],
+          as: 'badge_config'
+        }
+      },
+      {
+        $addFields: {
+          badge_config: {
+            $ifNull: [
+              {
+                $arrayElemAt: ['$badge_config.badge_data', 0]
+              },
+              []
+            ]
+          }
+        }
+      },
+      {
+        $addFields: {
+          badge_earned: {
+            $map: {
+              input: '$badge_earned',
+              as: 'earned',
+              in: {
+                $mergeObjects: [
+                  '$$earned',
+                  {
+                    badge_detail: {
+                      $arrayElemAt: [
+                        {
+                          $filter: {
+                            input: '$badge_config',
+                            as: 'badge',
+                            cond: {
+                              $eq: ['$$badge._id', '$$earned.badge_id']
+                            }
+                          }
+                        },
+                        0
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        $addFields: {
+          badgeEarnedCount: {
+            $size: {
+              $ifNull: ['$badge_earned', []]
+            }
+          }
+        }
+      },
+      {
+        $addFields: {
+          contest_status: {
+            $switch: {
+              branches: [
+                {
+                  // Upcoming
+                  case: {
+                    $gt: ['$start_date', today]
+                  },
+                  then: 'Upcoming'
+                },
+                {
+                  // Live
+                  case: {
+                    $and: [
+                      { $lte: ['$start_date', today] },
+                      { $gte: ['$end_date', today] }
+                    ]
+                  },
+                  then: 'Live'
+                },
+                {
+                  // Result Processing
+                  case: {
+                    $and: [
+                      { $lt: ['$end_date', today] },
+                      { $eq: ['$is_result_announced', false] }
+                    ]
+                  },
+                  then: 'Result Processing'
+                },
+                {
+                  // Result Announced
+                  case: {
+                    $and: [
+                      { $lt: ['$end_date', today] },
+                      { $eq: ['$is_result_announced', true] }
+                    ]
+                  },
+                  then: 'Result Announced'
+                }
+              ],
+              default: 'Unknown'
+            }
+          }
+        }
+      },
       {
         $project: {
           leaderboard: 1,
@@ -223,7 +405,10 @@ exports.getContestBoardData = async (req, res, next) => {
           completion_status: 1,
           is_contest_end: 1,
           badge_enroll: 1,
-          remainingTime: 1
+          remainingTime: 1,
+          badge_earned: 1,
+          badgeEarnedCount: 1,
+          contest_status: 1
         }
       }
     ])
@@ -237,6 +422,28 @@ exports.getContestBoardData = async (req, res, next) => {
     })
 
     const currentUserId = userId.toString()
+
+    contest_badge.forEach(contest => {
+      let previous = null
+      let currentRank = 0
+
+      contest.leaderboard = contest.leaderboard.map((user, index) => {
+        if (
+          !previous ||
+          previous.totalPoints !== user.totalPoints ||
+          previous.badgeEarnedCount !== user.badgeEarnedCount
+        ) {
+          currentRank = index + 1
+        }
+
+        previous = user
+
+        return {
+          ...user,
+          rank: currentRank
+        }
+      })
+    })
 
     contest_badge.forEach(contest => {
       const leaderboard = contest.leaderboard

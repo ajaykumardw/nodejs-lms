@@ -2207,6 +2207,7 @@ exports.getAttemptCheck = async (req, res, next) => {
 
     const pre_activity_report = await ActivityFolderReport.findOne({
       activity_id: activityId,
+      user_id: userId,
       module_type_id: moduleTypeId,
       is_completed: true,
       progress_status: '3'
@@ -2815,6 +2816,7 @@ exports.getAttemptCheck = async (req, res, next) => {
 
     const final_activity_report = await ActivityFolderReport.findOne({
       activity_id: activityId,
+      user_id: userId,
       module_type_id: moduleTypeId,
       is_completed: true,
       progress_status: '3'
@@ -3570,7 +3572,7 @@ exports.postScormData = async (req, res, next) => {
           from: 'activity_logs',
           let: {
             activityIds: '$activities._id',
-            userId: userId
+            userId: mongoose.Types.ObjectId.createFromHexString(userId)
           },
           pipeline: [
             {
@@ -4034,7 +4036,7 @@ exports.getNewAttemptController = async (req, res, next) => {
           from: 'activity_logs',
           let: {
             activityIds: '$activities._id',
-            userId: userId
+            userId: mongoose.Types.ObjectId.createFromHexString(userId)
           },
           pipeline: [
             {
@@ -4355,7 +4357,7 @@ exports.getNewAttemptController = async (req, res, next) => {
           from: 'activity_logs',
           let: {
             activityIds: '$activities._id',
-            userId: userId
+            userId: mongoose.Types.ObjectId.createFromHexString(userId)
           },
           pipeline: [
             {
@@ -4477,8 +4479,22 @@ exports.getEndAttemptController = async (req, res, next) => {
       return errorResponse(res, 'Not authenticated: Token missing', {}, 401)
     }
 
+    let decoded
+
+    try {
+      decoded = jwt.verify(token, jwtSecretKey)
+    } catch (err) {
+      if (err.name === 'TokenExpiredError') {
+        return errorResponse(res, 'Token expired. Please log in again', {}, 401)
+      }
+      return errorResponse(res, 'Invalid token', {}, 401)
+    }
+
+    const userId = decoded.userId
+
     const pre_activity_report = await ActivityFolderReport.findOne({
       activity_id: activityId,
+      user_id: userId,
       module_type_id: moduleTypeId,
       is_completed: true,
       progress_status: '3'
@@ -4706,7 +4722,7 @@ exports.getEndAttemptController = async (req, res, next) => {
           from: 'activity_logs',
           let: {
             activityIds: '$activities._id',
-            userId: userId
+            userId: mongoose.Types.ObjectId.createFromHexString(userId)
           },
           pipeline: [
             {
@@ -4749,18 +4765,6 @@ exports.getEndAttemptController = async (req, res, next) => {
         401
       )
     }
-
-    let decoded
-    try {
-      decoded = jwt.verify(token, jwtSecretKey)
-    } catch (err) {
-      if (err.name === 'TokenExpiredError') {
-        return errorResponse(res, 'Token expired. Please log in again', {}, 401)
-      }
-      return errorResponse(res, 'Invalid token', {}, 401)
-    }
-
-    const userId = decoded.userId
 
     const contentFolder = await ContentFolder.findById(contentFolderId)
     if (!contentFolder) {
@@ -4997,7 +5001,7 @@ exports.getEndAttemptController = async (req, res, next) => {
           from: 'activity_logs',
           let: {
             activityIds: '$activities._id',
-            userId: userId
+            userId: mongoose.Types.ObjectId.createFromHexString(userId)
           },
           pipeline: [
             {
@@ -5037,6 +5041,7 @@ exports.getEndAttemptController = async (req, res, next) => {
 
     const final_activity_report = await ActivityFolderReport.findOne({
       activity_id: activityId,
+      user_id: userId,
       module_type_id: moduleTypeId,
       is_completed: true,
       progress_status: '3'
