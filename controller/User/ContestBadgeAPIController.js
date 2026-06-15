@@ -415,25 +415,10 @@ exports.getContestBoardData = async (req, res, next) => {
     const currentUserId = userId.toString()
 
     contest_badge.forEach(contest => {
-      let previous = null
-      let currentRank = 0
-
-      contest.leaderboard = contest.leaderboard.map((user, index) => {
-        if (
-          !previous ||
-          previous.totalPoints !== user.totalPoints ||
-          previous.badgeEarnedCount !== user.badgeEarnedCount
-        ) {
-          currentRank = index + 1
-        }
-
-        previous = user
-
-        return {
-          ...user,
-          rank: currentRank
-        }
-      })
+      contest.leaderboard = contest.leaderboard.map((user, index) => ({
+        ...user,
+        rank: index + 1
+      }))
     })
 
     contest_badge.forEach(contest => {
