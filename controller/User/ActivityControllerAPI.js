@@ -3253,6 +3253,11 @@ exports.postScormData = async (req, res, next) => {
     const isPassed =
       parsed?.lessonStatus == 'passed' || parsed?.lessonStatus == 'completed'
 
+    const passPercent =
+      parsed?.lessonStatus == 'passed' || parsed?.lessonStatus == 'completed'
+        ? '100'
+        : '0'
+
     if (activityReport) {
       await ActivityFolderReport.findOneAndUpdate(
         {
