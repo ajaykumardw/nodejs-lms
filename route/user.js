@@ -9,6 +9,7 @@ const dashboardController = require('../controller/User/DashboardAPIController')
 const certificateController = require('../controller/User/CertificateControllerAPI')
 const contestBadgeController = require('../controller/User/ContestBadgeAPIController')
 const userSurveryReportController = require('../controller/User/UserSurveyReportController')
+const myProgramAPIController = require('../controller/User/MyProgramAPIController.')
 
 router.get('/program/data', isAuth, programController.getCourseAPIController)
 
@@ -88,6 +89,12 @@ router.get(
   '/contest-badge/data',
   isAuth,
   contestBadgeController.getContestBoardData
+)
+
+router.get(
+  '/my-program/fetch/data',
+  isAuth,
+  myProgramAPIController.getMyProgramController
 )
 
 module.exports = router

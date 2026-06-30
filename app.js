@@ -175,7 +175,6 @@ cron.schedule(
   async () => {
     try {
       await AssignPoint()
-      console.log('AssignPoint executed successfully')
     } catch (err) {
       console.error('Cron error:', err)
     }
