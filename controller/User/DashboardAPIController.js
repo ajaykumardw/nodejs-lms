@@ -6,6 +6,8 @@ const NotificationLog = require('../../model/NotificationLog')
 const ActivityLog = require('../../model/ActivityFolderReport')
 const { successResponse } = require('../../util/response')
 
+const dayjs = require('dayjs')
+
 exports.getDashboardAPI = async (req, res, next) => {
   try {
     const userObjectId = mongoose.Types.ObjectId.createFromHexString(
@@ -539,6 +541,7 @@ exports.getDashboardAPI = async (req, res, next) => {
       },
       {
         $project: {
+          start_activity_time: 1,
           title: '$moduleType.activity_data.title',
           description: '$moduleType.activity_data.description',
           current_attempt: 1
@@ -553,6 +556,12 @@ exports.getDashboardAPI = async (req, res, next) => {
         $limit: 5
       }
     ])
+
+    activityLog.forEach(item => {
+      item.start_activity_time = dayjs(item.start_activity_time).format(
+        'hh:mm A DD MMM YYYY'
+      )
+    })
 
     const finalData = {
       enrolledData: module,

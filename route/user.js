@@ -97,4 +97,6 @@ router.get(
   myProgramAPIController.getMyProgramController
 )
 
+router.get('/my-modules/fetch/data/:slug', isAuth, myProgramAPIController.getMyModulesController)
+
 module.exports = router
