@@ -1,6 +1,7 @@
 const mongoose = require('mongoose')
 const Module = require('../../model/Module')
 const Activity = require('../../model/Activity')
+const User = require('../../model/User')
 const AppConfig = require('../../model/AppConfig')
 const NotificationLog = require('../../model/NotificationLog')
 const ActivityLog = require('../../model/ActivityFolderReport')
