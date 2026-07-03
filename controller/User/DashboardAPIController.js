@@ -6,7 +6,7 @@ const AppConfig = require('../../model/AppConfig')
 const NotificationLog = require('../../model/NotificationLog')
 const ActivityLog = require('../../model/ActivityFolderReport')
 const SettingConfig = require('../../model/settingConfig')
-const { successResponse } = require('../../util/response')
+const { successResponse, errorResponse } = require('../../util/response')
 
 const dayjs = require('dayjs')
 
@@ -625,20 +625,16 @@ exports.getDashboardAPI = async (req, res, next) => {
     let not_started = 0
 
     for (const module of modules) {
-      const activities = module.activities || []
+      const activities = module.activity || []
 
-      // No activities => not started
-      if (!activity.length) {
+      if (activities.length === 0) {
         not_started++
         continue
       }
 
-      let completedActivities = 0
-      let hasInProgress = false
-
-      if (total_activity === completed_activity) {
+      if (module.completed_activity === module.total_activity) {
         completed++
-      } else if (module?.completion_percentage > 0) {
+      } else if (module.completion_percentage > 0) {
         in_progress++
       } else {
         not_started++
@@ -655,7 +651,7 @@ exports.getDashboardAPI = async (req, res, next) => {
       completed_percentage: total ? (completed / total) * 100 : 0
     }
 
-    const activity = await AppConfig.aggregate([
+    const activitys = await AppConfig.aggregate([
       {
         $unwind: '$activity_data'
       },
@@ -968,7 +964,7 @@ exports.getDashboardAPI = async (req, res, next) => {
       enrolledData: module,
       activityLog,
       progressStatus,
-      activitySummary: activity,
+      activitySummary: activitys,
       liveSession,
       notificationLog
     }
