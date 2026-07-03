@@ -10,6 +10,10 @@ const { successResponse } = require('../../util/response')
 
 const dayjs = require('dayjs')
 
+const LIVE_MODULE_TYPE_ID = mongoose.Types.ObjectId.createFromHexString(
+  '688219557b6953e899cb57d3'
+)
+
 exports.getDashboardAPI = async (req, res, next) => {
   try {
     const userObjectId = mongoose.Types.ObjectId.createFromHexString(
