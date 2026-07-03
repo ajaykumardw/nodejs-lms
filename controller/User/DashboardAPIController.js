@@ -596,8 +596,7 @@ exports.getDashboardAPI = async (req, res, next) => {
           isLiveModuleVisible: true,
           isVisible: true,
           'programSchedule._id': { $exists: true },
-          isDateVisible: true,
-          ...completionFilter
+          isDateVisible: true
         }
       },
 
