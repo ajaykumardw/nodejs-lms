@@ -230,7 +230,7 @@ exports.getDashboardAPI = async (req, res, next) => {
       {
         $lookup: {
           from: 'activity_logs',
-          let: { user_id: userId, module_id: '$_id' },
+          let: { user_id: userObjectId, module_id: '$_id' },
           pipeline: [
             {
               $match: {
@@ -268,7 +268,7 @@ exports.getDashboardAPI = async (req, res, next) => {
       {
         $lookup: {
           from: 'user_module_enroll',
-          let: { moduleId: '$_id', userId: userId },
+          let: { moduleId: '$_id', userId: userObjectId },
           pipeline: [
             {
               $match: {
