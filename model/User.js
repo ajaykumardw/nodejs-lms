@@ -193,6 +193,12 @@ const userSchema = new Schema({
     required: false,
     set: v => (v === '' ? undefined : v)
   },
+  reporting_manager_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'users',
+    required: false,
+    default: null
+  },
   dob: {
     type: Date,
     required: false
