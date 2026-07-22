@@ -577,6 +577,10 @@ exports.importAPI = async (req, res, next) => {
 
         LastName: row.LastName ? String(row.LastName).trim() : '',
 
+        reporting_manager_id: row?.reporting_manager_id
+          ? String(row?.reporting_manager_id)
+          : '',
+
         Designation: row.Designation ? String(row.Designation).trim() : '',
 
         EmployeeType: row.EmployeeType ? String(row.EmployeeType).trim() : '',
@@ -627,10 +631,13 @@ exports.importAPI = async (req, res, next) => {
 exports.getUserStatsAPI = async (req, res, next) => {
   try {
     const userId = req.userId
+
     const response = await userService.getUserStats(userId)
+
     return successResponse(res, 'Data loaded', response)
   } catch (error) {
     console.error('Error occurred:', error)
+
     return errorResponse(res, error, 500)
   }
 }

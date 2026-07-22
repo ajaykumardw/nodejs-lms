@@ -10,26 +10,71 @@ const { decrypt } = require('../../util/encryption')
 const mongoose = require('mongoose')
 
 exports.getCompanyIndexAPI = async (req, res, next) => {
-  const userId = req.userId
-  const company = await User.find({
-    created_by: userId
-  })
-    .populate({
-      path: 'reporting_manager_id',
-      select: '_id first_name last_name'
-    })
-    .select(
-      '_id first_name last_name email phone city_id state_id country_id address pincode employee_type  reporting_manager_id emp_id status codes '
-    )
+  try {
+    const userId = req.userId
 
-  res.status(200).json({
-    status: 'Success',
-    statusCode: 200,
-    message: 'Data successfully fetched!',
-    data: {
-      company
+    const page = Math.max(Number(req.query.page) || 1, 1)
+
+    const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 100)
+
+    const search = req.query.search?.trim() || ''
+
+    const skip = (page - 1) * limit
+
+    const filter = {
+      created_by: userId
     }
-  })
+
+    if (search) {
+      filter.$or = [
+        { first_name: { $regex: search, $options: 'i' } },
+        { last_name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } },
+        { emp_id: { $regex: search, $options: 'i' } }
+      ]
+    }
+
+    const [company, total] = await Promise.all([
+      User.find(filter)
+        .populate({
+          path: 'reporting_manager_id',
+          select: '_id first_name last_name'
+        })
+        .select(
+          '_id first_name last_name email phone city_id state_id country_id address pincode employee_type reporting_manager_id emp_id status codes'
+        )
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+
+      User.countDocuments(filter)
+    ])
+
+    // Decrypt sensitive fields
+    const decryptedCompany = company.map(user => ({
+      ...user,
+      email: user.email ? decrypt(user.email) : null,
+      phone: user.phone ? decrypt(user.phone) : null
+    }))
+
+    return res.status(200).json({
+      status: 'Success',
+      statusCode: 200,
+      message: 'Data successfully fetched!',
+      data: {
+        company: decryptedCompany,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit)
+        }
+      }
+    })
+  } catch (error) {
+    next(error)
+  }
 }
 
 exports.createCompanyAPI = async (req, res, next) => {
