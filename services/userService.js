@@ -12,14 +12,6 @@ const { errorResponse } = require('../util/response')
 
 const importUsers = async (res, userId, chunk, roleIds = []) => {
   try {
-    // const emails = chunk.map(u => u.Email?.toLowerCase().trim()).filter(Boolean);
-    // const existing = await User.find({ email: { $in: emails } }).select('email').lean();
-    // const existingEmails = new Set(existing.map(u => u.email));
-
-    // const phones = chunk.map(u => u.PhoneNo ? String(u.PhoneNo).trim() : null).filter(Boolean);
-    // const existing2 = await User.find({ phone: { $in: phones } }).select('phone').lean();
-    // const existingPhones = new Set(existing2.map(u => u.phone));
-
     const emails = chunk.map(u => normalizeEmail(u.Email)).filter(Boolean)
     const emailHashes = emails.map(email => hash(email))
 
@@ -50,8 +42,6 @@ const importUsers = async (res, userId, chunk, roleIds = []) => {
     const resultWithStatus = []
 
     for (const u of chunk) {
-      // const email = u.Email?.toLowerCase().trim();
-      // const phone = u.PhoneNo ? String(u.PhoneNo).trim() : null;
       const emailRaw = u.Email || ''
       const phoneRaw = u.PhoneNo || ''
       const email = normalizeEmail(emailRaw)
@@ -71,14 +61,6 @@ const importUsers = async (res, userId, chunk, roleIds = []) => {
       if (existingPhoneHashes.has(phoneHash)) {
         errors.phone = 'This phone has already been taken!'
       }
-
-      // if (existingEmails.has(email)) {
-      //   errors.email = 'This email has already been taken!';
-      // }
-
-      // if (existingPhones.has(phone)) {
-      //   errors.phone = 'This phone has already been taken!';
-      // }
 
       const result = await processEmployeeCodesForUser({
         rawCodes: u.EmpID,
@@ -146,7 +128,7 @@ const importUsers = async (res, userId, chunk, roleIds = []) => {
             participation_type_id: participationTypeId,
             zone_id: zoneId,
             employee_type: u.EmployeeType || '',
-            reporting_manager_id: u.reporting_manager_id || '',
+            reporting_manager_id: u.reporting_manager_id || null,
             company_id: userId,
             master_company_id: userId,
             parent_company_id: userId,
@@ -352,7 +334,7 @@ const getUserStats = async userId => {
     console.error('Error fetching user stats:', error)
     throw error
   }
-} 
+}
 
 const getOrCreateDesignation = async (name, userId) => {
   if (!name) return null

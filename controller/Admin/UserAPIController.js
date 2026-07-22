@@ -549,10 +549,9 @@ exports.importAPI = async (req, res, next) => {
       return errorResponse(res, 'Invalid data format', 400)
     }
 
-    // Normalize incoming data
     const normalizedChunk = chunk.map(row => {
-      // Handle Email field from Excel hyperlink object
       let email = ''
+      let password = ''
 
       if (typeof row.Email === 'string') {
         email = row.Email.toLowerCase().trim()
@@ -560,47 +559,33 @@ exports.importAPI = async (req, res, next) => {
         email = (row.Email.text || '').toLowerCase().trim()
       }
 
+      if (typeof row.password === 'string') {
+        password = row.password.toLowerCase().trim()
+      } else if (typeof row.password === 'object' && row.password !== null) {
+        password = (row.password.text || '').toLowerCase().trim()
+      }
+
       return {
         ...row,
-
-        // Normalize email
         Email: email,
-
-        // Normalize phone number
         PhoneNo: row.PhoneNo ? String(row.PhoneNo).trim() : '',
-
-        // Normalize pincode
         PinCode: row.PinCode ? String(row.PinCode).trim() : '',
-
-        // Normalize string fields
         FirstName: row.FirstName ? String(row.FirstName).trim() : '',
-
         LastName: row.LastName ? String(row.LastName).trim() : '',
-
         reporting_manager_id: row?.reporting_manager_id
           ? String(row?.reporting_manager_id)
           : '',
-
+        password,
         Designation: row.Designation ? String(row.Designation).trim() : '',
-
         EmployeeType: row.EmployeeType ? String(row.EmployeeType).trim() : '',
-
         Status: row.Status ? String(row.Status).trim() : '',
-
         Country: row.Country ? String(row.Country).trim() : '',
-
         State: row.State ? String(row.State).trim() : '',
-
         City: row.City ? String(row.City).trim() : '',
-
         Address: row.Address ? String(row.Address).trim() : '',
-
         Branch: row.Branch ? String(row.Branch).trim() : '',
-
         Department: row.Department ? String(row.Department).trim() : '',
-
         Region: row.Region ? String(row.Region).trim() : '',
-
         Zone: row.Zone ? String(row.Zone).trim() : ''
       }
     })
