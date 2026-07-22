@@ -115,6 +115,45 @@ exports.getCompanyIndexAPI = async (req, res, next) => {
   }
 }
 
+exports.validateReportingManagerAPI = async (req, res, next) => {
+  try {
+    const userId = req.userId
+    const { emp_id } = req.query
+
+    if (!emp_id) {
+      return res.status(200).json({
+        status: 'Success',
+        statusCode: 200,
+        valid: true,
+        message: 'Reporting manager is optional'
+      })
+    }
+
+    const user = await User.findOne({
+      created_by: userId,
+      codes: {
+        $elemMatch: {
+          type: 'active',
+          code: emp_id
+        }
+      }
+    })
+      .select('_id first_name last_name codes')
+      .lean()
+
+    return res.status(200).json({
+      status: 'Success',
+      statusCode: 200,
+      valid: !!user,
+      message: user
+        ? 'Valid reporting manager'
+        : 'Reporting manager employee ID does not exist'
+    })
+  } catch (error) {
+    next(error)
+  }
+}
+
 exports.createCompanyAPI = async (req, res, next) => {
   const country = await Country.find()
 

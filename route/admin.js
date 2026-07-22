@@ -13,7 +13,6 @@ const ParticipationTypeAPIController = require('../controller/Admin/Participatio
 const UserAPIController = require('../controller/Admin/UserAPIController')
 const CategoryController = require('../controller/Admin/CategoryController')
 
-
 const createUpload = require('../util/upload')
 
 const allowedTypesDocument = [
@@ -126,6 +125,11 @@ router.put(
 
 //routes for company
 router.get('/company', isAuth, companyAPIController.getCompanyIndexAPI)
+router.get(
+  '/validate-reporting-manager',
+  isAuth,
+  companyAPIController.checkEmailCompanyAPI
+)
 router.post(
   '/company',
   isAuth,
