@@ -25,7 +25,6 @@ exports.getCompanyIndexAPI = async (req, res, next) => {
       created_by: userId
     }
 
-    // Search filter
     if (search) {
       filter.$or = [
         {
@@ -41,21 +40,20 @@ exports.getCompanyIndexAPI = async (req, res, next) => {
           }
         },
         {
-          email: {
-            $regex: search,
-            $options: 'i'
-          }
+          email_hash: hash(normalizeEmail(search))
         },
         {
-          phone: {
-            $regex: search,
-            $options: 'i'
-          }
+          phone_hash: hash(normalizePhone(search))
         },
         {
-          emp_id: {
-            $regex: search,
-            $options: 'i'
+          codes: {
+            $elemMatch: {
+              type: 'active',
+              code: {
+                $regex: search,
+                $options: 'i'
+              }
+            }
           }
         }
       ]
@@ -64,36 +62,21 @@ exports.getCompanyIndexAPI = async (req, res, next) => {
     const [company, total] = await Promise.all([
       User.find(filter)
         .select(
-          [
-            '_id',
-            'first_name',
-            'last_name',
-            'email',
-            'phone',
-            'city_id',
-            'state_id',
-            'country_id',
-            'address',
-            'pincode',
-            'employee_type',
-            'reporting_manager_id',
-            'emp_id',
-            'status',
-            'codes'
-          ].join(' ')
+          '_id first_name last_name email phone city_id state_id country_id address pincode employee_type reporting_manager_id codes status'
         )
         .populate({
           path: 'reporting_manager_id',
-          select: '_id first_name last_name emp_id'
+          select: '_id first_name last_name codes'
         })
         .skip(skip)
         .limit(limit)
-        .lean(),
+        .lean({
+          virtuals: true
+        }),
 
       User.countDocuments(filter)
     ])
 
-    // Decrypt sensitive fields
     const decryptedCompany = company.map(user => ({
       ...user,
 
@@ -101,17 +84,11 @@ exports.getCompanyIndexAPI = async (req, res, next) => {
 
       phone: user.phone ? decrypt(user.phone) : null,
 
-      // Explicitly keep emp_id
       emp_id: user.emp_id || null,
 
-      // Reporting manager
       reporting_manager_id: user.reporting_manager_id
         ? {
-            _id: user.reporting_manager_id._id,
-
-            first_name: user.reporting_manager_id.first_name,
-
-            last_name: user.reporting_manager_id.last_name,
+            ...user.reporting_manager_id,
 
             emp_id: user.reporting_manager_id.emp_id || null
           }
@@ -120,21 +97,15 @@ exports.getCompanyIndexAPI = async (req, res, next) => {
 
     return res.status(200).json({
       status: 'Success',
-
       statusCode: 200,
-
       message: 'Data successfully fetched!',
-
       data: {
         company: decryptedCompany,
 
         pagination: {
           total,
-
           page,
-
           limit,
-
           totalPages: Math.ceil(total / limit)
         }
       }

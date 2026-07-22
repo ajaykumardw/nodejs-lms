@@ -1,4 +1,7 @@
 const mongoose = require('mongoose')
+
+const mongooseLeanVirtuals = require('mongoose-lean-virtuals')
+
 const { Schema, Types } = mongoose
 const {
   encrypt,
@@ -231,6 +234,8 @@ const userSchema = new Schema({
   },
   codes: [UserCodeSchema] // Array of codes
 })
+
+userSchema.plugin(mongooseLeanVirtuals)
 
 userSchema.virtual('emp_id').get(function () {
   const activeCodeObj = (this.codes || []).find(code => code.type === 'active')
