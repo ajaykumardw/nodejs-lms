@@ -128,7 +128,7 @@ router.get('/company', isAuth, companyAPIController.getCompanyIndexAPI)
 router.get(
   '/validate-reporting-manager',
   isAuth,
-  companyAPIController.checkEmailCompanyAPI
+  companyAPIController.validateReportingManagerAPI
 )
 router.post(
   '/company',

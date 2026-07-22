@@ -5,7 +5,7 @@ const PackageType = require('../../model/PackageType')
 const replaceTemplateField = require('../../util/ReplaceTemplateField')
 
 const { errorResponse, successResponse } = require('../../util/response')
-const { decrypt } = require('../../util/encryption')
+const { decrypt, encrypt, hash } = require('../../util/encryption')
 
 const mongoose = require('mongoose')
 
@@ -118,38 +118,120 @@ exports.getCompanyIndexAPI = async (req, res, next) => {
 exports.validateReportingManagerAPI = async (req, res, next) => {
   try {
     const userId = req.userId
-    const { emp_id } = req.query
 
-    if (!emp_id) {
-      return res.status(200).json({
-        status: 'Success',
-        statusCode: 200,
+    const empId = String(req.query.emp_id || '').trim()
+    const email = String(req.query.email || '')
+      .trim()
+      .toLowerCase()
+    const phone = String(req.query.phone || '').trim()
+
+    if (!empId) {
+      return successResponse(res, 'Reporting manager is optional', {
         valid: true,
-        message: 'Reporting manager is optional'
+        manager: null,
+        emailExists: false,
+        phoneExists: false
       })
     }
 
-    const user = await User.findOne({
+    const manager = await User.findOne({
       created_by: userId,
+
       codes: {
         $elemMatch: {
           type: 'active',
-          code: emp_id
+          code: empId
         }
       }
     })
-      .select('_id first_name last_name codes')
+      .select(
+        '_id first_name last_name email phone email_hash phone_hash codes'
+      )
       .lean()
 
-    return res.status(200).json({
-      status: 'Success',
-      statusCode: 200,
-      valid: !!user,
-      message: user
-        ? 'Valid reporting manager'
-        : 'Reporting manager employee ID does not exist'
-    })
+    if (!manager) {
+      return successResponse(
+        res,
+        `Reporting manager employee ID "${empId}" does not exist`,
+        {
+          valid: false,
+          manager: null,
+          emailExists: false,
+          phoneExists: false
+        }
+      )
+    }
+
+    const emailHash = email ? hash(email) : null
+    const phoneHash = phone ? hash(phone) : null
+
+    let emailExists = false
+
+    if (emailHash) {
+      const existingEmailUser = await User.findOne({
+        created_by: userId,
+
+        _id: {
+          $ne: manager._id
+        },
+
+        email_hash: emailHash
+      })
+        .select('_id')
+        .lean()
+
+      emailExists = !!existingEmailUser
+    }
+
+    let phoneExists = false
+
+    if (phoneHash) {
+      const existingPhoneUser = await User.findOne({
+        created_by: userId,
+
+        _id: {
+          $ne: manager._id
+        },
+
+        phone_hash: phoneHash
+      })
+        .select('_id')
+        .lean()
+
+      phoneExists = !!existingPhoneUser
+    }
+
+    const valid = !emailExists && !phoneExists
+
+    const messages = []
+
+    if (emailExists) {
+      messages.push(`Email "${email}" already exists`)
+    }
+
+    if (phoneExists) {
+      messages.push(`Phone "${phone}" already exists`)
+    }
+
+    return successResponse(
+      res,
+      messages.length > 0
+        ? messages.join(', ')
+        : 'Valid reporting manager and unique email/phone',
+      {
+        valid,
+        manager: {
+          _id: manager._id,
+          first_name: manager.first_name,
+          last_name: manager.last_name
+        },
+        emailExists,
+        phoneExists
+      }
+    )
   } catch (error) {
+    console.error('validateReportingManagerAPI Error:', error)
+
     next(error)
   }
 }
