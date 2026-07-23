@@ -9,6 +9,10 @@ const fs = require('fs')
 const AppConfig = require('./model/AppConfig')
 require('dotenv').config()
 
+const dns = require('dns')
+
+dns.setServers(['8.8.8.8', '1.1.1.1'])
+
 // Routes
 const authRoute = require('./route/auth')
 const adminRoute = require('./route/admin')

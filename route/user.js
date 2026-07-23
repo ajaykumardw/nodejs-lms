@@ -10,6 +10,7 @@ const certificateController = require('../controller/User/CertificateControllerA
 const contestBadgeController = require('../controller/User/ContestBadgeAPIController')
 const userSurveryReportController = require('../controller/User/UserSurveyReportController')
 const myProgramAPIController = require('../controller/User/MyProgramAPIController.')
+const reportingManagerAPIController = require('../controller/User/ReportingManagerController')
 
 router.get('/program/data', isAuth, programController.getCourseAPIController)
 
@@ -97,6 +98,17 @@ router.get(
   myProgramAPIController.getMyProgramController
 )
 
-router.get('/my-modules/fetch/data/:slug', isAuth, myProgramAPIController.getMyModulesController)
+router.get(
+  '/my-modules/fetch/data/:slug',
+  isAuth,
+  myProgramAPIController.getMyModulesController
+)
+
+//This route is for reporting manager
+router.get(
+  '/reporting/manager',
+  isAuth,
+  reportingManagerAPIController.getReportingManagerController
+)
 
 module.exports = router

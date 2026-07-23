@@ -101,7 +101,7 @@ const importUsers = async (res, userId, chunk, roleIds = []) => {
             userId
           )
           const zoneId = await getOrCreateZone(u.Zone, userId)
-
+          
           usersToInsert.push({
             email,
             phone,

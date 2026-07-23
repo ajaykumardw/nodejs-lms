@@ -62,7 +62,7 @@ exports.getCompanyIndexAPI = async (req, res, next) => {
     const [company, total] = await Promise.all([
       User.find(filter)
         .select(
-          '_id first_name last_name email phone city_id state_id country_id address pincode employee_type reporting_manager_id codes status'
+          '_id first_name last_name email phone city_id state_id country_id address pincode employee_type reporting_manager_id codes status company_name'
         )
         .populate({
           path: 'reporting_manager_id',
