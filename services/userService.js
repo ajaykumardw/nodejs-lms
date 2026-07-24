@@ -433,7 +433,8 @@ const getOrCreateParticipationType = async (name, userId) => {
   const trimmedName = name.trim()
 
   let participationType = await ParticipationType.findOne({
-    name: new RegExp(`^${trimmedName}$`, 'i')
+    name: new RegExp(`^${trimmedName}$`, 'i'),
+    company_id: userId
   })
 
   if (!participationType) {
@@ -453,7 +454,8 @@ const getOrCreateZone = async (name, userId) => {
   const trimmedName = name.trim()
 
   let zone = await Zone.findOne({
-    name: new RegExp(`^${trimmedName}$`, 'i')
+    name: new RegExp(`^${trimmedName}$`, 'i'),
+    company_id: userId
   })
 
   if (!zone) {

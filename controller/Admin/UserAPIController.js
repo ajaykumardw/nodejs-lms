@@ -65,12 +65,17 @@ exports.createUserAPI = async (req, res, next) => {
       'participation_type_id'
     ]
 
-    if (reporting_manager_id === '') {
-      reporting_manager_id = null
+    const userData = pick(req.body, allowedFields)
+
+    if (
+      userData.reporting_manager_id === '' ||
+      userData.reporting_manager_id === undefined
+    ) {
+      userData.reporting_manager_id = null
     }
 
     const existingUserEmail = await User.findOne({
-      email_hash: hash(normalizeEmail(req.body.email)),
+      email_hash: hash(normalizeEmail(userData.email)),
       company_id: userId
     })
     if (existingUserEmail) {
@@ -78,21 +83,19 @@ exports.createUserAPI = async (req, res, next) => {
     }
 
     const existingUserPhone = await User.findOne({
-      phone_hash: hash(normalizePhone(req.body.phone)),
+      phone_hash: hash(normalizePhone(userData.phone)),
       company_id: userId
     })
     if (existingUserPhone) {
       return errorResponse(res, 'This phone already been taken!', {}, 400)
     }
 
-    const userData = pick(req.body, allowedFields)
-
-    const hashedPassword = await bcrypt.hash(req.body.password, 12)
+    const hashedPassword = await bcrypt.hash(userData.password, 12)
 
     let processedCodes = []
     if (req.body.user_code != undefined) {
       const result = await processEmployeeCodesForUser({
-        rawCodes: req.body.user_code,
+        rawCodes: userData.user_code,
         userId: null, // No userId yet since new user
         existingUser: null
       })
