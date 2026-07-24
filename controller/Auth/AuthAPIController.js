@@ -22,16 +22,35 @@ exports.postAPILogIn = async (req, res, next) => {
 
     const { email, password } = req.body
 
-    const normalizedEmail = email
+    let user = null
 
-    const user = await User.findOne({
-      email_hash: hash(normalizeEmail(normalizedEmail))
-    })
+    // First, try login using email.
+    // Email is normalized and hashed.
+    if (email) {
+      const normalizedEmail = normalizeEmail(email)
+
+      user = await User.findOne({
+        email_hash: hash(normalizedEmail)
+      })
+    }
+
+    // If no email user is found, try the same input as an active code.
+    // Code is NOT normalized or hashed.
+    if (!user && email) {
+      user = await User.findOne({
+        codes: {
+          $elemMatch: {
+            type: 'active',
+            code: email
+          }
+        }
+      })
+    }
 
     if (!user) {
       return errorResponse(
         res,
-        'A user with this email cannot be found!',
+        'A user with this email or employee ID cannot be found!',
         {},
         401
       )
@@ -68,7 +87,6 @@ exports.postAPILogIn = async (req, res, next) => {
         true
       )
     }
-    
 
     const expiresInSeconds = expireTime * 60 * 60
     const expirationTimestamp = Math.floor(Date.now() / 1000) + expiresInSeconds
@@ -98,7 +116,7 @@ exports.postAPILogIn = async (req, res, next) => {
       token,
       expiresAt: expirationTimestamp,
       userId: user._id.toString(),
-      email,
+      email: decrypt(user.email),
       name: `${user.first_name} ${user.last_name}`
     })
   } catch (err) {
