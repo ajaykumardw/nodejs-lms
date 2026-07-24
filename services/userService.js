@@ -90,18 +90,21 @@ const importUsers = async (res, userId, chunk, roleIds = []) => {
             u.password ||
             u.EmpID ||
             Math.floor(1111 + Math.random() * 8888).toString()
+
           const hashedPassword = await bcrypt.hash(passwordRaw, 12)
-          const location = await getLocationByName(u.Country, u.State, u.City)
+
           const designationId = await getOrCreateDesignation(
             u.Designation,
             userId
           )
+
           const participationTypeId = await getOrCreateParticipationType(
             u.ParticipationType,
             userId
           )
+
           const zoneId = await getOrCreateZone(u.Zone, userId)
-          
+
           usersToInsert.push({
             email,
             phone,
@@ -109,38 +112,53 @@ const importUsers = async (res, userId, chunk, roleIds = []) => {
             last_name: u.LastName.trim(),
             password: hashedPassword,
             address: u.Address,
+
+            // Use the already fetched location
             country_id: location?.country || null,
             state_id: location?.state || null,
             city_id: location?.city || null,
+
             pincode: u.PinCode,
+
             status:
               u.Status?.toLowerCase() === 'active'
                 ? true
                 : u.Status?.toLowerCase() === 'inactive'
                 ? false
                 : null,
+
             application_no: u.ApplicationNo || '',
             licence_no: u.LicenseNo || '',
             urn_no: u.URNNumber || '',
             website: u.Website || '',
+
             codes: result.codes || [],
+
             designation_id: designationId,
             participation_type_id: participationTypeId,
             zone_id: zoneId,
+
             employee_type: u.EmployeeType || '',
             reporting_manager_id: u.reporting_manager_id || null,
+
             company_id: userId,
             master_company_id: userId,
             parent_company_id: userId,
             created_by: userId
           })
 
-          resultWithStatus.push({ ...safeUser, errors: [] })
-        } catch (innerErr) {
-          console.error('User insert error:', innerErr)
           resultWithStatus.push({
             ...safeUser,
-            errors: { error: 'Error processing this user' }
+            errors: []
+          })
+        } catch (innerErr) {
+          console.error('User insert error:', innerErr)
+
+          resultWithStatus.push({
+            ...safeUser,
+            errors: {
+              error: 'Error processing this user'
+            }
           })
         }
       }
@@ -188,30 +206,77 @@ const importUsers = async (res, userId, chunk, roleIds = []) => {
 const getLocationByName = async (countryName, stateName, cityName) => {
   const errors = {}
 
+  const country = String(countryName || '').trim()
+  const state = String(stateName || '').trim()
+  const city = String(cityName || '').trim()
+
+  // If all location fields are empty,
+  // allow the user to be imported without location
+  if (!country && !state && !city) {
+    return {
+      country: null,
+      state: null,
+      city: null,
+      errors: null
+    }
+  }
+
+  // Country is required if State or City is provided
+  if (!country) {
+    errors.country = 'Country is required when State or City is provided'
+    return { errors }
+  }
+
   const countryDoc = await Country.findOne({
-    country_name: new RegExp(`^${countryName?.trim()}$`, 'i')
+    country_name: new RegExp(`^${escapeRegex(country)}$`, 'i')
   }).lean()
 
   if (!countryDoc) {
-    errors.country = `Country '${countryName}' not found`
+    errors.country = `Country '${country}' not found`
     return { errors }
   }
 
-  const stateDoc = countryDoc.states.find(
-    s => s.state_name.trim().toLowerCase() === stateName?.trim().toLowerCase()
+  // State is optional
+  if (!state) {
+    return {
+      country: countryDoc.country_id,
+      state: null,
+      city: null,
+      errors: null
+    }
+  }
+
+  const stateDoc = countryDoc.states?.find(
+    s =>
+      String(s.state_name || '')
+        .trim()
+        .toLowerCase() === state.toLowerCase()
   )
 
   if (!stateDoc) {
-    errors.state = `State '${stateName}' not found in '${countryName}'`
+    errors.state = `State '${state}' not found in '${country}'`
     return { errors }
   }
 
-  const cityDoc = stateDoc.cities.find(
-    c => c.city_name.trim().toLowerCase() === cityName?.trim().toLowerCase()
+  // City is optional
+  if (!city) {
+    return {
+      country: countryDoc.country_id,
+      state: stateDoc.state_id,
+      city: null,
+      errors: null
+    }
+  }
+
+  const cityDoc = stateDoc.cities?.find(
+    c =>
+      String(c.city_name || '')
+        .trim()
+        .toLowerCase() === city.toLowerCase()
   )
 
   if (!cityDoc) {
-    errors.city = `City '${cityName}' not found in '${stateName}'`
+    errors.city = `City '${city}' not found in '${state}'`
     return { errors }
   }
 
@@ -221,6 +286,11 @@ const getLocationByName = async (countryName, stateName, cityName) => {
     city: cityDoc.city_id,
     errors: null
   }
+}
+
+// Prevent RegExp errors if country contains special characters
+const escapeRegex = string => {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 const processEmployeeCodesForUser = async ({

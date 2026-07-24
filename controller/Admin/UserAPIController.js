@@ -553,39 +553,62 @@ exports.importAPI = async (req, res, next) => {
       let email = ''
       let password = ''
 
+      // Email
       if (typeof row.Email === 'string') {
         email = row.Email.toLowerCase().trim()
       } else if (typeof row.Email === 'object' && row.Email !== null) {
         email = (row.Email.text || '').toLowerCase().trim()
       }
 
-      if (typeof row.password === 'string') {
-        password = row.password.toLowerCase().trim()
-      } else if (typeof row.password === 'object' && row.password !== null) {
-        password = (row.password.text || '').toLowerCase().trim()
+      // Password
+      // Support both Password and password
+      const rawPassword = row.Password ?? row.password
+
+      if (typeof rawPassword === 'string') {
+        password = rawPassword.trim()
+      } else if (typeof rawPassword === 'object' && rawPassword !== null) {
+        password = String(rawPassword.text || '').trim()
       }
 
       return {
         ...row,
+
         Email: email,
+
         PhoneNo: row.PhoneNo ? String(row.PhoneNo).trim() : '',
+
         PinCode: row.PinCode ? String(row.PinCode).trim() : '',
+
         FirstName: row.FirstName ? String(row.FirstName).trim() : '',
+
         LastName: row.LastName ? String(row.LastName).trim() : '',
+
         reporting_manager_id: row?.reporting_manager_id
-          ? String(row?.reporting_manager_id)
+          ? String(row.reporting_manager_id).trim()
           : '',
+
         password,
+
         Designation: row.Designation ? String(row.Designation).trim() : '',
+
         EmployeeType: row.EmployeeType ? String(row.EmployeeType).trim() : '',
+
         Status: row.Status ? String(row.Status).trim() : '',
+
         Country: row.Country ? String(row.Country).trim() : '',
+
         State: row.State ? String(row.State).trim() : '',
+
         City: row.City ? String(row.City).trim() : '',
+
         Address: row.Address ? String(row.Address).trim() : '',
+
         Branch: row.Branch ? String(row.Branch).trim() : '',
+
         Department: row.Department ? String(row.Department).trim() : '',
+
         Region: row.Region ? String(row.Region).trim() : '',
+
         Zone: row.Zone ? String(row.Zone).trim() : ''
       }
     })
