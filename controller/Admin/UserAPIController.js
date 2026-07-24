@@ -231,7 +231,7 @@ const processEmployeeCodesForUser = async ({
 
 exports.updateUserAPI = async (req, res, next) => {
   try {
-    const userId = req.params.id // assuming user ID is passed in URL
+    const userId = req.params.id
     const currentUser = req.userId
 
     const existingUser = await User.findById(userId)
@@ -240,6 +240,7 @@ exports.updateUserAPI = async (req, res, next) => {
       return errorResponse(res, 'User not found', 404)
     }
 
+    // Check duplicate email
     const existingUserEmail = await User.findOne({
       email_hash: hash(normalizeEmail(req.body.email)),
       company_id: currentUser,
@@ -250,6 +251,7 @@ exports.updateUserAPI = async (req, res, next) => {
       return errorResponse(res, 'This email already been taken!', {}, 400)
     }
 
+    // Check duplicate phone
     const existingUserPhone = await User.findOne({
       email_hash: hash(normalizePhone(req.body.phone)),
       company_id: currentUser,
@@ -288,11 +290,16 @@ exports.updateUserAPI = async (req, res, next) => {
       'participation_type_id'
     ]
 
-    if (reporting_manager_id === '') {
-      reporting_manager_id = null
-    }
-
+    // Pick allowed fields
     const updateData = pick(req.body, allowedFields)
+
+    // Convert empty reporting_manager_id to null
+    if (
+      updateData.reporting_manager_id === '' ||
+      updateData.reporting_manager_id === undefined
+    ) {
+      updateData.reporting_manager_id = null
+    }
 
     // Optional password update
     if (req.body.password) {
@@ -300,7 +307,7 @@ exports.updateUserAPI = async (req, res, next) => {
     }
 
     // Handle employee_codes from string
-    if (req.body.user_code != undefined) {
+    if (req.body.user_code !== undefined) {
       const result = await processEmployeeCodesForUser({
         rawCodes: req.body.user_code,
         userId,
@@ -324,7 +331,9 @@ exports.updateUserAPI = async (req, res, next) => {
       : []
 
     // Clear previous roles
-    await RoleUser.deleteMany({ user_id: userId })
+    await RoleUser.deleteMany({
+      user_id: userId
+    })
 
     // Insert new roles
     if (roles.length > 0) {
@@ -332,6 +341,7 @@ exports.updateUserAPI = async (req, res, next) => {
         user_id: userId,
         role_id: roleId
       }))
+
       await RoleUser.insertMany(roleUserDocs)
     }
 
