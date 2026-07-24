@@ -593,15 +593,10 @@ exports.importAPI = async (req, res, next) => {
 
       return {
         ...row,
-
         Email: email,
-
         PhoneNo: row.PhoneNo ? String(row.PhoneNo).trim() : '',
-
         PinCode: row.PinCode ? String(row.PinCode).trim() : '',
-
         FirstName: row.FirstName ? String(row.FirstName).trim() : '',
-
         LastName: row.LastName ? String(row.LastName).trim() : '',
 
         reporting_manager_id: row?.reporting_manager_id

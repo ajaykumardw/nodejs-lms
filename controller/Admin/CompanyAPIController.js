@@ -119,62 +119,82 @@ exports.validateReportingManagerAPI = async (req, res, next) => {
   try {
     const userId = req.userId
 
+    const reportingManagerEmpId = String(
+      req.query.reporting_manager_id || ''
+    ).trim()
+
     const empId = String(req.query.emp_id || '').trim()
+
     const email = String(req.query.email || '')
       .trim()
       .toLowerCase()
+
     const phone = String(req.query.phone || '').trim()
 
-    if (!empId) {
-      return successResponse(res, 'Reporting manager is optional', {
-        valid: true,
-        manager: null,
-        emailExists: false,
-        phoneExists: false
+    let manager = null
+
+    if (reportingManagerEmpId) {
+      manager = await User.findOne({
+        created_by: userId,
+        codes: {
+          $elemMatch: {
+            type: 'active',
+            code: reportingManagerEmpId
+          }
+        }
       })
-    }
+        .select('_id first_name last_name')
+        .lean()
 
-    const manager = await User.findOne({
-      created_by: userId,
-
-      codes: {
-        $elemMatch: {
-          type: 'active',
-          code: empId
-        }
+      if (!manager) {
+        return successResponse(
+          res,
+          `Reporting manager employee ID "${reportingManagerEmpId}" does not exist`,
+          {
+            valid: false,
+            manager: null,
+            reportingManagerExists: false,
+            empIdExists: false,
+            emailExists: false,
+            phoneExists: false
+          }
+        )
       }
-    })
-      .select(
-        '_id first_name last_name email phone email_hash phone_hash codes'
-      )
-      .lean()
-
-    if (!manager) {
-      return successResponse(
-        res,
-        `Reporting manager employee ID "${empId}" does not exist`,
-        {
-          valid: false,
-          manager: null,
-          emailExists: false,
-          phoneExists: false
-        }
-      )
     }
 
-    const emailHash = email ? hash(email) : null
-    const phoneHash = phone ? hash(phone) : null
+    // --------------------------------------------------
+    // 2. Check New Employee EmpID Uniqueness
+    // --------------------------------------------------
+
+    let empIdExists = false
+
+    if (empId) {
+      const existingEmpIdUser = await User.findOne({
+        created_by: userId,
+        codes: {
+          $elemMatch: {
+            type: 'active',
+            code: empId
+          }
+        }
+      })
+        .select('_id')
+        .lean()
+
+      empIdExists = !!existingEmpIdUser
+    }
+
+    // --------------------------------------------------
+    // 3. Check Email Uniqueness
+    // --------------------------------------------------
 
     let emailExists = false
 
-    if (emailHash) {
+    if (email) {
+      const emailHash = hash(email)
+
       const existingEmailUser = await User.findOne({
         created_by: userId,
-
-        _id: {
-          $ne: manager._id
-        },
-
         email_hash: emailHash
       })
         .select('_id')
@@ -183,16 +203,17 @@ exports.validateReportingManagerAPI = async (req, res, next) => {
       emailExists = !!existingEmailUser
     }
 
+    // --------------------------------------------------
+    // 4. Check Phone Uniqueness
+    // --------------------------------------------------
+
     let phoneExists = false
 
-    if (phoneHash) {
+    if (phone) {
+      const phoneHash = hash(phone)
+
       const existingPhoneUser = await User.findOne({
         created_by: userId,
-
-        _id: {
-          $ne: manager._id
-        },
-
         phone_hash: phoneHash
       })
         .select('_id')
@@ -201,9 +222,27 @@ exports.validateReportingManagerAPI = async (req, res, next) => {
       phoneExists = !!existingPhoneUser
     }
 
-    const valid = !emailExists && !phoneExists
+    // --------------------------------------------------
+    // 5. Final Validation
+    // --------------------------------------------------
+
+    const valid =
+      !empIdExists &&
+      !emailExists &&
+      !phoneExists &&
+      (!reportingManagerEmpId || !!manager)
 
     const messages = []
+
+    if (reportingManagerEmpId && !manager) {
+      messages.push(
+        `Reporting manager employee ID "${reportingManagerEmpId}" does not exist`
+      )
+    }
+
+    if (empIdExists) {
+      messages.push(`Employee ID "${empId}" already exists`)
+    }
 
     if (emailExists) {
       messages.push(`Email "${email}" already exists`)
@@ -217,14 +256,20 @@ exports.validateReportingManagerAPI = async (req, res, next) => {
       res,
       messages.length > 0
         ? messages.join(', ')
-        : 'Valid reporting manager and unique email/phone',
+        : 'Valid reporting manager and unique employee details',
       {
         valid,
-        manager: {
-          _id: manager._id,
-          first_name: manager.first_name,
-          last_name: manager.last_name
-        },
+
+        manager: manager
+          ? {
+              _id: manager._id,
+              first_name: manager.first_name,
+              last_name: manager.last_name
+            }
+          : null,
+
+        reportingManagerExists: !!manager,
+        empIdExists,
         emailExists,
         phoneExists
       }
