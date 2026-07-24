@@ -68,6 +68,14 @@ exports.getCompanyIndexAPI = async (req, res, next) => {
           path: 'reporting_manager_id',
           select: '_id first_name last_name codes'
         })
+        .populate('participation_type_id')
+        .populate({
+          path: 'roles',
+          populate: {
+            path: 'role_id',
+            select: '_id name'
+          }
+        })
         .skip(skip)
         .limit(limit)
         .lean({
@@ -280,7 +288,6 @@ exports.validateReportingManagerAPI = async (req, res, next) => {
     next(error)
   }
 }
-
 
 exports.createCompanyAPI = async (req, res, next) => {
   const country = await Country.find()
