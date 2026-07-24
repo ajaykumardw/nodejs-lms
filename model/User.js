@@ -97,9 +97,19 @@ const userSchema = new Schema({
   },
   pincode: {
     type: String,
-    required: false,
-    minlength: 6,
-    maxlength: 10
+    default: '',
+    validate: {
+      validator: function (value) {
+        // Empty value is allowed
+        if (!value || value.trim() === '') {
+          return true
+        }
+
+        // If provided, must be at least 6 characters
+        return value.trim().length >= 6
+      },
+      message: 'Pincode must be at least 6 characters long'
+    }
   },
   package_id: {
     type: mongoose.Schema.Types.ObjectId,
