@@ -65,6 +65,10 @@ exports.createUserAPI = async (req, res, next) => {
       'participation_type_id'
     ]
 
+    if (reporting_manager_id === '') {
+      reporting_manager_id = null
+    }
+
     const existingUserEmail = await User.findOne({
       email_hash: hash(normalizeEmail(req.body.email)),
       company_id: userId
@@ -283,6 +287,10 @@ exports.updateUserAPI = async (req, res, next) => {
       'employee_type',
       'participation_type_id'
     ]
+
+    if (reporting_manager_id === '') {
+      reporting_manager_id = null
+    }
 
     const updateData = pick(req.body, allowedFields)
 
