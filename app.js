@@ -3,6 +3,7 @@ const express = require('express')
 const mongoose = require('mongoose')
 const flash = require('connect-flash')
 const cors = require('cors')
+const User = require('./model/User')
 const path = require('path')
 const fs = require('fs')
 

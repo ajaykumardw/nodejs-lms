@@ -5,7 +5,7 @@ const PackageType = require('../../model/PackageType')
 const replaceTemplateField = require('../../util/ReplaceTemplateField')
 
 const { errorResponse, successResponse } = require('../../util/response')
-const { decrypt, encrypt, hash } = require('../../util/encryption')
+const { decrypt, encrypt, hash, normalizeEmail, normalizePhone } = require('../../util/encryption')
 
 const mongoose = require('mongoose')
 
@@ -62,7 +62,7 @@ exports.getCompanyIndexAPI = async (req, res, next) => {
     const [company, total] = await Promise.all([
       User.find(filter)
         .select(
-          '_id first_name last_name email phone city_id state_id country_id address pincode employee_type reporting_manager_id codes status company_name'
+          '_id first_name last_name email phone city_id state_id country_id address pincode employee_type reporting_manager_id codes status photo company_name'
         )
         .populate({
           path: 'reporting_manager_id',
@@ -75,6 +75,10 @@ exports.getCompanyIndexAPI = async (req, res, next) => {
             path: 'role_id',
             select: '_id name'
           }
+        })
+        .sort({
+          first_name: 1,
+          last_name: 1
         })
         .skip(skip)
         .limit(limit)
@@ -382,7 +386,7 @@ exports.postCompanyAPI = async (req, res, next) => {
       pincode,
       gst_no,
       pan_no,
-      photo: imageUrl ? `/img/user-profile/${imageUrl}` : '',
+      photo: imageUrl || '',
       company_id: 0,
       master_company_id: 0,
       parent_company_id: 0,
@@ -605,6 +609,8 @@ exports.putCompanyAPI = async (req, res, next) => {
     })
 
     const imageUrl = req.file ? req.file.filename : ''
+
+    console.log('Image URL:', imageUrl) // Log the image URL for debugging
 
     const {
       first_name,

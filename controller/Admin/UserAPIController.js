@@ -36,9 +36,7 @@ exports.createUserAPI = async (req, res, next) => {
   try {
     const userId = req.userId
 
-    const imageUrl = req.file?.filename
-      ? `/img/user-profile/${req.file.filename}`
-      : ''
+    const imageUrl = req.file?.filename ? req.file.filename : ''
 
     const allowedFields = [
       'first_name',
@@ -256,7 +254,7 @@ exports.updateUserAPI = async (req, res, next) => {
 
     // Check duplicate phone
     const existingUserPhone = await User.findOne({
-      email_hash: hash(normalizePhone(req.body.phone)),
+      phone_hash: hash(normalizePhone(req.body.phone)),
       company_id: currentUser,
       _id: { $ne: userId }
     })
@@ -265,9 +263,7 @@ exports.updateUserAPI = async (req, res, next) => {
       return errorResponse(res, 'This phone already been taken!', {}, 400)
     }
 
-    const imageUrl = req.file?.filename
-      ? `/img/user-profile/${req.file.filename}`
-      : undefined
+    const imageUrl = req.file?.filename ? req.file.filename : undefined
 
     const allowedFields = [
       'first_name',

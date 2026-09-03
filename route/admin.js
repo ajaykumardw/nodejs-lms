@@ -196,14 +196,14 @@ router.delete(
 router.post(
   '/user',
   isAuth,
-  uploadVideo('file'),
+  imageUpload('photo'),
   UserAPIController.createUserAPI
 )
 router.put(
   '/user/:id',
   isAuth,
   validation.putUser,
-  uploadVideo('file'),
+  imageUpload('photo'),
   UserAPIController.updateUserAPI
 )
 router.delete('/user/:id', isAuth, UserAPIController.deleteAPI)
@@ -212,25 +212,25 @@ router.get('/user/search', isAuth, UserAPIController.searchUserAPI)
 router.put(
   '/user/update-password/:id',
   isAuth,
-  uploadVideo('file'),
+  imageUpload('file'),
   UserAPIController.updatePasswordAPI
 )
 router.put(
   '/user/attach/empcode/:id',
   isAuth,
-  uploadVideo('file'),
+  imageUpload('file'),
   UserAPIController.attachNewUserCodeAPI
 )
 router.put(
   '/user/mark/active/empcode/:id',
   isAuth,
-  uploadVideo('file'),
+  imageUpload('file'),
   UserAPIController.markActiveUserCodeAPI
 )
 router.put(
   '/user/status/update/:id',
   isAuth,
-  uploadVideo('file'),
+  imageUpload('file'),
   UserAPIController.updateStatusAPI
 )
 router.post('/users/import', isAuth, UserAPIController.importAPI)

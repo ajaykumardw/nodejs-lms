@@ -17,8 +17,7 @@ exports.postAPILogIn = async (req, res, next) => {
   try {
     if (!validate(req, res)) return
 
-    const companyId = '68538f50752fe999fdf22797'
-    const notificationId = '6878cd0351dcbae6759e8912'
+    let company_logo = ''
 
     const { email, password } = req.body
 
@@ -70,6 +69,10 @@ exports.postAPILogIn = async (req, res, next) => {
     const userId = user?._id
 
     if (createdBy && createdBy != '6811ae35704460d978b84eaa') {
+      const masterUser = await User.findOne({ _id: createdBy })
+
+      company_logo = masterUser?.photo || ''
+
       await LearnerPoints(
         '6a1eba182ff5cb1b286b97b4',
         userId,
@@ -86,6 +89,8 @@ exports.postAPILogIn = async (req, res, next) => {
         null,
         true
       )
+    } else {
+      company_logo = user?.photo || ''
     }
 
     const expiresInSeconds = expireTime * 60 * 60
@@ -116,6 +121,8 @@ exports.postAPILogIn = async (req, res, next) => {
       token,
       expiresAt: expirationTimestamp,
       userId: user._id.toString(),
+      photo: user.photo || '',
+      company_logo: company_logo,
       email: decrypt(user.email),
       name: `${user.first_name} ${user.last_name}`
     })
