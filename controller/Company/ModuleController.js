@@ -1,6 +1,7 @@
 require('dotenv').config();
 const Module = require('../../model/Module');
 const AppConfig = require('../../model/AppConfig');
+const mongoose = require("mongoose")
 const { successResponse, errorResponse, warningResponse } = require('../../util/response');
 const ContentFolder = require('../../model/ContentFolder');
 
@@ -293,12 +294,44 @@ exports.getModuleDataAPI = async (req, res, next) => {
         })
 
         // Fetch paginated data
-        const modules = await Module.find({
-            created_by: userId,
-            content_folder_id: cId,
-        })
-            .skip(skip)
-            .limit(limit)
+        const modules = await Module.aggregate([
+            {
+                $match: {
+                    created_by: mongoose.Types.ObjectId.createFromHexString(userId),
+                    content_folder_id: mongoose.Types.ObjectId.createFromHexString(cId)
+                }
+            },
+            {
+                $lookup: {
+                    from: "app_config",
+                    let: { moduleTypeId: "$module_type_id" },
+                    pipeline: [
+                        { $unwind: "$module_data" },
+                        {
+                            $match: {
+                                $expr: {
+                                    $eq: ["$module_data._id", "$$moduleTypeId"]
+                                }
+                            }
+                        },
+                        {
+                            $replaceRoot: {
+                                newRoot: "$module_data"
+                            }
+                        }
+                    ],
+                    as: "module_type"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$module_type",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            { $skip: skip },
+            { $limit: limit }
+        ]);
 
         return successResponse(res, 'Module data fetched successfully', {
             data: modules,
