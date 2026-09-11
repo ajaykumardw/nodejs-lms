@@ -30,6 +30,7 @@ const scheduleNotificationController = require('../controller/Company/ScheduleNo
 const dashboardController = require('../controller/Company/DashboardAPIController')
 const userProfileController = require('../controller/Company/UserProfileController')
 const leaderboardAPIController = require('../controller/Company/LeaderboardAPIController')
+const ILTAPIController = require("../controller/Company/ILTAPIController")
 
 const createUpload = require('../util/upload')
 
@@ -661,5 +662,11 @@ router.delete(
   isAuth,
   leaderboardAPIController?.deleteContestBadgeController
 )
+
+
+//This is for ILT
+router.get("/ILT/data/:moduleId", isAuth, ILTAPIController.getILTAPIController)
+router.post("/ILT/reminder/save/data/:moduleId", isAuth, ILTAPIController.postILTReminderController)
+router.post("/ILT/module/setting/data/:moduleId", isAuth, ILTAPIController.postILTModuleSettingAPIController)
 
 module.exports = router

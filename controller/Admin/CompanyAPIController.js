@@ -610,8 +610,6 @@ exports.putCompanyAPI = async (req, res, next) => {
 
     const imageUrl = req.file ? req.file.filename : ''
 
-    console.log('Image URL:', imageUrl) // Log the image URL for debugging
-
     const {
       first_name,
       last_name,
