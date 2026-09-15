@@ -76,6 +76,25 @@ const activityUpload = createUpload(
   2000
 )
 
+const attachmentUpload = createUpload(
+  [
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "image/svg+xml",
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+  ],
+  "attachment",
+  2000
+);
+
 const { uploadField: certificateUploads } = certificateUpload(
   ['image/jpeg', 'image/png', 'image/jpg', 'image/svg+xml'],
   {
@@ -668,5 +687,10 @@ router.delete(
 router.get("/ILT/data/:moduleId", isAuth, ILTAPIController.getILTAPIController)
 router.post("/ILT/reminder/save/data/:moduleId", isAuth, ILTAPIController.postILTReminderController)
 router.post("/ILT/module/setting/data/:moduleId", isAuth, ILTAPIController.postILTModuleSettingAPIController)
+
+// This is the route for batch creation
+router.post("/ILT/batch/:moduleId", isAuth, ...attachmentUpload.middleware("attachment"), ILTAPIController.postILTBatchAPIController)
+router.put("/ILT/batch/:batchId", isAuth, ...attachmentUpload.middleware("attachment"), ILTAPIController.putILTBatchAPIController)
+router.post("/ILT/batch/data/upload/:moduleId", isAuth, ILTAPIController.postILTBatchUploadAPIController);
 
 module.exports = router
