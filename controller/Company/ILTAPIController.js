@@ -104,6 +104,46 @@ exports.getILTAPIController = async (req, res, next) => {
 
         const module = await Module.findById(moduleId)
 
+        const activities = await Activity.aggregate([
+            {
+                $match: {
+                    created_by: (userId),
+                    module_id: mongoose.Types.ObjectId.createFromHexString(moduleId)
+                }
+            },
+            {
+                $lookup: {
+                    from: 'app_config',
+                    let: { moduleTypeId: '$module_type_id' },
+                    pipeline: [
+                        { $unwind: '$activity_data' },
+                        {
+                            $match: {
+                                $expr: { $eq: ['$activity_data._id', '$$moduleTypeId'] }
+                            }
+                        },
+                        { $project: { _id: 0, activity_data: 1 } }
+                    ],
+                    as: 'activity_type'
+                }
+            },
+            {
+                $unwind: {
+                    path: '$activity_type',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            // Populate virtual 'questions'
+            {
+                $lookup: {
+                    from: 'questions', // collection name
+                    localField: '_id', // Activity _id
+                    foreignField: 'activity_id', // questions.activity_id
+                    as: 'questions' // result array
+                }
+            }
+        ])
+
         if (!module) {
             return errorResponse(res, 'Module not found', {}, 404)
         }
@@ -191,6 +231,8 @@ exports.getILTAPIController = async (req, res, next) => {
             .populate('company_id', '_id first_name last_name email phone email_hash phone_hash address dob pincode photo employee_type emp_id')
 
         finalData['region'] = regions
+
+        finalData["activity"] = activities;
 
         const filter = {
             created_by: userId
@@ -2286,3 +2328,31 @@ exports.postILTBatchUploadAPIController = async (req, res, next) => {
         next(error);
     }
 };
+
+exports.postILTActivityAPIController = async (req, res, next) => {
+    try {
+
+        const userId = req?.userId;
+
+        const { moduleId, type, moduleTypeId } = req?.params;
+
+        const activity = new Activity({
+            created_by: userId,
+            module_id: moduleId,
+            module_type_id: moduleTypeId,
+            engage_type: type
+        })
+
+        await activity.save()
+
+        await Module.findByIdAndUpdate(moduleId, {
+            is_survey_completed: false,
+            is_survey_done: false
+        })
+
+        return successResponse(res, 'Activity saved successfully')
+
+    } catch (error) {
+        next(error)
+    }
+}

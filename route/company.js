@@ -692,5 +692,6 @@ router.post("/ILT/module/setting/data/:moduleId", isAuth, ILTAPIController.postI
 router.post("/ILT/batch/:moduleId", isAuth, ...attachmentUpload.middleware("attachment"), ILTAPIController.postILTBatchAPIController)
 router.put("/ILT/batch/:batchId", isAuth, ...attachmentUpload.middleware("attachment"), ILTAPIController.putILTBatchAPIController)
 router.post("/ILT/batch/data/upload/:moduleId", isAuth, ILTAPIController.postILTBatchUploadAPIController);
+router.post("/ILT/engage/activity/create/:type/:moduleId/:moduleTypeId", isAuth, ILTAPIController.postILTActivityAPIController)
 
 module.exports = router

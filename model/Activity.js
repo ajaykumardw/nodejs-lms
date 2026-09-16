@@ -16,6 +16,11 @@ const activitySchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       required: false
     },
+    engage_type: {
+      type: String,
+      enum: ["pre_read", "training_material", "post_read"],
+      default: null,
+    },
     document_data: {
       title: {
         type: String,
