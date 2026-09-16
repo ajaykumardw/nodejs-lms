@@ -141,6 +141,11 @@ exports.getILTAPIController = async (req, res, next) => {
                     foreignField: 'activity_id', // questions.activity_id
                     as: 'questions' // result array
                 }
+            },
+            {
+                $sort: {
+                    created_at: -1
+                }
             }
         ])
 
