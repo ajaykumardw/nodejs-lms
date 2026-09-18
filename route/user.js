@@ -11,6 +11,16 @@ const contestBadgeController = require('../controller/User/ContestBadgeAPIContro
 const userSurveryReportController = require('../controller/User/UserSurveyReportController')
 const myProgramAPIController = require('../controller/User/MyProgramAPIController.')
 const reportingManagerAPIController = require('../controller/User/ReportingManagerController')
+const trainerController = require("../controller/User/TrainerAPIController")
+const batchController = require("../controller/User/BatchAPIController")
+const gradingController = require("../controller/User/GradingAPIController")
+const attendanceController = require("../controller/User/AttendanceAPIController")
+const learnerController = require("../controller/User/LearnerAPIController")
+const sessionController = require("../controller/User/SessionAPIController")
+const materialController = require("../controller/User/MaterialAPIController")
+const preReadController = require("../controller/User/PreReadAPIController")
+const postReadController = require("../controller/User/PostReadAPIController")
+const noteController = require("../controller/User/NoteAPIController")
 
 router.get('/program/data', isAuth, programController.getCourseAPIController)
 
@@ -110,5 +120,50 @@ router.get(
   isAuth,
   reportingManagerAPIController.getReportingManagerController
 )
+
+//This is the route for my training
+router.get("/trainer/overview", isAuth, trainerController.getTrainerOverview);
+router.get("/trainer/profile", isAuth, trainerController.getTrainerProfile);
+router.put("/trainer/profile", isAuth, trainerController.updateTrainerProfile);
+
+// Batches
+router.get("/trainer/batches", isAuth, batchController.getTrainerBatches);
+router.get("/trainer/batches/:batchId", isAuth, batchController.getBatchDetail);
+
+// Session detail
+router.get("/trainer/batches/:batchId/sessions/:sessionId", isAuth, sessionController.getSessionDetail);
+
+// Learners
+router.get("/trainer/batches/:batchId/sessions/:sessionId/learners", isAuth, learnerController.getSessionLearners);
+
+// Attendance
+router.get("/trainer/batches/:batchId/sessions/:sessionId/attendance", isAuth, attendanceController.getSessionAttendance);
+router.put("/trainer/batches/:batchId/sessions/:sessionId/attendance/:learnerId", isAuth, attendanceController.markAttendance);
+router.post("/trainer/batches/:batchId/sessions/:sessionId/attendance/mark-all-present", isAuth, attendanceController.markAllPresent);
+router.post("/trainer/batches/:batchId/sessions/:sessionId/attendance/bulk-save", isAuth, attendanceController.bulkSaveAttendance);
+
+// Materials
+router.get("/trainer/resource/material", isAuth, materialController.getMaterials);
+router.post("/trainer/resource/material", isAuth, materialController.uploadMaterial);
+router.delete("/trainer/resource/material/:materialId", isAuth, materialController.deleteMaterial);
+
+// Pre-read
+router.get("/trainer/resource/pre-read", isAuth, preReadController.getPreReadItems);
+router.post("/trainer/resource/pre-read", isAuth, preReadController.createPreReadItem);
+router.put("/trainer/resource/pre-read/:preReadId/toggle", isAuth, preReadController.togglePreReadDone);
+
+// Post-read / assignments
+router.get("/trainer/resource/post-read", isAuth, postReadController.getPostReadItems);
+router.post("/trainer/resource/post-read", isAuth, postReadController.createPostReadItem);
+router.post("/trainer/resource/post-read/:postReadId/submissions", isAuth, postReadController.submitPostRead);
+
+// Grading
+router.get("/trainer/resource/grading", isAuth, gradingController.getGradingQueue);
+router.put("/trainer/resource/grading/:submissionId", isAuth, gradingController.setSubmissionScore);
+
+// Session notes
+router.get("/trainer/batches/:batchId/sessions/:sessionId/notes", isAuth, noteController.getSessionNotes);
+router.put("/trainer/batches/:batchId/sessions/:sessionId/notes", isAuth, noteController.saveSessionNotes);
+router.put("/trainer/batches/:batchId/sessions/:sessionId/complete", isAuth, noteController.completeSession);
 
 module.exports = router

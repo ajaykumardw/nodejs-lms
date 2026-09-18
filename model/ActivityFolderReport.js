@@ -6,6 +6,11 @@ const UserActivityLog = new mongoose.Schema({
         required: true,
         ref: "Module"
     },
+    engage_type: {
+        type: String,
+        enum: ["pre_read", "training_material", "post_read"],
+        default: null,
+    },
     program_id: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
