@@ -31,6 +31,8 @@ async function startWorker() {
 
         const { activityId, fileName, folderName } = job.data
 
+        console.log("Worker", activityId, fileName, folderName)
+
         const zipFilePath = path.join(BASE_PATH, fileName)
         const extractPath = path.join(BASE_PATH, folderName)
 
@@ -39,9 +41,11 @@ async function startWorker() {
             $set: { 'scorm_data.scorm_status': 'processing' }
           })
 
+
           await fs.promises.mkdir(extractPath, { recursive: true })
 
           const zip = await unzipper.Open.file(zipFilePath)
+          console.log("Worker zip", zip.files)
 
           for (const entry of zip.files) {
             const fullPath = path.join(extractPath, entry.path)
