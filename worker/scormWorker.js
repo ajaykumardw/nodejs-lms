@@ -15,6 +15,9 @@ mongoose.set('bufferCommands', false)
 const BASE_PATH = path.resolve(process.cwd(), 'public', 'activity')
 const MongoURL = process.env.MONGODB_URL
 
+console.log("Mongo url", MongoURL);
+
+
 async function startWorker() {
   try {
     await mongoose.connect(MongoURL)
@@ -25,11 +28,8 @@ async function startWorker() {
     const worker = new Worker(
       'scorm-extract',
       async job => {
-        console.log('SCORM worker started')
 
         const { activityId, fileName, folderName } = job.data
-
-        console.log('Job received:', job.data)
 
         const zipFilePath = path.join(BASE_PATH, fileName)
         const extractPath = path.join(BASE_PATH, folderName)
