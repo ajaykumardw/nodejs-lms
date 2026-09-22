@@ -35,10 +35,10 @@ async function startWorker() {
         const extractPath = path.join(BASE_PATH, folderName)
 
         try {
+
           await Activity.findByIdAndUpdate(activityId, {
             $set: { 'scorm_data.scorm_status': 'processing' }
           })
-
 
           await fs.promises.mkdir(extractPath, { recursive: true })
 
