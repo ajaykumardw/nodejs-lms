@@ -11,11 +11,22 @@ exports.getMaterials = async (req, res, next) => {
         const batch = await Batch.findById(batchId).select("module_id").lean();
         if (!batch) return errorResponse(res, "Batch not found", {}, 404);
 
-        const activities = await Activity.find({ module_id: batch.module_id, engage_type: "training_material" }).lean();
+        const activities = await Activity.find({
+            module_id: batch.module_id,
+            engage_type: "training_material"
+        })
+            .populate("questions")
+            .lean();
 
         const materials = activities.map((a) => {
             const { title, type } = resolveActivityDisplay(a);
-            return { _id: a._id, title, type, file_url: a.document_data?.image_url || a.video_data?.video_url || a.scorm_data?.content_url };
+            return {
+                _id: a._id,
+                title,
+                type,
+                questions: a?.questions,
+                file_url: a.document_data?.image_url || a.video_data?.video_url || a.scorm_data?.content_url
+            };
         });
 
         return successResponse(res, "Materials fetched successfully", { materials });

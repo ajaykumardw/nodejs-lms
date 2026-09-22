@@ -6,6 +6,11 @@ const UserActivityLog = new mongoose.Schema({
         required: true,
         ref: "Module"
     },
+    batch_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: false,
+        default: null
+    },
     engage_type: {
         type: String,
         enum: ["pre_read", "training_material", "post_read"],

@@ -15,7 +15,7 @@ mongoose.set('bufferCommands', false)
 const BASE_PATH = path.resolve(process.cwd(), 'public', 'activity')
 const MongoURL = process.env.MONGODB_URL
 
-async function startWorker () {
+async function startWorker() {
   try {
     await mongoose.connect(MongoURL)
 
@@ -113,7 +113,7 @@ async function startWorker () {
 
 startWorker()
 
-function findManifest (dir) {
+function findManifest(dir) {
   const entries = fs.readdirSync(dir, { withFileTypes: true })
 
   for (const e of entries) {

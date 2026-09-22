@@ -1,7 +1,10 @@
 const mongoose = require("mongoose");
 const Activity = require("../../model/Activity");
 const Batch = require("../../model/Batch");
-const ActivityLog = require("../../model/ActivityLog"); // confirm this is the right file/model name
+const Module = require("../../model/Module")
+const ContentFolder = require("../../model/ContentFolder")
+const Program = require("../../model/Program")
+const ActivityLog = require("../../model/ActivityFolderReport"); // confirm this is the right file/model name
 const { resolveActivityDisplay } = require("../../util/resolveActivityDisplay");
 const { successResponse, errorResponse } = require("../../util/response");
 
@@ -18,7 +21,9 @@ exports.getPreReadItems = async (req, res, next) => {
         const activities = await Activity.find({
             module_id: batch.module_id,
             engage_type: "pre_read",
-        }).lean();
+        })
+            .populate("questions")
+            .lean();
 
         const activityIds = activities.map((a) => a._id);
 
@@ -26,7 +31,7 @@ exports.getPreReadItems = async (req, res, next) => {
             {
                 $match: {
                     activity_id: { $in: activityIds },
-                    program_id: mongoose.Types.ObjectId.createFromHexString(batchId), // rename if program_id != batch
+                    batch_id: mongoose.Types.ObjectId.createFromHexString(batchId), // rename if program_id != batch
                 },
             },
             { $group: { _id: "$activity_id", completed: { $sum: { $cond: ["$is_completed", 1, 0] } } } },
@@ -34,13 +39,21 @@ exports.getPreReadItems = async (req, res, next) => {
 
         const progressMap = Object.fromEntries(progress.map((p) => [String(p._id), p.completed]));
 
-        console.log("Activity", activities, batch)
-
         const items = activities.map((a) => {
+
             const { title, type } = resolveActivityDisplay(a);
+            
             return {
                 id: a._id,
                 title,
+                module_id: batch?.module_id,
+                video_data: a?.video_data,
+                document_data: a?.document_data,
+                module_type_id: a?.module_type_id,
+                quiz_data: a?.quiz_data,
+                youtube_data: a?.youtube_data,
+                scorm_data: a?.scorm_data,
+                questions: a?.questions,
                 type,
                 completions: progressMap[String(a._id)] || 0,
             };
@@ -64,6 +77,16 @@ exports.togglePreReadDone = async (req, res, next) => {
         const activity = await Activity.findById(preReadId).lean();
         if (!activity) return errorResponse(res, "Pre-read item not found", {}, 404);
 
+        const moduleId = activity?.module_id;
+
+        const modules = await Module.findById(moduleId)
+
+        const contentFolderId = modules?.content_folder_id;
+
+        const contentFolder = await ContentFolder.findById(contentFolderId)
+
+        const programId = contentFolder?.program_id;
+
         const existing = await ActivityLog.findOne({
             activity_id: preReadId,
             user_id: userId,
@@ -73,10 +96,14 @@ exports.togglePreReadDone = async (req, res, next) => {
         const nextDone = !(existing?.is_completed);
 
         const record = await ActivityLog.findOneAndUpdate(
-            { activity_id: preReadId, user_id: userId, program_id: batchId },
+            { activity_id: preReadId, user_id: userId, program_id: programId, batch_id: batchId },
             {
                 $set: {
                     module_id: activity.module_id,
+                    program_id: programId,
+                    content_folder_id: contentFolderId,
+                    activity_id: activity?._id,
+                    user_id: userId,
                     engage_type: "pre_read",
                     module_type_id: activity.module_type_id,
                     is_completed: nextDone,

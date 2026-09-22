@@ -13,7 +13,7 @@ exports.getPostReadItems = async (req, res, next) => {
         const batch = await Batch.findById(batchId).select("module_id").lean();
         if (!batch) return errorResponse(res, "Batch not found", {}, 404);
 
-        const items = await Activity.find({ module_id: batch.module_id, engage_type: "post_read" }).lean();
+        const items = await Activity.find({ module_id: batch.module_id, engage_type: "post_read" }).populate("questions").lean();
         const itemIds = items.map((i) => i._id);
 
         const submissionCounts = await BatchAssignmentSubmission.aggregate([
@@ -23,8 +23,19 @@ exports.getPostReadItems = async (req, res, next) => {
         const countMap = new Map(submissionCounts.map((c) => [String(c._id), c.count]));
 
         const enriched = items.map((item) => {
+
             const { title, type } = resolveActivityDisplay(item);
-            return { id: item._id, title, type, submissions: countMap.get(String(item._id)) || 0 };
+
+            return {
+                id: item._id,
+                title,
+                module_type_id: item?.module_type_id,
+                document_data: item?.document_data,
+                video_data: item?.video_data,
+                questions: item?.questions,
+                type,
+                submissions: countMap.get(String(item._id)) || 0
+            };
         });
 
         return successResponse(res, "Post-read items fetched successfully", { items: enriched });

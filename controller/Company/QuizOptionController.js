@@ -12,7 +12,7 @@ exports.getQuizOptionAPI = async (req, res, next) => {
         const activityId = req.params.activityId;
 
         const question = await Question.find({
-            company_id: userId,
+            // company_id: userId,
             activity_id: activityId,
             module_id: moduleId
         })
@@ -26,13 +26,16 @@ exports.getQuizOptionAPI = async (req, res, next) => {
 
 exports.postQuizOptionAPI = async (req, res, next) => {
     try {
+        
         const {
             userId
         } = req;
+
         const {
             activityId,
             moduleId
         } = req.params;
+        
         const data = req.body;
 
         if (!Array.isArray(data) || data.length === 0) {
