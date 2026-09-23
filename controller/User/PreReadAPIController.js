@@ -4,12 +4,15 @@ const Batch = require("../../model/Batch");
 const Module = require("../../model/Module")
 const ContentFolder = require("../../model/ContentFolder")
 const Program = require("../../model/Program")
+const BatchLearner = require("../../model/BatchLearner")
 const ActivityLog = require("../../model/ActivityFolderReport"); // confirm this is the right file/model name
 const { resolveActivityDisplay } = require("../../util/resolveActivityDisplay");
 const { successResponse, errorResponse } = require("../../util/response");
 
 exports.getPreReadItems = async (req, res, next) => {
     try {
+
+        const userId = req?.userId;
         const { batchId } = req.query;
 
         if (!batchId) return errorResponse(res, "batchId is required", {}, 400);
@@ -18,12 +21,202 @@ exports.getPreReadItems = async (req, res, next) => {
 
         if (!batch) return errorResponse(res, "Batch not found", {}, 404);
 
-        const activities = await Activity.find({
-            module_id: batch.module_id,
-            engage_type: "pre_read",
-        })
-            .populate("questions")
-            .lean();
+        const activities = await Activity.aggregate([
+            {
+                $match: {
+                    module_id: batch.module_id,
+                    engage_type: "pre_read",
+                }
+            },
+
+            // Questions
+            {
+                $lookup: {
+                    from: 'questions',
+                    localField: '_id',
+                    foreignField: 'activity_id',
+                    as: 'questions'
+                }
+            },
+
+            // Module Setting
+            {
+                $lookup: {
+                    from: 'modulesettings',
+                    localField: 'module_id',
+                    foreignField: 'moduleId',
+                    as: 'moduleSetting'
+                }
+            },
+
+            {
+                $unwind: {
+                    path: '$moduleSetting',
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+
+            // Certificate Populate
+            {
+                $lookup: {
+                    from: 'certificates',
+                    localField: 'moduleSetting.selectedCertificateId',
+                    foreignField: '_id',
+                    as: 'moduleSetting.selectedCertificateId'
+                }
+            },
+
+            // Keep only first certificate object
+            {
+                $addFields: {
+                    'moduleSetting.selectedCertificateId': {
+                        $arrayElemAt: ['$moduleSetting.selectedCertificateId', 0]
+                    }
+                }
+            },
+
+            // Activity filters
+            {
+                $match: {
+                    $expr: {
+                        $switch: {
+                            branches: [
+                                // Document
+                                {
+                                    case: {
+                                        $eq: [
+                                            '$module_type_id',
+                                            mongoose.Types.ObjectId.createFromHexString(
+                                                '688723af5dd97f4ccae68834'
+                                            )
+                                        ]
+                                    },
+                                    then: {
+                                        $gt: [
+                                            {
+                                                $strLenCP: {
+                                                    $ifNull: ['$document_data.image_url', '']
+                                                }
+                                            },
+                                            0
+                                        ]
+                                    }
+                                },
+
+                                // Video
+                                {
+                                    case: {
+                                        $eq: [
+                                            '$module_type_id',
+                                            mongoose.Types.ObjectId.createFromHexString(
+                                                '688723af5dd97f4ccae68835'
+                                            )
+                                        ]
+                                    },
+                                    then: {
+                                        $gt: [
+                                            {
+                                                $strLenCP: {
+                                                    $ifNull: ['$video_data.video_url', '']
+                                                }
+                                            },
+                                            0
+                                        ]
+                                    }
+                                },
+
+                                // Youtube
+                                {
+                                    case: {
+                                        $eq: [
+                                            '$module_type_id',
+                                            mongoose.Types.ObjectId.createFromHexString(
+                                                '688723af5dd97f4ccae68836'
+                                            )
+                                        ]
+                                    },
+                                    then: {
+                                        $gt: [
+                                            {
+                                                $strLenCP: {
+                                                    $ifNull: ['$video_data.video_url', '']
+                                                }
+                                            },
+                                            0
+                                        ]
+                                    }
+                                },
+
+                                // SCORM
+                                {
+                                    case: {
+                                        $eq: [
+                                            '$module_type_id',
+                                            mongoose.Types.ObjectId.createFromHexString(
+                                                '688723af5dd97f4ccae68837'
+                                            )
+                                        ]
+                                    },
+                                    then: {
+                                        $gt: [
+                                            {
+                                                $strLenCP: {
+                                                    $ifNull: ['$scorm_data.folder_url', '']
+                                                }
+                                            },
+                                            0
+                                        ]
+                                    }
+                                },
+
+                                // Hide these module types
+                                {
+                                    case: {
+                                        $in: [
+                                            '$module_type_id',
+                                            [
+                                                mongoose.Types.ObjectId.createFromHexString(
+                                                    '688723af5dd97f4ccae68838'
+                                                ),
+                                                mongoose.Types.ObjectId.createFromHexString(
+                                                    '688723af5dd97f4ccae68839'
+                                                ),
+                                                mongoose.Types.ObjectId.createFromHexString(
+                                                    '688723af5dd97f4ccae6883a'
+                                                )
+                                            ]
+                                        ]
+                                    },
+                                    then: false
+                                },
+
+                                // Quiz
+                                {
+                                    case: {
+                                        $eq: [
+                                            '$module_type_id',
+                                            mongoose.Types.ObjectId.createFromHexString(
+                                                '68886902954c4d9dc7a379bd'
+                                            )
+                                        ]
+                                    },
+                                    then: {
+                                        $gt: [
+                                            {
+                                                $size: '$questions'
+                                            },
+                                            0
+                                        ]
+                                    }
+                                }
+                            ],
+
+                            default: true
+                        }
+                    }
+                }
+            }
+        ])
 
         const activityIds = activities.map((a) => a._id);
 
@@ -42,7 +235,7 @@ exports.getPreReadItems = async (req, res, next) => {
         const items = activities.map((a) => {
 
             const { title, type } = resolveActivityDisplay(a);
-            
+
             return {
                 id: a._id,
                 title,

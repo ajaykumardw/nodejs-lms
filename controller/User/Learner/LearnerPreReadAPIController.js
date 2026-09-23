@@ -1,14 +1,16 @@
-const mongoose = require("mongoose")
+const mongoose = require("mongoose");
+const Activity = require("../../../model/Activity");
+const Batch = require("../../../model/Batch");
+const Module = require("../../../model/Module");
+const ContentFolder = require("../../../model/ContentFolder");
+const ActivityLog = require("../../../model/ActivityFolderReport");
+const { resolveActivityDisplay } = require("../../../util/resolveActivityDisplay");
+const { successResponse, errorResponse } = require("../../../util/response");
 
-const Activity = require("../../model/Activity");
-const Batch = require("../../model/Batch");
-const { resolveActivityDisplay } = require("../../util/resolveActivityDisplay");
-const { successResponse, errorResponse } = require("../../util/response");
-
-exports.getMaterials = async (req, res, next) => {
+exports.getPreReadItems = async (req, res, next) => {
     try {
+        const learnerId = req.userId;
         const { batchId } = req.query;
-        if (!batchId) return errorResponse(res, "batchId is required", {}, 400);
 
         const batch = await Batch.findById(batchId).select("module_id").lean();
         if (!batch) return errorResponse(res, "Batch not found", {}, 404);
@@ -17,7 +19,7 @@ exports.getMaterials = async (req, res, next) => {
             {
                 $match: {
                     module_id: batch.module_id,
-                    engage_type: "training_material"
+                    engage_type: "pre_read",
                 }
             },
 
@@ -210,58 +212,79 @@ exports.getMaterials = async (req, res, next) => {
             }
         ])
 
-        const materials = activities.map((a) => {
+        const activityIds = activities.map((a) => a._id);
+
+        const myCompletedIds = await ActivityLog.distinct("activity_id", {
+            activity_id: { $in: activityIds },
+            user_id: learnerId,
+            is_completed: true,
+        });
+        const completedSet = new Set(myCompletedIds.map(String));
+
+        const items = activities.map((a) => {
             const { title, type } = resolveActivityDisplay(a);
             return {
-                _id: a._id,
+                id: a._id,
                 title,
+                module_type_id: a.module_type_id,
+                document_data: a.document_data,
+                video_data: a.video_data,
+                scorm_data: a.scorm_data,
+                questions: a.questions,
                 type,
-                questions: a?.questions,
-                file_url: a.document_data?.image_url || a.video_data?.video_url || a.scorm_data?.content_url
+                done: completedSet.has(String(a._id)),
             };
         });
 
-        return successResponse(res, "Materials fetched successfully", { materials });
+        return successResponse(res, "Pre-read fetched", { items });
     } catch (error) {
         next(error);
     }
 };
 
-exports.uploadMaterial = async (req, res, next) => {
+exports.togglePreReadDone = async (req, res, next) => {
     try {
-        const trainerId = req?.userId;
-        const { batchId, title, type, file_url, image_url } = req.body;
+        const { id: preReadId } = req.params;
+        const userId = req.userId;
+        const { batchId } = req.body;
 
-        if (!batchId || !title || !type) {
-            return errorResponse(res, "batchId, title and type are required", {}, 400);
-        }
+        const activity = await Activity.findById(preReadId).lean();
+        if (!activity) return errorResponse(res, "Pre-read item not found", {}, 404);
 
-        const batch = await Batch.findById(batchId).select("module_id").lean();
-        if (!batch) return errorResponse(res, "Batch not found", {}, 404);
+        // ActivityLog requires program_id + content_folder_id — resolve them
+        // via the module, same as the trainer-preview toggle does.
+        const moduleDoc = await Module.findById(activity.module_id).lean();
+        const contentFolder = await ContentFolder.findById(moduleDoc?.content_folder_id).lean();
+        const programId = contentFolder?.program_id;
 
-        const typeDataKey = { document: "document_data", video: "video_data", scorm: "scorm_data" }[type];
-        if (!typeDataKey) return errorResponse(res, "Unsupported type", {}, 400);
+        const existing = await ActivityLog.findOne({
+            activity_id: preReadId,
+            user_id: userId,
+            batch_id: batchId,
+        }).lean();
 
-        const material = await Activity.create({
-            module_id: batch.module_id,
-            engage_type: "training_material",
-            image_url: image_url || "",
-            created_by: trainerId,
-            [typeDataKey]: { title, ...(typeDataKey === "document_data" ? { image_url: file_url } : { video_url: file_url }) },
-        });
+        const nextDone = !(existing?.is_completed);
 
-        return successResponse(res, "Material uploaded successfully", { material });
-    } catch (error) {
-        next(error);
-    }
-};
+        const record = await ActivityLog.findOneAndUpdate(
+            { activity_id: preReadId, user_id: userId, batch_id: batchId },
+            {
+                $set: {
+                    module_id: activity.module_id,
+                    program_id: programId,
+                    content_folder_id: contentFolder?._id,
+                    activity_id: activity._id,
+                    user_id: userId,
+                    batch_id: batchId,
+                    engage_type: "pre_read",
+                    module_type_id: activity.module_type_id,
+                    is_completed: nextDone,
+                    completed_at_time: nextDone ? new Date() : null,
+                },
+            },
+            { new: true, upsert: true }
+        );
 
-exports.deleteMaterial = async (req, res, next) => {
-    try {
-        const { materialId } = req.params;
-        const deleted = await Activity.findOneAndDelete({ _id: materialId, engage_type: "training_material" });
-        if (!deleted) return errorResponse(res, "Material not found", {}, 404);
-        return successResponse(res, "Material deleted successfully", {});
+        return successResponse(res, "Pre-read status updated", { record });
     } catch (error) {
         next(error);
     }

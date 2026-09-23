@@ -22,6 +22,18 @@ const preReadController = require("../controller/User/PreReadAPIController")
 const postReadController = require("../controller/User/PostReadAPIController")
 const noteController = require("../controller/User/NoteAPIController")
 
+//Route for learner section
+const LearnerBatchController = require("../controller/User/Learner/LearnerBatchAPIController");
+
+const LearnerPreReadController = require("../controller/User/Learner/LearnerPreReadAPIController");
+
+const LearnerMaterialController = require("../controller/User/Learner/LearnerMaterialAPIController");
+const LearnerPostReadController = require("../controller/User/Learner/LearnerPostReadAPIController");
+const LearnerAttendanceController = require("../controller/User/Learner/LearnerAttendanceAPIController");
+const LearnerEnrollmentController = require("../controller/User/Learner/LearnerEnrollmentAPIController");
+
+const { checkEnrollment } = require("../middleware/checkEnrollment");
+
 router.get('/program/data', isAuth, programController.getCourseAPIController)
 
 router.get('/module/data/:id', isAuth, moduleController.getModuleAPIController)
@@ -165,5 +177,43 @@ router.put("/trainer/resource/grading/:submissionId", isAuth, gradingController.
 router.get("/trainer/batches/:batchId/sessions/:sessionId/notes", isAuth, noteController.getSessionNotes);
 router.put("/trainer/batches/:batchId/sessions/:sessionId/notes", isAuth, noteController.saveSessionNotes);
 router.put("/trainer/batches/:batchId/sessions/:sessionId/complete", isAuth, noteController.completeSession);
+
+// Dashboard
+router.get("/learner/overview", isAuth, LearnerBatchController.getLearnerOverview);
+
+// Enrollment — respond to a nomination. Not behind checkEnrollment, since
+// a learner who hasn't confirmed yet still needs to be able to respond.
+router.get("/learner/enrollments", isAuth, LearnerEnrollmentController.getMyEnrollments);
+router.put("/learner/enrollments/:batchId/respond", isAuth, LearnerEnrollmentController.respondToEnrollment);
+
+// Batches & sessions
+router.get("/learner/batches", isAuth, LearnerBatchController.getMyBatches);
+router.get("/learner/batches/:batchId", isAuth, checkEnrollment, LearnerBatchController.getBatchSessions);
+
+// Attendance — read only, no write route exists
+router.get(
+  "/learner/batches/:batchId/sessions/:sessionId/attendance",
+  isAuth,
+  checkEnrollment,
+  LearnerAttendanceController.getMyAttendance
+);
+router.get(
+  "/learner/batches/:batchId/attendance",
+  isAuth,
+  checkEnrollment,
+  LearnerAttendanceController.getMyAttendanceHistory
+);
+
+// Pre-read
+router.get("/learner/resource/pre-read", isAuth, checkEnrollment, LearnerPreReadController.getPreReadItems);
+router.put("/learner/resource/pre-read/:id/toggle", isAuth, checkEnrollment, LearnerPreReadController.togglePreReadDone);
+
+// Material — read only
+router.get("/learner/resource/material", isAuth, checkEnrollment, LearnerMaterialController.getMaterials);
+
+// Post-read — read + submit (no delete/edit-after-grade route)
+router.get("/learner/resource/post-read", isAuth, checkEnrollment, LearnerPostReadController.getPostReadItems);
+router.post("/learner/resource/post-read/:id/submit", isAuth, checkEnrollment, LearnerPostReadController.submitPostRead);
+
 
 module.exports = router

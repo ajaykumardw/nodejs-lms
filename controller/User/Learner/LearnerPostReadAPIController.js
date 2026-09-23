@@ -1,14 +1,16 @@
-const mongoose = require("mongoose")
+const mongoose = require("mongoose");
+const Activity = require("../../../model/Activity");
+const Batch = require("../../../model/Batch");
+const BatchAssignmentSubmission = require("../../../model/BatchAssignment");
+const { resolveActivityDisplay } = require("../../../util/resolveActivityDisplay");
+const { successResponse, errorResponse } = require("../../../util/response");
 
-const Activity = require("../../model/Activity");
-const Batch = require("../../model/Batch");
-const { resolveActivityDisplay } = require("../../util/resolveActivityDisplay");
-const { successResponse, errorResponse } = require("../../util/response");
-
-exports.getMaterials = async (req, res, next) => {
+// GET /user/learner/resource/post-read?batchId=
+// Mount checkEnrollment before this route.
+exports.getPostReadItems = async (req, res, next) => {
     try {
+        const learnerId = req.userId;
         const { batchId } = req.query;
-        if (!batchId) return errorResponse(res, "batchId is required", {}, 400);
 
         const batch = await Batch.findById(batchId).select("module_id").lean();
         if (!batch) return errorResponse(res, "Batch not found", {}, 404);
@@ -17,7 +19,7 @@ exports.getMaterials = async (req, res, next) => {
             {
                 $match: {
                     module_id: batch.module_id,
-                    engage_type: "training_material"
+                    engage_type: "post_read",
                 }
             },
 
@@ -210,58 +212,80 @@ exports.getMaterials = async (req, res, next) => {
             }
         ])
 
-        const materials = activities.map((a) => {
-            const { title, type } = resolveActivityDisplay(a);
+        const activityIds = activities.map((a) => a._id);
+
+        const mySubmissions = await BatchAssignmentSubmission.find({
+            activity_id: { $in: activityIds },
+            batch_id: batchId,
+            learner_id: learnerId,
+        }).lean();
+        const submissionMap = new Map(mySubmissions.map((s) => [String(s.activity_id), s]));
+
+        const items = activities.map((item) => {
+            const { title, type } = resolveActivityDisplay(item);
+            const mine = submissionMap.get(String(item._id));
+
             return {
-                _id: a._id,
+                id: item._id,
                 title,
                 type,
-                questions: a?.questions,
-                file_url: a.document_data?.image_url || a.video_data?.video_url || a.scorm_data?.content_url
+                module_type_id: item.module_type_id,
+                mySubmission: mine
+                    ? {
+                        status: mine.status,
+                        score: mine.score,
+                        submittedAt: mine.submitted_at,
+                        text: mine.submission_text,
+                        fileUrl: mine.submission_file_url,
+                    }
+                    : null,
             };
         });
 
-        return successResponse(res, "Materials fetched successfully", { materials });
+        return successResponse(res, "Post-read items fetched successfully", { items });
     } catch (error) {
         next(error);
     }
 };
 
-exports.uploadMaterial = async (req, res, next) => {
+// POST /user/learner/resource/post-read/:id/submit
+// Mount checkEnrollment before this route.
+// SECURITY: learner_id is always req.userId. Never accept a learnerId in
+// the body — the original trainer-side submitPostRead took it from the
+// client, which would let one learner submit as another. Fixed here.
+exports.submitPostRead = async (req, res, next) => {
     try {
-        const trainerId = req?.userId;
-        const { batchId, title, type, file_url, image_url } = req.body;
+        const { id: postReadId } = req.params;
+        const learnerId = req.userId;
+        const { batchId, submission_text, submission_file_url } = req.body;
 
-        if (!batchId || !title || !type) {
-            return errorResponse(res, "batchId, title and type are required", {}, 400);
+        if (!batchId) return errorResponse(res, "batchId is required", {}, 400);
+        if (!submission_text && !submission_file_url) {
+            return errorResponse(res, "Provide submission text or a file", {}, 400);
         }
 
-        const batch = await Batch.findById(batchId).select("module_id").lean();
-        if (!batch) return errorResponse(res, "Batch not found", {}, 404);
+        const activity = await Activity.findById(postReadId).lean();
+        if (!activity) return errorResponse(res, "Assignment not found", {}, 404);
 
-        const typeDataKey = { document: "document_data", video: "video_data", scorm: "scorm_data" }[type];
-        if (!typeDataKey) return errorResponse(res, "Unsupported type", {}, 400);
+        const submission = await BatchAssignmentSubmission.findOneAndUpdate(
+            { activity_id: postReadId, learner_id: learnerId, batch_id: batchId },
+            {
+                $set: {
+                    module_id: activity.module_id,
+                    submission_text: submission_text || "",
+                    submission_file_url: submission_file_url || "",
+                    submitted_at: new Date(),
+                    status: "submitted",
+                    // Clear any prior grade — a resubmission should go back to the queue.
+                    score: null,
+                    graded_by: null,
+                    graded_at: null,
+                },
+            },
+            { new: true, upsert: true }
+        );
 
-        const material = await Activity.create({
-            module_id: batch.module_id,
-            engage_type: "training_material",
-            image_url: image_url || "",
-            created_by: trainerId,
-            [typeDataKey]: { title, ...(typeDataKey === "document_data" ? { image_url: file_url } : { video_url: file_url }) },
-        });
-
-        return successResponse(res, "Material uploaded successfully", { material });
-    } catch (error) {
-        next(error);
-    }
-};
-
-exports.deleteMaterial = async (req, res, next) => {
-    try {
-        const { materialId } = req.params;
-        const deleted = await Activity.findOneAndDelete({ _id: materialId, engage_type: "training_material" });
-        if (!deleted) return errorResponse(res, "Material not found", {}, 404);
-        return successResponse(res, "Material deleted successfully", {});
+        return successResponse(res, "Submission recorded", { submission });
     } catch (error) {
         next(error);
     }
