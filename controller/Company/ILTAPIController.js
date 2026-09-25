@@ -325,6 +325,25 @@ exports.getILTAPIController = async (req, res, next) => {
                 virtuals: true,
             });
 
+        // Decrypt learner and trainer emails
+        finalData["batch"].forEach((batch) => {
+            // Learner emails
+            batch.learners?.forEach((learner) => {
+                if (learner.learner_id?.email) {
+                    learner.learner_id.email = decrypt(learner.learner_id.email);
+                }
+            });
+
+            // Trainer emails
+            batch.sessions?.forEach((session) => {
+                session.trainers?.forEach((trainer) => {
+                    if (trainer.trainer_id?.email) {
+                        trainer.trainer_id.email = decrypt(trainer.trainer_id.email);
+                    }
+                });
+            });
+        });
+
         finalData['finalSchedule'] = finalSchedule;
 
         return successResponse(res, "ILT fetched successfully", finalData)

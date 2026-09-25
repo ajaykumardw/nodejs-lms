@@ -225,6 +225,7 @@ exports.getPostReadItems = async (req, res, next) => {
             return {
                 id: item._id,
                 title,
+                module_id: item?.module_id,
                 module_type_id: item?.module_type_id,
                 document_data: item?.document_data,
                 video_data: item?.video_data,

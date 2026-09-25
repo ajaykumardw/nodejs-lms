@@ -105,8 +105,6 @@ exports.getActivityData = async (req, res, next) => {
           created_by: masterId
         }
       },
-
-      // Logs
       {
         $lookup: {
           from: 'activity_logs',
@@ -129,8 +127,6 @@ exports.getActivityData = async (req, res, next) => {
           as: 'logs'
         }
       },
-
-      // Has completed
       {
         $addFields: {
           has_completed: {
@@ -138,8 +134,6 @@ exports.getActivityData = async (req, res, next) => {
           }
         }
       },
-
-      // Questions
       {
         $lookup: {
           from: 'questions',
@@ -148,8 +142,6 @@ exports.getActivityData = async (req, res, next) => {
           as: 'questions'
         }
       },
-
-      // Module Setting
       {
         $lookup: {
           from: 'modulesettings',

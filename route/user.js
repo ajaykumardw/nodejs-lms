@@ -21,6 +21,7 @@ const materialController = require("../controller/User/MaterialAPIController")
 const preReadController = require("../controller/User/PreReadAPIController")
 const postReadController = require("../controller/User/PostReadAPIController")
 const noteController = require("../controller/User/NoteAPIController")
+const learnerActivityAPIController = require("../controller/User/Learner/LearnerActivityAPIController")
 
 //Route for learner section
 const LearnerBatchController = require("../controller/User/Learner/LearnerBatchAPIController");
@@ -215,5 +216,13 @@ router.get("/learner/resource/material", isAuth, checkEnrollment, LearnerMateria
 router.get("/learner/resource/post-read", isAuth, checkEnrollment, LearnerPostReadController.getPostReadItems);
 router.post("/learner/resource/post-read/:id/submit", isAuth, checkEnrollment, LearnerPostReadController.submitPostRead);
 
+//This route is for learner activity controller
+router.post("/learner/activity/fetch/data", isAuth, learnerActivityAPIController?.getFetchActivity)
+router.post('/learner/activity/new-attempt', isAuth, learnerActivityAPIController.postNewAttempController)
+router.post("/learner/save/scorm-data", isAuth, learnerActivityAPIController?.postScormData)
+router.post("/learner/set/report-data", isAuth, learnerActivityAPIController?.postReportController)
+router.post("/learner/insert/report-data", isAuth, learnerActivityAPIController?.postInsertReportController)
+router.post('/learner/activity/attempt-check', isAuth, learnerActivityAPIController.getAttemptCheck)
+router.post('/learner/activity/end-attempt', learnerActivityAPIController.postEndAttemptController)
 
 module.exports = router

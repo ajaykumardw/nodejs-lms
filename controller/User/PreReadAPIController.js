@@ -12,7 +12,6 @@ const { successResponse, errorResponse } = require("../../util/response");
 exports.getPreReadItems = async (req, res, next) => {
     try {
 
-        const userId = req?.userId;
         const { batchId } = req.query;
 
         if (!batchId) return errorResponse(res, "batchId is required", {}, 400);
@@ -247,6 +246,7 @@ exports.getPreReadItems = async (req, res, next) => {
                 youtube_data: a?.youtube_data,
                 scorm_data: a?.scorm_data,
                 questions: a?.questions,
+                has_completed: a?.has_completed,
                 type,
                 completions: progressMap[String(a._id)] || 0,
             };

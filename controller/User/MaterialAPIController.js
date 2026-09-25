@@ -2,6 +2,7 @@ const mongoose = require("mongoose")
 
 const Activity = require("../../model/Activity");
 const Batch = require("../../model/Batch");
+const ActivityLog = require("../../model/ActivityFolderReport")
 const { resolveActivityDisplay } = require("../../util/resolveActivityDisplay");
 const { successResponse, errorResponse } = require("../../util/response");
 
@@ -210,13 +211,35 @@ exports.getMaterials = async (req, res, next) => {
             }
         ])
 
+        const activityIds = activities.map((a) => a._id);
+
+        const progress = await ActivityLog.aggregate([
+            {
+                $match: {
+                    activity_id: { $in: activityIds },
+                    batch_id: mongoose.Types.ObjectId.createFromHexString(batchId), // rename if program_id != batch
+                },
+            },
+            { $group: { _id: "$activity_id", completed: { $sum: { $cond: ["$is_completed", 1, 0] } } } },
+        ]);
+
+        const progressMap = Object.fromEntries(progress.map((p) => [String(p._id), p.completed]));
+
         const materials = activities.map((a) => {
             const { title, type } = resolveActivityDisplay(a);
             return {
-                _id: a._id,
+                id: a._id,
                 title,
-                type,
+                module_id: batch?.module_id,
+                video_data: a?.video_data,
+                document_data: a?.document_data,
+                module_type_id: a?.module_type_id,
+                quiz_data: a?.quiz_data,
+                youtube_data: a?.youtube_data,
+                scorm_data: a?.scorm_data,
                 questions: a?.questions,
+                type,
+                completions: progressMap[String(a._id)] || 0,
                 file_url: a.document_data?.image_url || a.video_data?.video_url || a.scorm_data?.content_url
             };
         });

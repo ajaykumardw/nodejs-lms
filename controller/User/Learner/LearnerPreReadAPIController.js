@@ -9,8 +9,8 @@ const { successResponse, errorResponse } = require("../../../util/response");
 
 exports.getPreReadItems = async (req, res, next) => {
     try {
-        const learnerId = req.userId;
-        const { batchId } = req.query;
+        const learnerId = mongoose.Types.ObjectId.createFromHexString(req.userId);
+        const { batchId, sessionId } = req.query;
 
         const batch = await Batch.findById(batchId).select("module_id").lean();
         if (!batch) return errorResponse(res, "Batch not found", {}, 404);
@@ -22,8 +22,6 @@ exports.getPreReadItems = async (req, res, next) => {
                     engage_type: "pre_read",
                 }
             },
-
-            // Questions
             {
                 $lookup: {
                     from: 'questions',
@@ -32,8 +30,6 @@ exports.getPreReadItems = async (req, res, next) => {
                     as: 'questions'
                 }
             },
-
-            // Module Setting
             {
                 $lookup: {
                     from: 'modulesettings',
@@ -42,15 +38,12 @@ exports.getPreReadItems = async (req, res, next) => {
                     as: 'moduleSetting'
                 }
             },
-
             {
                 $unwind: {
                     path: '$moduleSetting',
                     preserveNullAndEmptyArrays: true
                 }
             },
-
-            // Certificate Populate
             {
                 $lookup: {
                     from: 'certificates',
@@ -59,8 +52,6 @@ exports.getPreReadItems = async (req, res, next) => {
                     as: 'moduleSetting.selectedCertificateId'
                 }
             },
-
-            // Keep only first certificate object
             {
                 $addFields: {
                     'moduleSetting.selectedCertificateId': {
@@ -68,21 +59,48 @@ exports.getPreReadItems = async (req, res, next) => {
                     }
                 }
             },
-
-            // Activity filters
+            {
+                $lookup: {
+                    from: 'activity_logs',
+                    let: {
+                        activityId: '$_id',
+                        userId: learnerId,
+                        batchId: mongoose.Types.ObjectId.createFromHexString(batchId),
+                        sessionId: mongoose.Types.ObjectId.createFromHexString(sessionId)
+                    },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $and: [
+                                        { $eq: ['$user_id', '$$userId'] },
+                                        { $eq: ['$activity_id', '$$activityId'] },
+                                        { $eq: ['$batch_id', '$$batchId'] },
+                                        { $eq: ['$session_id', '$$sessionId'] }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    as: 'logs'
+                }
+            },
+            {
+                $addFields: {
+                    has_completed: {
+                        $in: [true, '$logs.is_completed']
+                    }
+                }
+            },
             {
                 $match: {
                     $expr: {
                         $switch: {
                             branches: [
-                                // Document
                                 {
                                     case: {
                                         $eq: [
-                                            '$module_type_id',
-                                            mongoose.Types.ObjectId.createFromHexString(
-                                                '688723af5dd97f4ccae68834'
-                                            )
+                                            '$module_type_id', mongoose.Types.ObjectId.createFromHexString('688723af5dd97f4ccae68834')
                                         ]
                                     },
                                     then: {
@@ -96,15 +114,10 @@ exports.getPreReadItems = async (req, res, next) => {
                                         ]
                                     }
                                 },
-
-                                // Video
                                 {
                                     case: {
                                         $eq: [
-                                            '$module_type_id',
-                                            mongoose.Types.ObjectId.createFromHexString(
-                                                '688723af5dd97f4ccae68835'
-                                            )
+                                            '$module_type_id', mongoose.Types.ObjectId.createFromHexString('688723af5dd97f4ccae68835')
                                         ]
                                     },
                                     then: {
@@ -118,15 +131,10 @@ exports.getPreReadItems = async (req, res, next) => {
                                         ]
                                     }
                                 },
-
-                                // Youtube
                                 {
                                     case: {
                                         $eq: [
-                                            '$module_type_id',
-                                            mongoose.Types.ObjectId.createFromHexString(
-                                                '688723af5dd97f4ccae68836'
-                                            )
+                                            '$module_type_id', mongoose.Types.ObjectId.createFromHexString('688723af5dd97f4ccae68836')
                                         ]
                                     },
                                     then: {
@@ -140,16 +148,9 @@ exports.getPreReadItems = async (req, res, next) => {
                                         ]
                                     }
                                 },
-
-                                // SCORM
                                 {
                                     case: {
-                                        $eq: [
-                                            '$module_type_id',
-                                            mongoose.Types.ObjectId.createFromHexString(
-                                                '688723af5dd97f4ccae68837'
-                                            )
-                                        ]
+                                        $eq: ['$module_type_id', mongoose.Types.ObjectId.createFromHexString('688723af5dd97f4ccae68837')]
                                     },
                                     then: {
                                         $gt: [
@@ -162,37 +163,22 @@ exports.getPreReadItems = async (req, res, next) => {
                                         ]
                                     }
                                 },
-
-                                // Hide these module types
                                 {
                                     case: {
                                         $in: [
                                             '$module_type_id',
                                             [
-                                                mongoose.Types.ObjectId.createFromHexString(
-                                                    '688723af5dd97f4ccae68838'
-                                                ),
-                                                mongoose.Types.ObjectId.createFromHexString(
-                                                    '688723af5dd97f4ccae68839'
-                                                ),
-                                                mongoose.Types.ObjectId.createFromHexString(
-                                                    '688723af5dd97f4ccae6883a'
-                                                )
+                                                mongoose.Types.ObjectId.createFromHexString('688723af5dd97f4ccae68838'),
+                                                mongoose.Types.ObjectId.createFromHexString('688723af5dd97f4ccae68839'),
+                                                mongoose.Types.ObjectId.createFromHexString('688723af5dd97f4ccae6883a')
                                             ]
                                         ]
                                     },
                                     then: false
                                 },
-
-                                // Quiz
                                 {
                                     case: {
-                                        $eq: [
-                                            '$module_type_id',
-                                            mongoose.Types.ObjectId.createFromHexString(
-                                                '68886902954c4d9dc7a379bd'
-                                            )
-                                        ]
+                                        $eq: ['$module_type_id', mongoose.Types.ObjectId.createFromHexString('68886902954c4d9dc7a379bd')]
                                     },
                                     then: {
                                         $gt: [
@@ -226,6 +212,8 @@ exports.getPreReadItems = async (req, res, next) => {
             return {
                 id: a._id,
                 title,
+                module_id: a?.module_id,
+                logs: a?.logs,
                 module_type_id: a.module_type_id,
                 document_data: a.document_data,
                 video_data: a.video_data,
@@ -246,13 +234,11 @@ exports.togglePreReadDone = async (req, res, next) => {
     try {
         const { id: preReadId } = req.params;
         const userId = req.userId;
-        const { batchId } = req.body;
+        const { batchId, sessionId } = req.body;
 
         const activity = await Activity.findById(preReadId).lean();
         if (!activity) return errorResponse(res, "Pre-read item not found", {}, 404);
 
-        // ActivityLog requires program_id + content_folder_id — resolve them
-        // via the module, same as the trainer-preview toggle does.
         const moduleDoc = await Module.findById(activity.module_id).lean();
         const contentFolder = await ContentFolder.findById(moduleDoc?.content_folder_id).lean();
         const programId = contentFolder?.program_id;
@@ -261,6 +247,7 @@ exports.togglePreReadDone = async (req, res, next) => {
             activity_id: preReadId,
             user_id: userId,
             batch_id: batchId,
+            session_id: sessionId,
         }).lean();
 
         const nextDone = !(existing?.is_completed);
@@ -275,6 +262,7 @@ exports.togglePreReadDone = async (req, res, next) => {
                     activity_id: activity._id,
                     user_id: userId,
                     batch_id: batchId,
+                    session_id: sessionId,
                     engage_type: "pre_read",
                     module_type_id: activity.module_type_id,
                     is_completed: nextDone,

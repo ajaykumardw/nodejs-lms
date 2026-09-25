@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Batch = require("../../../model/Batch");
 const BatchLearner = require("../../../model/BatchLearner");
 const BatchSession = require("../../../model/BatchSession");
+const Module = require("../../../model/Module")
 const BatchSessionAttendance = require("../../../model/BatchAttendance");
 const ActivityLog = require("../../../model/ActivityFolderReport");
 const Activity = require("../../../model/Activity");
@@ -81,6 +82,9 @@ exports.getBatchSessions = async (req, res, next) => {
         const batch = await Batch.findById(batchId).lean();
         if (!batch) return errorResponse(res, "Batch not found", {}, 404);
 
+        const module = await Module.findById(batch?.module_id)
+        const contentFolderId = module?.content_folder_id;
+
         const sessions = await BatchSession.find({ batch_id: batchId })
             .sort({ session_number: 1 })
             .lean();
@@ -91,6 +95,7 @@ exports.getBatchSessions = async (req, res, next) => {
             session_id: { $in: sessionIds },
             learner_id: learnerId,
         }).lean();
+
         const attendanceMap = new Map(
             attendanceRecords.map((a) => [String(a.session_id), a.status])
         );
@@ -107,7 +112,7 @@ exports.getBatchSessions = async (req, res, next) => {
         }));
 
         return successResponse(res, "Sessions fetched successfully", {
-            batch: { id: batch._id, name: batch.name, status: batch.status },
+            batch: { id: batch._id, name: batch.name, status: batch.status, module_id: batch?.module_id, contentFolderId },
             sessions: enrichedSessions,
         });
     } catch (error) {
