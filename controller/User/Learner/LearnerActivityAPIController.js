@@ -3,8 +3,10 @@ const ActivityFolderReport = require("../../../model/ActivityFolderReport")
 const ProgramSchedule = require("../../../model/ProgramSchedule")
 const ContentFolder = require("../../../model/ContentFolder")
 const Module = require("../../../model/Module")
+const Question = require('../../../model/Question')
 const QuizSetting = require("../../../model/QuizSetting")
 const Activity = require("../../../model/Activity")
+const QuizReport = require("../../../model/QuizResultReport")
 const UserSurvey = require("../../../model/UserSurveyReport")
 const User = require("../../../model/User")
 const { successResponse, errorResponse } = require("../../../util/response")
@@ -2496,6 +2498,7 @@ exports.postInsertReportController = async (req, res, next) => {
         let activityIds = []
 
         const {
+            answers,
             currentPage,
             totalPages,
             viewedPages,
@@ -2863,10 +2866,12 @@ exports.postInsertReportController = async (req, res, next) => {
             perComplete =
                 totalVideoTime > 0 ? (roundedViewed / Number(totalVideoTime)) * 100 : 0
         } else if (moduleTypeId == '68886902954c4d9dc7a379bd') {
-            const quizData = Array.isArray(req.body) ? req.body : []
+            const quizData = Array.isArray(answers) ? answers : []
 
             await QuizReport.deleteMany({
                 user_id: userId,
+                batch_id: batchId,
+                session_id: sessionId,
                 activity_id: activityId,
                 log_id: activityReport._id,
                 module_id: moduleId
@@ -2885,8 +2890,7 @@ exports.postInsertReportController = async (req, res, next) => {
 
             const answered = filteredQuizData.length
 
-            perComplete =
-                questions.length > 0 ? (answered / questions.length) * 100 : 0
+            perComplete = questions.length > 0 ? (answered / questions.length) * 100 : 0
 
             const totalMark = quizData.reduce(
                 (sum, item) => sum + Number(item.mark),
@@ -2907,6 +2911,8 @@ exports.postInsertReportController = async (req, res, next) => {
 
             const formattedAttempts = quizData.map(a => ({
                 user_id: userId,
+                batch_id: batchId,
+                session_id: sessionId,
                 created_by: userId,
                 activity_id: activityId,
                 log_id: activityReport._id,
@@ -2925,9 +2931,7 @@ exports.postInsertReportController = async (req, res, next) => {
             }
         }
 
-        const isFinalCompleted = quizCompleted
-            ? isPassed
-            : Number(perComplete).toFixed(1) >= 100
+        const isFinalCompleted = quizCompleted ? isPassed : Number(perComplete).toFixed(1) >= 100
 
         const reportData = {
             user_id: userId,
@@ -2945,8 +2949,7 @@ exports.postInsertReportController = async (req, res, next) => {
             progress_status: fetchProgressStatus(perComplete),
             completion_percentage: perComplete,
             is_completed: isFinalCompleted,
-            completed_at_time:
-                Number(perComplete).toFixed(1) >= 100 ? Date.now() : null,
+            completed_at_time: Number(perComplete).toFixed(1) >= 100 ? Date.now() : null,
             passed_at_time: isPassed ? Date.now() : null,
             end_activity_time: Date.now(),
             total_page_no: totalPages,

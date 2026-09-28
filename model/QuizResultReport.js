@@ -8,6 +8,16 @@ const quizReportSchema = new Schema({
         required: true,
         ref: 'users',
     },
+    batch_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: false,
+        default: null
+    },
+    session_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: false,
+        default: null
+    },
     log_id: {
         type: mongoose.Schema.Types.ObjectId,
         required: true,
