@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Activity = require("../../../model/Activity");
 const Batch = require("../../../model/Batch");
+const ActivityLog = require("../../../model/ActivityFolderReport");
 const BatchAssignmentSubmission = require("../../../model/BatchAssignment");
 const { resolveActivityDisplay } = require("../../../util/resolveActivityDisplay");
 const { successResponse, errorResponse } = require("../../../util/response");
@@ -10,7 +11,7 @@ const { successResponse, errorResponse } = require("../../../util/response");
 exports.getPostReadItems = async (req, res, next) => {
     try {
         const learnerId = req.userId;
-        const { batchId } = req.query;
+        const { batchId, sessionId } = req.query;
 
         const batch = await Batch.findById(batchId).select("module_id").lean();
         if (!batch) return errorResponse(res, "Batch not found", {}, 404);
@@ -214,31 +215,29 @@ exports.getPostReadItems = async (req, res, next) => {
 
         const activityIds = activities.map((a) => a._id);
 
-        const mySubmissions = await BatchAssignmentSubmission.find({
+        const myCompletedIds = await ActivityLog.distinct("activity_id", {
             activity_id: { $in: activityIds },
             batch_id: batchId,
-            learner_id: learnerId,
-        }).lean();
-        const submissionMap = new Map(mySubmissions.map((s) => [String(s.activity_id), s]));
+            session_id: sessionId,
+            user_id: learnerId,
+            is_completed: true,
+        });
+        const completedSet = new Set(myCompletedIds.map(String));
 
-        const items = activities.map((item) => {
-            const { title, type } = resolveActivityDisplay(item);
-            const mine = submissionMap.get(String(item._id));
-
+        const items = activities.map((a) => {
+            const { title, type } = resolveActivityDisplay(a);
             return {
-                id: item._id,
+                id: a._id,
                 title,
+                module_id: a?.module_id,
+                logs: a?.logs,
+                module_type_id: a.module_type_id,
+                document_data: a.document_data,
+                video_data: a.video_data,
+                scorm_data: a.scorm_data,
+                questions: a.questions,
                 type,
-                module_type_id: item.module_type_id,
-                mySubmission: mine
-                    ? {
-                        status: mine.status,
-                        score: mine.score,
-                        submittedAt: mine.submitted_at,
-                        text: mine.submission_text,
-                        fileUrl: mine.submission_file_url,
-                    }
-                    : null,
+                done: completedSet.has(String(a._id)),
             };
         });
 

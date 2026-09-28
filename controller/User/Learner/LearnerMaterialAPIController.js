@@ -2,12 +2,15 @@ const mongoose = require("mongoose")
 
 const Activity = require("../../../model/Activity");
 const Batch = require("../../../model/Batch");
+const ActivityLog = require("../../../model/ActivityFolderReport");
 const { resolveActivityDisplay } = require("../../../util/resolveActivityDisplay");
 const { successResponse, errorResponse } = require("../../../util/response");
 
 exports.getMaterials = async (req, res, next) => {
     try {
-        const { batchId } = req.query;
+
+        const learnerId = mongoose.Types.ObjectId.createFromHexString(req.userId);
+        const { batchId, sessionId } = req.query;
 
         const batch = await Batch.findById(batchId).select("module_id").lean();
         if (!batch) return errorResponse(res, "Batch not found", {}, 404);
@@ -209,22 +212,35 @@ exports.getMaterials = async (req, res, next) => {
             }
         ])
 
-        const materials = activities.map((a) => {
+        const activityIds = activities.map((a) => a._id);
+
+        const myCompletedIds = await ActivityLog.distinct("activity_id", {
+            activity_id: { $in: activityIds },
+            batch_id: batchId,
+            session_id: sessionId,
+            user_id: learnerId,
+            is_completed: true,
+        });
+        const completedSet = new Set(myCompletedIds.map(String));
+
+        const items = activities.map((a) => {
             const { title, type } = resolveActivityDisplay(a);
             return {
-                _id: a._id,
+                id: a._id,
                 title,
-                type,
+                module_id: a?.module_id,
+                logs: a?.logs,
                 module_type_id: a.module_type_id,
                 document_data: a.document_data,
                 video_data: a.video_data,
                 scorm_data: a.scorm_data,
                 questions: a.questions,
-                file_url: a.document_data?.image_url || a.video_data?.video_url || a.scorm_data?.content_url,
+                type,
+                done: completedSet.has(String(a._id)),
             };
         });
 
-        return successResponse(res, "Materials fetched successfully", { materials });
+        return successResponse(res, "Materials fetched successfully", { items });
     } catch (error) {
         next(error);
     }

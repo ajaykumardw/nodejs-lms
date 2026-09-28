@@ -3,9 +3,13 @@ const ActivityFolderReport = require("../../../model/ActivityFolderReport")
 const ProgramSchedule = require("../../../model/ProgramSchedule")
 const ContentFolder = require("../../../model/ContentFolder")
 const Module = require("../../../model/Module")
+const QuizSetting = require("../../../model/QuizSetting")
 const Activity = require("../../../model/Activity")
+const UserSurvey = require("../../../model/UserSurveyReport")
 const User = require("../../../model/User")
 const { successResponse, errorResponse } = require("../../../util/response")
+
+const LearnerPoint = require('../../../util/earnPoints')
 
 function parseScormData(scormData) {
 
@@ -30,6 +34,18 @@ function parseScormData(scormData) {
         suspendData: scormData?.['cmi.suspend_data'] || null,
         lastSlide: scormData['lastSlide'] || null,
         lastTime: scormData?.['lastTime'] ? parseTimeToSeconds(scormData['lastTime']) : null
+    }
+}
+
+const fetchProgressStatus = percentage => {
+    const perComplete = Number(percentage)
+
+    if (perComplete === 0) {
+        return 1
+    } else if (perComplete === 100) {
+        return 3
+    } else {
+        return 2
     }
 }
 
@@ -2479,14 +2495,6 @@ exports.postInsertReportController = async (req, res, next) => {
 
         let activityIds = []
 
-        const programSchedule = await ProgramSchedule.findOne({
-            module_id: moduleId
-        })
-
-        if (programSchedule) {
-            activityIds.push(...programSchedule.activity_id)
-        }
-
         const {
             currentPage,
             totalPages,
@@ -2501,6 +2509,14 @@ exports.postInsertReportController = async (req, res, next) => {
             batchId,
             sessionId,
         } = req.body
+
+        const programSchedule = await ProgramSchedule.findOne({
+            module_id: moduleId
+        })
+
+        if (programSchedule) {
+            activityIds.push(...programSchedule.activity_id)
+        }
 
         const is_pre_passed = await ActivityFolderReport.findOne({
             activity_id: activityId,

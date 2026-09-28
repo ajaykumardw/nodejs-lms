@@ -202,6 +202,8 @@ exports.getPreReadItems = async (req, res, next) => {
 
         const myCompletedIds = await ActivityLog.distinct("activity_id", {
             activity_id: { $in: activityIds },
+            batch_id: batchId,
+            session_id: sessionId,
             user_id: learnerId,
             is_completed: true,
         });
