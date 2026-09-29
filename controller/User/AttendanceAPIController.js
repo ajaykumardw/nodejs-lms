@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const Batch = require("../../model/Batch")
 const BatchLearner = require("../../model/BatchLearner");
 const BatchSessionAttendance = require("../../model/BatchAttendance");
 const { successResponse, errorResponse } = require("../../util/response");
@@ -12,7 +13,7 @@ exports.getSessionAttendance = async (req, res, next) => {
         const page = Math.max(parseInt(req.query.page) || 1, 1);
         const search = (req.query.search || "").trim();
 
-        const matchStage = { batch_id: mongoose.Types.ObjectId.createFromHexString(batchId) };
+        const matchStage = { batch_id: mongoose.Types.ObjectId.createFromHexString(batchId), status: "confirmed" };
 
         const searchMatch = search
             ? {
@@ -125,7 +126,7 @@ exports.markAllPresent = async (req, res, next) => {
 
         const learnerIds = await BatchLearner.find({
             batch_id: batchId,
-            status: { $in: ["confirmed", "nominated"] },
+            status: "confirmed",
         }).distinct("learner_id");
 
         const ops = learnerIds.map((learnerId) => ({

@@ -10,11 +10,12 @@ const { successResponse, errorResponse } = require("../../../util/response");
 // /user/trainer/... routes. Do not add a PUT here.
 exports.getMyAttendance = async (req, res, next) => {
     try {
-        const { sessionId } = req.params;
+        const { sessionId, batchId } = req.params;
         const learnerId = req.userId;
 
         const record = await BatchSessionAttendance.findOne({
             session_id: sessionId,
+            batch_id: batchId,
             learner_id: learnerId,
         }).lean();
 
@@ -36,17 +37,16 @@ exports.getMyAttendance = async (req, res, next) => {
 // status already folded into getBatchSessions.
 exports.getMyAttendanceHistory = async (req, res, next) => {
     try {
-        const { batchId } = req.params;
+        const { batchId, sessionId } = req.params;
         const learnerId = req.userId;
 
-        const sessions = await BatchSession.find({ batch_id: batchId })
+        const sessions = await BatchSession.find({ batch_id: batchId, })
             .sort({ session_number: 1 })
             .lean();
 
-        const sessionIds = sessions.map((s) => s._id);
-
         const records = await BatchSessionAttendance.find({
-            session_id: { $in: sessionIds },
+            session_id: sessionId,
+            batch_id: batchId,
             learner_id: learnerId,
         }).lean();
         const recordMap = new Map(records.map((r) => [String(r.session_id), r]));

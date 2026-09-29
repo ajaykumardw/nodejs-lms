@@ -16,7 +16,7 @@ exports.getMyBatches = async (req, res, next) => {
 
         const enrollments = await BatchLearner.find({
             learner_id: learnerId,
-            status: { $in: ["confirmed", "nominated"] },
+            status: "confirmed",
         })
             .populate("batch_id")
             .lean();
@@ -79,17 +79,37 @@ exports.getBatchSessions = async (req, res, next) => {
         const { batchId } = req.params;
         const learnerId = req.userId;
 
+        const now = new Date();
+
         const batch = await Batch.findById(batchId).lean();
         if (!batch) return errorResponse(res, "Batch not found", {}, 404);
 
         const module = await Module.findById(batch?.module_id)
         const contentFolderId = module?.content_folder_id;
 
-        const sessions = await BatchSession.find({ batch_id: batchId })
+        const sessions = await BatchSession.find({
+            batch_id: batchId,
+            status: { $ne: "completed" },
+        })
             .sort({ session_number: 1 })
             .lean();
 
-        const sessionIds = sessions.map((s) => s._id);
+        const availableSessions = sessions.filter((session) => {
+            const sessionDate = new Date(session.session_date);
+
+            const [startHour, startMinute] = session.start_time.split(":").map(Number);
+            const [endHour, endMinute] = session.end_time.split(":").map(Number);
+
+            const startDateTime = new Date(sessionDate);
+            startDateTime.setHours(startHour, startMinute, 0, 0);
+
+            const endDateTime = new Date(sessionDate);
+            endDateTime.setHours(endHour, endMinute, 59, 999);
+
+            return now >= startDateTime && now <= endDateTime;
+        });
+
+        const sessionIds = availableSessions.map((s) => s._id);
 
         const attendanceRecords = await BatchSessionAttendance.find({
             session_id: { $in: sessionIds },
@@ -100,7 +120,7 @@ exports.getBatchSessions = async (req, res, next) => {
             attendanceRecords.map((a) => [String(a.session_id), a.status])
         );
 
-        const enrichedSessions = sessions.map((s) => ({
+        const enrichedSessions = availableSessions.map((s) => ({
             id: s._id,
             sessionNumber: s.session_number,
             date: s.session_date,

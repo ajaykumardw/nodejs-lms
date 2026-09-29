@@ -27,8 +27,6 @@ exports.getPreReadItems = async (req, res, next) => {
                     engage_type: "pre_read",
                 }
             },
-
-            // Questions
             {
                 $lookup: {
                     from: 'questions',
@@ -37,8 +35,6 @@ exports.getPreReadItems = async (req, res, next) => {
                     as: 'questions'
                 }
             },
-
-            // Module Setting
             {
                 $lookup: {
                     from: 'modulesettings',
@@ -47,15 +43,12 @@ exports.getPreReadItems = async (req, res, next) => {
                     as: 'moduleSetting'
                 }
             },
-
             {
                 $unwind: {
                     path: '$moduleSetting',
                     preserveNullAndEmptyArrays: true
                 }
             },
-
-            // Certificate Populate
             {
                 $lookup: {
                     from: 'certificates',
@@ -64,8 +57,6 @@ exports.getPreReadItems = async (req, res, next) => {
                     as: 'moduleSetting.selectedCertificateId'
                 }
             },
-
-            // Keep only first certificate object
             {
                 $addFields: {
                     'moduleSetting.selectedCertificateId': {
@@ -73,21 +64,15 @@ exports.getPreReadItems = async (req, res, next) => {
                     }
                 }
             },
-
-            // Activity filters
             {
                 $match: {
                     $expr: {
                         $switch: {
                             branches: [
-                                // Document
                                 {
                                     case: {
                                         $eq: [
-                                            '$module_type_id',
-                                            mongoose.Types.ObjectId.createFromHexString(
-                                                '688723af5dd97f4ccae68834'
-                                            )
+                                            '$module_type_id', mongoose.Types.ObjectId.createFromHexString('688723af5dd97f4ccae68834')
                                         ]
                                     },
                                     then: {
@@ -101,15 +86,10 @@ exports.getPreReadItems = async (req, res, next) => {
                                         ]
                                     }
                                 },
-
-                                // Video
                                 {
                                     case: {
                                         $eq: [
-                                            '$module_type_id',
-                                            mongoose.Types.ObjectId.createFromHexString(
-                                                '688723af5dd97f4ccae68835'
-                                            )
+                                            '$module_type_id', mongoose.Types.ObjectId.createFromHexString('688723af5dd97f4ccae68835')
                                         ]
                                     },
                                     then: {
@@ -123,15 +103,10 @@ exports.getPreReadItems = async (req, res, next) => {
                                         ]
                                     }
                                 },
-
-                                // Youtube
                                 {
                                     case: {
                                         $eq: [
-                                            '$module_type_id',
-                                            mongoose.Types.ObjectId.createFromHexString(
-                                                '688723af5dd97f4ccae68836'
-                                            )
+                                            '$module_type_id', mongoose.Types.ObjectId.createFromHexString('688723af5dd97f4ccae68836')
                                         ]
                                     },
                                     then: {
@@ -145,15 +120,10 @@ exports.getPreReadItems = async (req, res, next) => {
                                         ]
                                     }
                                 },
-
-                                // SCORM
                                 {
                                     case: {
                                         $eq: [
-                                            '$module_type_id',
-                                            mongoose.Types.ObjectId.createFromHexString(
-                                                '688723af5dd97f4ccae68837'
-                                            )
+                                            '$module_type_id', mongoose.Types.ObjectId.createFromHexString('688723af5dd97f4ccae68837')
                                         ]
                                     },
                                     then: {
@@ -167,22 +137,14 @@ exports.getPreReadItems = async (req, res, next) => {
                                         ]
                                     }
                                 },
-
-                                // Hide these module types
                                 {
                                     case: {
                                         $in: [
                                             '$module_type_id',
                                             [
-                                                mongoose.Types.ObjectId.createFromHexString(
-                                                    '688723af5dd97f4ccae68838'
-                                                ),
-                                                mongoose.Types.ObjectId.createFromHexString(
-                                                    '688723af5dd97f4ccae68839'
-                                                ),
-                                                mongoose.Types.ObjectId.createFromHexString(
-                                                    '688723af5dd97f4ccae6883a'
-                                                )
+                                                mongoose.Types.ObjectId.createFromHexString('688723af5dd97f4ccae68838'),
+                                                mongoose.Types.ObjectId.createFromHexString('688723af5dd97f4ccae68839'),
+                                                mongoose.Types.ObjectId.createFromHexString('688723af5dd97f4ccae6883a')
                                             ]
                                         ]
                                     },
@@ -223,7 +185,7 @@ exports.getPreReadItems = async (req, res, next) => {
             {
                 $match: {
                     activity_id: { $in: activityIds },
-                    batch_id: mongoose.Types.ObjectId.createFromHexString(batchId), // rename if program_id != batch
+                    batch_id: mongoose.Types.ObjectId.createFromHexString(batchId),
                 },
             },
             { $group: { _id: "$activity_id", completed: { $sum: { $cond: ["$is_completed", 1, 0] } } } },

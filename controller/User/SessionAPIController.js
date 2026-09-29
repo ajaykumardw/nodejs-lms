@@ -2,11 +2,9 @@ const mongoose = require("mongoose");
 const BatchSession = require("../../model/BatchSession");
 const BatchLearner = require("../../model/BatchLearner");
 const BatchSessionAttendance = require("../../model/BatchAttendance");
-const BatchSessionPreRead = require("../../model/BatchSessionPreRead");
-const BatchSessionPreReadProgress = require("../../model/BatchPreReadProgress");
-const BatchSessionPostRead = require("../../model/BatchPostRead");
-const BatchAssignmentSubmission = require("../../model/BatchAssignment");
-const BatchSessionMaterial = require("../../model/BatchSessionMaterial");
+const Activity = require("../../model/Activity")
+const Batch = require("../../model/Batch")
+const ActivityLog = require("../../model/ActivityFolderReport")
 const { successResponse, errorResponse } = require("../../util/response");
 
 exports.getSessionDetail = async (req, res, next) => {
@@ -17,6 +15,13 @@ exports.getSessionDetail = async (req, res, next) => {
             return errorResponse(res, "Invalid session id", {}, 400);
         }
 
+        const batch = await Batch.findById(batchId)
+
+        if (!batch) {
+
+            return errorResponse(res, "Batch not found", {}, 404)
+        }
+
         const session = await BatchSession.findOne({ _id: sessionId, batch_id: batchId })
             .populate("batch_id", "name")
             .lean();
@@ -25,39 +30,80 @@ exports.getSessionDetail = async (req, res, next) => {
             return errorResponse(res, "Session not found", {}, 404);
         }
 
-        const totalLearners = await BatchLearner.countDocuments({
+        const batchLearner = await BatchLearner.find({
             batch_id: batchId,
-            status: { $in: ["confirmed", "nominated"] },
-        });
+            status: "confirmed",
+        })
+
+        const totalLearners = batchLearner?.length;
+
+        const learnerIds = batchLearner.map(bl => bl.learner_id)
 
         const attendanceAgg = await BatchSessionAttendance.aggregate([
-            { $match: { session_id: session._id } },
-            { $group: { _id: "$status", count: { $sum: 1 } } },
+            {
+                $match: {
+                    session_id: mongoose.Types.ObjectId.createFromHexString(sessionId),
+                    batch_id: mongoose.Types.ObjectId.createFromHexString(batchId),
+                    learner_id: {
+                        $in: learnerIds
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: "$status",
+                    count: { $sum: 1 }
+                }
+            },
         ]);
 
         const attendanceCounts = { present: 0, late: 0, absent: 0, pending: 0 };
+
         attendanceAgg.forEach((a) => {
             attendanceCounts[a._id] = a.count;
         });
+
         attendanceCounts.pending = Math.max(
             totalLearners - attendanceCounts.present - attendanceCounts.late - attendanceCounts.absent,
             0
         );
 
-        const preReadItems = await BatchSessionPreRead.find({ session_id: session._id }).lean();
+        const preReadItems = await Activity.find({
+            engage_type: "pre_read",
+            module_id: batch?.module_id,
+        });
+
         const preReadIds = preReadItems.map((p) => p._id);
-        const preReadCompletedLearnerIds = await BatchSessionPreReadProgress.distinct("learner_id", {
-            pre_read_id: { $in: preReadIds },
-            completed: true,
+        const preReadCompletedLearnerIds = await ActivityLog.distinct("user_id", {
+            activity_id: { $in: preReadIds },
+            user_id: {
+                $in: learnerIds
+            },
+            batch_id: batchId,
+            session_id: sessionId,
+            is_completed: true,
         });
 
-        const materialsCount = await BatchSessionMaterial.countDocuments({ session_id: session._id });
+        const materialsCount = await Activity.countDocuments({
+            engage_type: "training_material",
+            module_id: batch?.module_id,
+        });
 
-        const postReadItems = await BatchSessionPostRead.find({ session_id: session._id }).lean();
+        const postReadItems = await Activity.find({
+            engage_type: "post_read",
+            module_id: batch?.module_id,
+        }).lean();
         const postReadIds = postReadItems.map((p) => p._id);
-        const submissions = await BatchAssignmentSubmission.countDocuments({
-            post_read_id: { $in: postReadIds },
+
+        const submissions = await ActivityLog.countDocuments({
+            activity_id: { $in: postReadIds },
+            user_id: {
+                $in: learnerIds
+            },
+            batch_id: batchId,
+            session_id: sessionId
         });
+
         const pendingPostRead = Math.max(
             totalLearners * postReadItems.length - submissions,
             0

@@ -199,7 +199,7 @@ router.get(
   LearnerAttendanceController.getMyAttendance
 );
 router.get(
-  "/learner/batches/:batchId/attendance",
+  "/learner/batches/:batchId/attendance/:sessionId",
   isAuth,
   checkEnrollment,
   LearnerAttendanceController.getMyAttendanceHistory

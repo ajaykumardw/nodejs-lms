@@ -54,7 +54,7 @@ const fetchProgressStatus = percentage => {
 exports.getFetchActivity = async (req, res, next) => {
     try {
 
-        const { activityId, moduleId, } = req.body
+        const { activityId, moduleId, batchId, sessionId } = req.body
 
         const userId = req?.userId
 
@@ -80,6 +80,8 @@ exports.getFetchActivity = async (req, res, next) => {
                     from: 'activity_logs',
                     let: {
                         userID: mongoose.Types.ObjectId.createFromHexString(userId),
+                        batch_id: mongoose.Types.ObjectId.createFromHexString(batchId),
+                        session_id: mongoose.Types.ObjectId.createFromHexString(sessionId),
                         activityId: '$_id'
                     },
                     pipeline: [
@@ -88,7 +90,9 @@ exports.getFetchActivity = async (req, res, next) => {
                                 $expr: {
                                     $and: [
                                         { $eq: ['$user_id', '$$userID'] },
-                                        { $eq: ['$activity_id', '$$activityId'] }
+                                        { $eq: ['$activity_id', '$$activityId'] },
+                                        { $eq: ['$batch_id', '$$batch_id'] },
+                                        { $eq: ['$session_id', '$$session_id'] }
                                     ]
                                 }
                             }
@@ -102,6 +106,8 @@ exports.getFetchActivity = async (req, res, next) => {
                     from: 'activity_logs',
                     let: {
                         userID: mongoose.Types.ObjectId.createFromHexString(userId),
+                        batch_id: mongoose.Types.ObjectId.createFromHexString(batchId),
+                        session_id: mongoose.Types.ObjectId.createFromHexString(sessionId),
                         activityId: '$_id'
                     },
                     pipeline: [
@@ -110,7 +116,9 @@ exports.getFetchActivity = async (req, res, next) => {
                                 $expr: {
                                     $and: [
                                         { $eq: ['$user_id', '$$userID'] },
-                                        { $eq: ['$activity_id', '$$activityId'] }
+                                        { $eq: ['$activity_id', '$$activityId'] },
+                                        { $eq: ['$batch_id', '$$batch_id'] },
+                                        { $eq: ['$session_id', '$$session_id'] }
                                     ]
                                 }
                             }
