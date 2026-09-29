@@ -82,9 +82,12 @@ exports.getBatchSessions = async (req, res, next) => {
         const now = new Date();
 
         const batch = await Batch.findById(batchId).lean();
-        if (!batch) return errorResponse(res, "Batch not found", {}, 404);
 
-        const module = await Module.findById(batch?.module_id)
+        if (!batch) {
+            return errorResponse(res, "Batch not found", {}, 404);
+        }
+
+        const module = await Module.findById(batch?.module_id).lean();
         const contentFolderId = module?.content_folder_id;
 
         const sessions = await BatchSession.find({
@@ -94,19 +97,17 @@ exports.getBatchSessions = async (req, res, next) => {
             .sort({ session_number: 1 })
             .lean();
 
+        /**
+         * Only allow sessions whose session_date is today.
+         */
         const availableSessions = sessions.filter((session) => {
             const sessionDate = new Date(session.session_date);
 
-            const [startHour, startMinute] = session.start_time.split(":").map(Number);
-            const [endHour, endMinute] = session.end_time.split(":").map(Number);
-
-            const startDateTime = new Date(sessionDate);
-            startDateTime.setHours(startHour, startMinute, 0, 0);
-
-            const endDateTime = new Date(sessionDate);
-            endDateTime.setHours(endHour, endMinute, 59, 999);
-
-            return now >= startDateTime && now <= endDateTime;
+            return (
+                sessionDate.getFullYear() === now.getFullYear() &&
+                sessionDate.getMonth() === now.getMonth() &&
+                sessionDate.getDate() === now.getDate()
+            );
         });
 
         const sessionIds = availableSessions.map((s) => s._id);
@@ -117,24 +118,67 @@ exports.getBatchSessions = async (req, res, next) => {
         }).lean();
 
         const attendanceMap = new Map(
-            attendanceRecords.map((a) => [String(a.session_id), a.status])
+            attendanceRecords.map((a) => [
+                String(a.session_id),
+                a.status,
+            ])
         );
 
-        const enrichedSessions = availableSessions.map((s) => ({
-            id: s._id,
-            sessionNumber: s.session_number,
-            date: s.session_date,
-            startTime: s.start_time,
-            endTime: s.end_time,
-            venue: s.venue,
-            status: s.status,
-            myAttendanceStatus: attendanceMap.get(String(s._id)) || "pending",
-        }));
+        const enrichedSessions = availableSessions.map((s) => {
+            const sessionDate = new Date(s.session_date);
 
-        return successResponse(res, "Sessions fetched successfully", {
-            batch: { id: batch._id, name: batch.name, status: batch.status, module_id: batch?.module_id, contentFolderId },
-            sessions: enrichedSessions,
+            const [startHour, startMinute] = s.start_time
+                .split(":")
+                .map(Number);
+
+            const [endHour, endMinute] = s.end_time
+                .split(":")
+                .map(Number);
+
+            const startDateTime = new Date(sessionDate);
+            startDateTime.setHours(startHour, startMinute, 0, 0);
+
+            const endDateTime = new Date(sessionDate);
+            endDateTime.setHours(endHour, endMinute, 59, 999);
+
+            const isPreAllowed = now < startDateTime;
+
+            const isMaterialAllowed = now >= startDateTime && now <= endDateTime;
+
+            const isPastAllowed = now > endDateTime;
+
+            return {
+                id: s._id,
+                sessionNumber: s.session_number,
+                date: s.session_date,
+                startTime: s.start_time,
+                endTime: s.end_time,
+                venue: s.venue,
+                status: s.status,
+
+                isPreAllowed,
+                isMaterialAllowed,
+                isPastAllowed,
+
+                myAttendanceStatus:
+                    attendanceMap.get(String(s._id)) || "pending",
+            };
         });
+
+        return successResponse(
+            res,
+            "Sessions fetched successfully",
+            {
+                batch: {
+                    id: batch._id,
+                    name: batch.name,
+                    status: batch.status,
+                    module_id: batch?.module_id,
+                    contentFolderId,
+                },
+                sessions: enrichedSessions,
+            }
+        );
     } catch (error) {
         next(error);
     }

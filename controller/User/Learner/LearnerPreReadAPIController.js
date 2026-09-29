@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Activity = require("../../../model/Activity");
 const Batch = require("../../../model/Batch");
+const BatchSession = require("../../../model/BatchSession")
 const Module = require("../../../model/Module");
 const ContentFolder = require("../../../model/ContentFolder");
 const ActivityLog = require("../../../model/ActivityFolderReport");
@@ -14,6 +15,36 @@ exports.getPreReadItems = async (req, res, next) => {
 
         const batch = await Batch.findById(batchId).select("module_id").lean();
         if (!batch) return errorResponse(res, "Batch not found", {}, 404);
+
+        const now = new Date();
+
+        const session = await BatchSession.findOne({
+            _id: sessionId,
+            batch_id: batchId,
+            status: { $ne: "completed" },
+        })
+
+        const sessionDate = new Date(session.session_date);
+
+        const availableSessions = sessionDate.getFullYear() === now.getFullYear() && sessionDate.getMonth() === now.getMonth() && sessionDate.getDate() === now.getDate();
+
+        const [startHour, startMinute] = session?.start_time
+            .split(":")
+            .map(Number);
+
+        const [endHour, endMinute] = session?.end_time
+            .split(":")
+            .map(Number);
+
+        const startDateTime = new Date(sessionDate);
+        startDateTime.setHours(startHour, startMinute, 0, 0);
+
+        const endDateTime = new Date(sessionDate);
+        endDateTime.setHours(endHour, endMinute, 59, 999);
+
+        const isPreAllowed = now < startDateTime;
+
+        const isAllowed = session && availableSessions && isPreAllowed
 
         const activities = await Activity.aggregate([
             {
@@ -226,7 +257,7 @@ exports.getPreReadItems = async (req, res, next) => {
             };
         });
 
-        return successResponse(res, "Pre-read fetched", { items });
+        return successResponse(res, "Pre-read fetched", { items, isAllowed });
     } catch (error) {
         next(error);
     }

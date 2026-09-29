@@ -1,10 +1,10 @@
 const mongoose = require("mongoose")
-
-const Activity = require("../../../model/Activity");
 const Batch = require("../../../model/Batch");
+const Activity = require("../../../model/Activity");
+const BatchSession = require("../../../model/BatchSession")
 const ActivityLog = require("../../../model/ActivityFolderReport");
-const { resolveActivityDisplay } = require("../../../util/resolveActivityDisplay");
 const { successResponse, errorResponse } = require("../../../util/response");
+const { resolveActivityDisplay } = require("../../../util/resolveActivityDisplay");
 
 exports.getMaterials = async (req, res, next) => {
     try {
@@ -14,6 +14,36 @@ exports.getMaterials = async (req, res, next) => {
 
         const batch = await Batch.findById(batchId).select("module_id").lean();
         if (!batch) return errorResponse(res, "Batch not found", {}, 404);
+
+        const now = new Date();
+
+        const session = await BatchSession.findOne({
+            _id: sessionId,
+            batch_id: batchId,
+            status: { $ne: "completed" },
+        })
+
+        const sessionDate = new Date(session.session_date);
+
+        const availableSessions = sessionDate.getFullYear() === now.getFullYear() && sessionDate.getMonth() === now.getMonth() && sessionDate.getDate() === now.getDate();
+
+        const [startHour, startMinute] = session?.start_time
+            .split(":")
+            .map(Number);
+
+        const [endHour, endMinute] = session?.end_time
+            .split(":")
+            .map(Number);
+
+        const startDateTime = new Date(sessionDate);
+        startDateTime.setHours(startHour, startMinute, 0, 0);
+
+        const endDateTime = new Date(sessionDate);
+        endDateTime.setHours(endHour, endMinute, 59, 999);
+
+        const isMaterialAllowed = now >= startDateTime && now <= endDateTime;
+
+        const isAllowed = session && availableSessions && isMaterialAllowed
 
         const activities = await Activity.aggregate([
             {
@@ -240,7 +270,7 @@ exports.getMaterials = async (req, res, next) => {
             };
         });
 
-        return successResponse(res, "Materials fetched successfully", { items });
+        return successResponse(res, "Materials fetched successfully", { items, isAllowed });
     } catch (error) {
         next(error);
     }

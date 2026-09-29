@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Activity = require("../../../model/Activity");
 const Batch = require("../../../model/Batch");
 const ActivityLog = require("../../../model/ActivityFolderReport");
+const BatchSession = require("../../../model/BatchSession")
 const BatchAssignmentSubmission = require("../../../model/BatchAssignment");
 const { resolveActivityDisplay } = require("../../../util/resolveActivityDisplay");
 const { successResponse, errorResponse } = require("../../../util/response");
@@ -23,8 +24,6 @@ exports.getPostReadItems = async (req, res, next) => {
                     engage_type: "post_read",
                 }
             },
-
-            // Questions
             {
                 $lookup: {
                     from: 'questions',
@@ -213,6 +212,40 @@ exports.getPostReadItems = async (req, res, next) => {
             }
         ])
 
+        const now = new Date();
+
+        const session = await BatchSession.findOne({
+            _id: sessionId,
+            batch_id: batchId,
+            status: { $ne: "completed" },
+        })
+
+        const sessionDate = new Date(session.session_date);
+
+        const availableSessions = sessionDate.getFullYear() === now.getFullYear() && sessionDate.getMonth() === now.getMonth() && sessionDate.getDate() === now.getDate();
+
+        const [startHour, startMinute] = session?.start_time
+            .split(":")
+            .map(Number);
+
+        const [endHour, endMinute] = session?.end_time
+            .split(":")
+            .map(Number);
+
+        const startDateTime = new Date(sessionDate);
+        startDateTime.setHours(startHour, startMinute, 0, 0);
+
+        const endDateTime = new Date(sessionDate);
+        endDateTime.setHours(endHour, endMinute, 59, 999);
+
+        // const isPreAllowed = now < startDateTime;
+
+        // const isMaterialAllowed = now >= startDateTime && now <= endDateTime;
+
+        const isPastAllowed = now > endDateTime
+
+        const isAllowed = session && availableSessions && isPastAllowed
+
         const activityIds = activities.map((a) => a._id);
 
         const myCompletedIds = await ActivityLog.distinct("activity_id", {
@@ -241,7 +274,7 @@ exports.getPostReadItems = async (req, res, next) => {
             };
         });
 
-        return successResponse(res, "Post-read items fetched successfully", { items });
+        return successResponse(res, "Post-read items fetched successfully", { items, isAllowed });
     } catch (error) {
         next(error);
     }
