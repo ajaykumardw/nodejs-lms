@@ -31,6 +31,7 @@ const dashboardController = require('../controller/Company/DashboardAPIControlle
 const userProfileController = require('../controller/Company/UserProfileController')
 const leaderboardAPIController = require('../controller/Company/LeaderboardAPIController')
 const ILTAPIController = require("../controller/Company/ILTAPIController")
+const AttendanceController = require("../controller/Company/AttendanceAPIController")
 
 const createUpload = require('../util/upload')
 
@@ -694,4 +695,7 @@ router.put("/ILT/batch/:batchId", isAuth, ...attachmentUpload.middleware("attach
 router.post("/ILT/batch/data/upload/:moduleId", isAuth, ILTAPIController.postILTBatchUploadAPIController);
 router.post("/ILT/engage/activity/create/:type/:moduleId/:moduleTypeId", isAuth, ILTAPIController.postILTActivityAPIController)
 
+//This is the route for ILT attendance
+router.get("/ILT/attendance/dashboard/data", isAuth, AttendanceController?.getAttendanceDashboardAPIController)
+router.post("/ILT/attendance/mark", isAuth, AttendanceController?.markAttendanceAPIController)
 module.exports = router
