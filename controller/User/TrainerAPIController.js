@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const Batch = require("../../model/Batch");
 const BatchLearner = require("../../model/BatchLearner");
-const BatchSession = require("../../model/BatchSession");
+const ActivityLog = require("../../model/ActivityFolderReport")
 const BatchTrainer = require("../../model/BatchSessionTrainer");
 const BatchAssignmentSubmission = require("../../model/BatchAssignment");
 const User = require("../../model/User"); // adjust path to your users model
@@ -35,9 +35,13 @@ exports.getTrainerOverview = async (req, res, next) => {
             status: { $in: ["confirmed", "nominated"] },
         });
 
-        const pendingGrading = await BatchAssignmentSubmission.countDocuments({
-            batch_id: { $in: batchIds },
-            status: { $ne: "graded" },
+        const pendingGrading = await ActivityLog.countDocuments({
+            batch_id: {
+                $in: batchIds
+            },
+            session_id: {
+                $in: sessionIds
+            }
         });
 
         const startOfDay = new Date();
